@@ -1,0 +1,63 @@
+[
+  {
+    "id": "menu_choco_loco",
+    "name": "Chocolate Loco",
+    "description": "Waffle con masa de chocolate, cubierto con salsa de chocolate, trozos de KitKat y chips de chocolate blanco y negro.",
+    "price": 850,
+    "base": "base_chocolate",
+    "toppings": [
+      "top_kitkat",
+      "top_chips"
+    ],
+    "syrups": [
+      "syr_chocolate"
+    ],
+    "image": "ima_loc533.jpeg"
+  },
+  {
+    "id": "menu_patagonia_frutilla",
+    "name": "Bosque Patagónico",
+    "description": "Masa tradicional dorada, coronada con frutillas frescas de estación, crema batida y abundante salsa de dulce de leche.",
+    "price": 900,
+    "base": "base_tradicional",
+    "toppings": [
+      "top_frutilla"
+    ],
+    "syrups": [
+      "syr_dulce_leche"
+    ],
+    "image": "ima_loc532.jpeg"
+  },
+  {
+    "id": "menu_tentacion_oreo",
+    "name": "Tentación Oreo",
+    "description": "Waffle tradicional con galletitas Oreo trituradas, chips de chocolate, bañado en dulce de leche y salsa de chocolate.",
+    "price": 880,
+    "base": "base_tradicional",
+    "toppings": [
+      "top_oreo",
+      "top_chips"
+    ],
+    "syrups": [
+      "syr_dulce_leche",
+      "syr_chocolate"
+    ],
+    "image": "ima_loc534.jpeg"
+  },
+  {
+    "id": "menu_1779993744262",
+    "name": "prueba",
+    "description": "waffle de prueba",
+    "price": 1000,
+    "base": "base_tradicional",
+    "toppings": [
+      "top_oreo",
+      "top_frutilla",
+      "top_rocklets"
+    ],
+    "syrups": [
+      "syr_dulce_leche"
+    ],
+    "image": "prueba_1779993513462.png"
+  }
+]

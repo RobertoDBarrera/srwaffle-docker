@@ -1,0 +1,331 @@
+[
+  {
+    "id": "sale_1780926998166",
+    "date": "2026-06-08T13:56:38.166Z",
+    "items": [
+      {
+        "name": "Waffle del Bosque Helado",
+        "details": "Masa Tradicional + Frutillas Frescas + Salsa de Chocolate + Helado de Sambayón",
+        "price": 1500
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "status": "refunded"
+  },
+  {
+    "id": "sale_1779994470325",
+    "date": "2026-05-28T18:54:30.325Z",
+    "items": [
+      {
+        "name": "Waffle del Bosque Helado",
+        "details": "Masa Tradicional + Frutillas Frescas + Salsa de Chocolate + Helado de Sambayón",
+        "price": 1500
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "status": "refunded"
+  },
+  {
+    "id": "sale_1779994410615",
+    "date": "2026-05-28T18:53:30.615Z",
+    "items": [
+      {
+        "name": "Waffle del Bosque Helado",
+        "details": "Masa Tradicional + Frutillas Frescas + Salsa de Chocolate + Helado de Sambayón",
+        "price": 1500
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "status": "refunded"
+  },
+  {
+    "id": "sale_1018",
+    "date": "2026-05-25T18:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "2 Toppings, 1 Salsas",
+        "price": 770
+      },
+      {
+        "name": "Gaseosa Cola (Lata)",
+        "details": "Bebida",
+        "price": 300
+      }
+    ],
+    "total": 1070,
+    "paymentMethod": "Mercado Pago",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1017",
+    "date": "2026-05-25T22:11:07.750Z",
+    "items": [
+      {
+        "name": "Chocolate Loco",
+        "details": "Waffle del Menú",
+        "price": 850
+      },
+      {
+        "name": "Gaseosa Cola (Lata)",
+        "details": "Bebida",
+        "price": 300
+      }
+    ],
+    "total": 1150,
+    "paymentMethod": "Tarjeta de Débito",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1016",
+    "date": "2026-05-26T02:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "1 Toppings, 2 Salsas",
+        "price": 780
+      }
+    ],
+    "total": 780,
+    "paymentMethod": "Mercado Pago",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1015",
+    "date": "2026-05-26T06:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "1 Toppings, 2 Salsas",
+        "price": 780
+      }
+    ],
+    "total": 780,
+    "paymentMethod": "Tarjeta de Débito",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1014",
+    "date": "2026-05-26T10:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "3 Toppings, 1 Salsas",
+        "price": 890
+      },
+      {
+        "name": "Jugo Naranja (Exprimido)",
+        "details": "Bebida",
+        "price": 380
+      }
+    ],
+    "total": 1270,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1013",
+    "date": "2026-05-26T14:11:07.750Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle del Menú",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1012",
+    "date": "2026-05-26T18:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "1 Toppings, 1 Salsas",
+        "price": 700
+      }
+    ],
+    "total": 700,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1011",
+    "date": "2026-05-26T22:11:07.750Z",
+    "items": [
+      {
+        "name": "Tentación Oreo",
+        "details": "Waffle del Menú",
+        "price": 880
+      },
+      {
+        "name": "Gaseosa Cola (Lata)",
+        "details": "Bebida",
+        "price": 300
+      }
+    ],
+    "total": 1180,
+    "paymentMethod": "Tarjeta de Débito",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1010",
+    "date": "2026-05-27T02:11:07.750Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle del Menú",
+        "price": 900
+      },
+      {
+        "name": "Agua Mineral (500ml)",
+        "details": "Bebida",
+        "price": 250
+      }
+    ],
+    "total": 1150,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1009",
+    "date": "2026-05-27T06:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "1 Toppings, 1 Salsas",
+        "price": 700
+      }
+    ],
+    "total": 700,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1008",
+    "date": "2026-05-27T10:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "3 Toppings, 2 Salsas",
+        "price": 970
+      },
+      {
+        "name": "Jugo Naranja (Exprimido)",
+        "details": "Bebida",
+        "price": 380
+      }
+    ],
+    "total": 1350,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1007",
+    "date": "2026-05-27T14:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "1 Toppings, 1 Salsas",
+        "price": 650
+      }
+    ],
+    "total": 650,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1006",
+    "date": "2026-05-27T18:11:07.750Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle del Menú",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1005",
+    "date": "2026-05-27T22:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "3 Toppings, 2 Salsas",
+        "price": 970
+      }
+    ],
+    "total": 970,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1004",
+    "date": "2026-05-28T02:11:07.750Z",
+    "items": [
+      {
+        "name": "Waffle Personalizado",
+        "details": "2 Toppings, 1 Salsas",
+        "price": 770
+      }
+    ],
+    "total": 770,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1003",
+    "date": "2026-05-28T06:11:07.750Z",
+    "items": [
+      {
+        "name": "Tentación Oreo",
+        "details": "Waffle del Menú",
+        "price": 880
+      }
+    ],
+    "total": 880,
+    "paymentMethod": "Tarjeta de Débito",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1002",
+    "date": "2026-05-28T10:11:07.750Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle del Menú",
+        "price": 900
+      },
+      {
+        "name": "Jugo Naranja (Exprimido)",
+        "details": "Bebida",
+        "price": 380
+      }
+    ],
+    "total": 1280,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1001",
+    "date": "2026-05-28T14:11:07.750Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle del Menú",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Tarjeta de Débito",
+    "status": "completed"
+  }
+]

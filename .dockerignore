@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+data/
+scratch/
+tecnologias.md
+*.mp4
+*.jpg
+*.jpeg
+*.png
