@@ -590,64 +590,128 @@ nav {
 }
 
 /* El Waffle en CSS */
-.waffle-visual {
+.waffle-assembly-box {
+  position: relative;
   width: 320px;
   height: 320px;
+  z-index: 2;
+  filter: drop-shadow(0 15px 25px rgba(0,0,0,0.45));
+}
+
+.waffle-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 140px;
   background-color: #e5b565; /* Base vainilla por defecto */
-  border-radius: 50%;
-  position: relative;
+  clip-path: polygon(50% 0, 85% 100%, 15% 100%);
   z-index: 2;
   box-shadow: 
-    0 15px 25px rgba(0,0,0,0.3), 
-    inset 0 -10px 20px rgba(0,0,0,0.15), 
-    inset 0 10px 20px rgba(255,255,255,0.25);
+    inset 0 10px 20px rgba(255,255,255,0.25),
+    inset 0 -10px 20px rgba(0,0,0,0.1);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
-  padding: 25px;
-  gap: 12px;
+  grid-template-rows: repeat(2, 1fr);
+  padding: 30px 40px 10px 40px;
+  gap: 8px;
+  transition: var(--transition-smooth);
+}
+
+.waffle-front {
+  position: absolute;
+  top: 140px;
+  left: 0;
+  width: 100%;
+  height: 180px;
+  background-color: #e5b565; /* Base vainilla por defecto */
+  clip-path: polygon(15% 0, 85% 0, 50% 100%);
+  z-index: 12;
+  box-shadow: 
+    inset 0 10px 20px rgba(255,255,255,0.15),
+    inset 0 -10px 20px rgba(0,0,0,0.25);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 10px 40px 30px 40px;
+  gap: 8px;
   transition: var(--transition-smooth);
 }
 
 /* Masa de Chocolate */
-.waffle-visual.base-chocolate {
+.waffle-back.base-chocolate, .waffle-front.base-chocolate {
   background-color: #4a2c11;
   box-shadow: 
-    0 15px 25px rgba(0,0,0,0.4), 
     inset 0 -10px 20px rgba(0,0,0,0.3), 
     inset 0 10px 20px rgba(255,255,255,0.08);
 }
 
 /* Masa Red Velvet */
-.waffle-visual.base-red-velvet {
+.waffle-back.base-red-velvet, .waffle-front.base-red-velvet {
   background-color: #83101c;
   box-shadow: 
-    0 15px 25px rgba(0,0,0,0.4), 
     inset 0 -10px 20px rgba(0,0,0,0.3), 
     inset 0 10px 20px rgba(255,255,255,0.1);
 }
 
 /* Burbujas del Bubble Waffle */
 .waffle-bubble {
-  background: rgba(0,0,0,0.1);
   border-radius: 50%;
   box-shadow: 
-    inset 2px 2px 5px rgba(0,0,0,0.3),
-    inset -2px -2px 5px rgba(255,255,255,0.1),
-    2px 2px 4px rgba(255,255,255,0.1);
+    inset -3px -3px 8px rgba(0,0,0,0.45),
+    inset 3px 3px 8px rgba(255,255,255,0.3),
+    0 4px 6px rgba(0,0,0,0.15);
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: var(--transition-smooth);
 }
 
 .waffle-bubble::after {
   content: '';
   position: absolute;
-  width: 75%;
-  height: 75%;
+  width: 60%;
+  height: 60%;
+  top: 15%;
+  left: 15%;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 70%);
+}
+
+/* Burbujas por tipo de masa */
+.waffle-back.base-tradicional .waffle-bubble, 
+.waffle-front.base-tradicional .waffle-bubble {
+  background: radial-gradient(circle at 30% 30%, #ffd47d 5%, #df9c39 60%, #a46412 100%);
+}
+
+.waffle-back.base-chocolate .waffle-bubble, 
+.waffle-front.base-chocolate .waffle-bubble {
+  background: radial-gradient(circle at 30% 30%, #7c4c2a 5%, #46250e 60%, #170700 100%);
+}
+
+.waffle-back.base-red-velvet .waffle-bubble, 
+.waffle-front.base-red-velvet .waffle-bubble {
+  background: radial-gradient(circle at 30% 30%, #c4354b 5%, #83101c 60%, #460209 100%);
+}
+
+/* Relleno untable en el cono */
+.spread-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 140px;
+  clip-path: polygon(50% 0, 85% 100%, 15% 100%);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: var(--transition-smooth);
+}
+.spread-overlay.active-nutella {
+  opacity: 0.95;
+  background: radial-gradient(circle at 50% 50%, #3d1f11 20%, #220f07 80%);
+}
+.spread-overlay.active-dulce {
+  opacity: 0.95;
+  background: radial-gradient(circle at 50% 50%, #b86e25 20%, #7d430c 80%);
 }
 
 /* Capas de Salsas (syrups) */
@@ -657,9 +721,9 @@ nav {
   left: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  clip-path: ellipse(105px 75px at 160px 105px);
   pointer-events: none;
-  z-index: 3;
+  z-index: 13;
   opacity: 0;
   transition: var(--transition-smooth);
 }
@@ -670,16 +734,42 @@ nav {
 
 /* Rayas de salsas en CSS */
 .syrup-chocolate {
-  background: repeating-linear-gradient(45deg, transparent, transparent 15px, #2b1810 15px, #2b1810 25px);
-  mask-image: radial-gradient(circle, #fff 65%, transparent 70%);
+  background: 
+    repeating-linear-gradient(45deg, transparent, transparent 18px, #2b1810 18px, #2b1810 23px),
+    repeating-linear-gradient(-45deg, transparent, transparent 18px, #2b1810 18px, #2b1810 23px);
 }
 .syrup-dulce-leche {
-  background: repeating-linear-gradient(-45deg, transparent, transparent 18px, #c3843e 18px, #c3843e 28px);
-  mask-image: radial-gradient(circle, #fff 65%, transparent 70%);
+  background: 
+    repeating-linear-gradient(35deg, transparent, transparent 20px, #c3843e 20px, #c3843e 25px),
+    repeating-linear-gradient(-35deg, transparent, transparent 20px, #c3843e 20px, #c3843e 25px);
 }
 .syrup-caramelo {
-  background: repeating-linear-gradient(75deg, transparent, transparent 16px, #a66a1e 16px, #a66a1e 26px);
-  mask-image: radial-gradient(circle, #fff 65%, transparent 70%);
+  background: 
+    repeating-linear-gradient(55deg, transparent, transparent 18px, #a66a1e 18px, #a66a1e 23px),
+    repeating-linear-gradient(-55deg, transparent, transparent 18px, #a66a1e 18px, #a66a1e 23px);
+}
+
+/* Crema Batida Visual */
+.visual-whipped-cream {
+  position: absolute;
+  top: 35px;
+  left: 55px;
+  width: 210px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 8;
+  opacity: 0;
+  transition: var(--transition-smooth);
+  background: 
+    radial-gradient(circle at 20% 50%, #ffffff 24px, transparent 30px),
+    radial-gradient(circle at 40% 30%, #fcfbf7 32px, transparent 38px),
+    radial-gradient(circle at 60% 30%, #ffffff 32px, transparent 38px),
+    radial-gradient(circle at 80% 50%, #ffffff 24px, transparent 30px),
+    radial-gradient(circle at 50% 60%, #f7f5ee 28px, transparent 34px);
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+}
+.visual-whipped-cream.active {
+  opacity: 0.95;
 }
 
 /* Contenedor dinámico de Toppings en el waffle visual */
@@ -689,8 +779,7 @@ nav {
   left: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  z-index: 4;
+  z-index: 15;
   pointer-events: none;
 }
 
@@ -713,18 +802,23 @@ nav {
 
 /* Toppings visuales dibujados por CSS por simplicidad */
 .vt-top_oreo {
-  background-color: #1e1e1e;
+  background-color: #161616;
   border-radius: 50%;
-  border: 2px dashed #3a3a3a;
-  box-shadow: inset 0 0 4px #000;
+  border: 2px dashed #444;
+  box-shadow: 
+    inset 0 0 6px #000,
+    0 3px 6px rgba(0,0,0,0.4);
 }
 .vt-top_kitkat {
-  background-color: #b22222;
+  width: 10px;
+  height: 35px;
+  background: repeating-linear-gradient(45deg, #42250f, #42250f 4px, #8d5b34 4px, #8d5b34 6px);
   border-radius: 2px;
-  width: 28px;
-  height: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 .vt-top_frutilla {
+  background-image: radial-gradient(#fee440 20%, transparent 25%);
+  background-size: 5px 6px;
   background-color: #e63946;
   clip-path: polygon(50% 100%, 15% 20%, 85% 20%);
   border-radius: 50% 50% 20% 20%;
@@ -1763,4 +1857,104 @@ nav {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
+}
+
+/* --- HELADOS / ICE CREAMS VISUALS --- */
+.visual-icecreams-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: auto;
+}
+
+.visual-icecream-scoop {
+  position: absolute;
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  box-shadow: inset -10px -10px 0px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: popIn 0.4s ease forwards;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Posiciones fijas para las bochas */
+.visual-icecream-scoop.scoop-0 {
+  left: 80px;
+  top: 90px;
+  z-index: 11;
+}
+
+.visual-icecream-scoop.scoop-1 {
+  left: 155px;
+  top: 95px;
+  z-index: 11;
+}
+
+.visual-icecream-scoop.scoop-2 {
+  left: 118px;
+  top: 40px;
+  z-index: 7;
+}
+
+/* Colores específicos de sabores */
+.scoop-ice_vainilla {
+  background-color: #fff9e6;
+  border: 3px solid #f3e5ab;
+}
+.scoop-ice_chocolate {
+  background-color: #5c4033;
+  border: 3px solid #3d2b1f;
+}
+.scoop-ice_dulce_leche {
+  background-color: #cd7f32;
+  border: 3px solid #b87333;
+}
+/* Genéricos para sabores añadidos */
+.scoop-generic-ice {
+  background-color: #f1b6c8;
+  border: 3px solid #e294aa;
+}
+
+/* Cardboard Wrapper / Porta-cono */
+.cone-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(15% 140px, 85% 140px, 60% 320px, 40% 320px);
+  background: linear-gradient(135deg, #2a2a2a 0%, #111111 100%);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    inset 0 10px 15px rgba(255,255,255,0.05),
+    0 8px 16px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cone-wrapper-label {
+  background: #ffffff;
+  color: #121212;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-family: var(--font-cursive);
+  font-size: 0.95rem;
+  font-weight: normal;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  border: 1.5px solid #eaeaea;
+  transform: translateY(60px) rotate(-6deg);
+  text-shadow: none;
+  z-index: 10;
 }

@@ -1,5 +1,103 @@
 [
   {
+    "id": "sale_1781010774611",
+    "date": "2026-06-09T13:12:54.611Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781010406353",
+    "date": "2026-06-09T13:06:46.353Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781010211039",
+    "date": "2026-06-09T13:03:31.039Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781009956756",
+    "date": "2026-06-09T12:59:16.756Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781009712582",
+    "date": "2026-06-09T12:55:12.582Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781008945956",
+    "date": "2026-06-09T12:42:25.956Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
+    "id": "sale_1781008409450",
+    "date": "2026-06-09T12:33:29.450Z",
+    "items": [
+      {
+        "name": "Waffle Customizado",
+        "details": "Masa: Tradicional + Relleno: Nutella + Crema Batida + Oreo + Chocolate + Vainilla",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed"
+  },
+  {
     "id": "sale_1780926998166",
     "date": "2026-06-08T13:56:38.166Z",
     "items": [

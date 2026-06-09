@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Configuración del Waffle Personalizado del Cliente
   let clientWaffle = {
     base: 'base_tradicional',
+    spread: 'none',
     toppings: [],
+    whippedCream: false,
     syrups: [],
     icecreams: []
   };
@@ -68,6 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const calculateWafflePrice = (waffleConfig) => {
     let price = getStockItem(waffleConfig.base)?.price || 0;
+    if (waffleConfig.spread && waffleConfig.spread !== 'none') {
+      price += getStockItem(waffleConfig.spread)?.price || 0;
+    }
+    if (waffleConfig.whippedCream) {
+      price += getStockItem('top_crema_batida')?.price || 0;
+    }
     waffleConfig.toppings.forEach(id => {
       price += getStockItem(id)?.price || 0;
     });
@@ -126,14 +134,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById(canvasContainerId);
     if (!wrapper) return;
 
-    const waffleElement = wrapper.querySelector('.waffle-visual');
+    const backElement = wrapper.querySelector('.waffle-back');
+    const frontElement = wrapper.querySelector('.waffle-front');
     const toppingsContainer = wrapper.querySelector('.visual-toppings-container');
     const chocolateOverlay = wrapper.querySelector('.syrup-chocolate');
     const dulceOverlay = wrapper.querySelector('.syrup-dulce-leche');
     const caramelOverlay = wrapper.querySelector('.syrup-caramelo');
+    const spreadOverlay = wrapper.querySelector('.spread-overlay');
+    const whippedCreamOverlay = wrapper.querySelector('.visual-whipped-cream');
 
-    waffleElement.className = 'waffle-visual';
-    waffleElement.classList.add(`base-${config.base.replace('base_', '').replace('_', '-')}`);
+    const baseClass = `base-${config.base.replace('base_', '').replace('_', '-')}`;
+    if (backElement) {
+      backElement.className = 'waffle-back';
+      backElement.classList.add(baseClass);
+    }
+    if (frontElement) {
+      frontElement.className = 'waffle-front';
+      frontElement.classList.add(baseClass);
+    }
+
+    if (spreadOverlay) {
+      spreadOverlay.className = 'spread-overlay';
+      if (config.spread === 'syr_nutella') {
+        spreadOverlay.classList.add('active-nutella');
+      } else if (config.spread === 'syr_dulce_leche_spread') {
+        spreadOverlay.classList.add('active-dulce');
+      }
+    }
 
     if (chocolateOverlay) {
       if (config.syrups.includes('syr_chocolate')) chocolateOverlay.classList.add('active');
@@ -148,6 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
       else caramelOverlay.classList.remove('active');
     }
 
+    if (whippedCreamOverlay) {
+      if (config.whippedCream) whippedCreamOverlay.classList.add('active');
+      else whippedCreamOverlay.classList.remove('active');
+    }
+
     if (toppingsContainer) {
       toppingsContainer.innerHTML = '';
       
@@ -159,10 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const toppingElement = document.createElement('div');
           toppingElement.className = `visual-topping-item vt-${toppingId}`;
           
-          const radius = Math.random() * 115;
-          const angle = Math.random() * Math.PI * 2;
-          const x = 160 + radius * Math.cos(angle) - 10;
-          const y = 160 + radius * Math.sin(angle) - 10;
+          // Toppings sit on top of the ice cream/cream at the mouth of the cone
+          const x = 75 + Math.random() * 170 - 12;
+          const y = 45 + Math.random() * 110 - 12;
 
           const randomRotation = Math.floor(Math.random() * 360);
           
@@ -246,13 +277,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clientWaffle = {
       base: 'base_tradicional',
+      spread: 'none',
       toppings: [],
+      whippedCream: false,
       syrups: [],
       icecreams: []
     };
 
     renderBuilderOptions('client-bases-options', 'bases', 'radio', (baseId) => {
       clientWaffle.base = baseId;
+      updateClientBuilderUI();
+    });
+
+    renderBuilderOptions('client-spreads-options', 'syrups', 'radio', (spreadId) => {
+      clientWaffle.spread = spreadId;
       updateClientBuilderUI();
     });
 
@@ -268,6 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       updateClientBuilderUI();
       return true;
+    });
+
+    renderBuilderOptions('client-whipped-cream-options', 'toppings', 'radio', (creamId) => {
+      clientWaffle.whippedCream = (creamId === 'top_crema_batida');
+      updateClientBuilderUI();
     });
 
     renderBuilderOptions('client-syrups-options', 'syrups', 'checkbox', (syrupId, checked) => {
@@ -352,6 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
           stockOk = false;
           outOfStockName = baseItem ? baseItem.name : 'Masa';
         }
+
+        if (clientWaffle.spread && clientWaffle.spread !== 'none') {
+          const spreadItem = getStockItem(clientWaffle.spread);
+          if (!spreadItem || spreadItem.stock <= 0) {
+            stockOk = false;
+            outOfStockName = spreadItem ? spreadItem.name : 'Relleno';
+          }
+        }
         
         clientWaffle.toppings.forEach(tId => {
           const top = getStockItem(tId);
@@ -360,6 +411,14 @@ document.addEventListener('DOMContentLoaded', () => {
             outOfStockName = top ? top.name : 'Topping';
           }
         });
+
+        if (clientWaffle.whippedCream) {
+          const creamItem = getStockItem('top_crema_batida');
+          if (!creamItem || creamItem.stock <= 0) {
+            stockOk = false;
+            outOfStockName = creamItem ? creamItem.name : 'Crema Batida';
+          }
+        }
 
         clientWaffle.icecreams.forEach(iId => {
           const ice = getStockItem(iId);
@@ -376,6 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const baseName = getStockItem(clientWaffle.base)?.name || '';
+        const spreadName = clientWaffle.spread && clientWaffle.spread !== 'none' ? getStockItem(clientWaffle.spread)?.name : 'Sin relleno';
+        const whippedCreamText = clientWaffle.whippedCream ? 'Con Crema Batida' : 'Sin crema batida';
         const toppingsName = clientWaffle.toppings.map(id => getStockItem(id)?.name).join(', ') || 'Sin toppings';
         const syrupsName = clientWaffle.syrups.map(id => getStockItem(id)?.name).join(', ') || 'Sin salsas';
         const icecreamsName = clientWaffle.icecreams.map(id => getStockItem(id)?.name).join(', ') || 'Sin helado';
@@ -383,9 +444,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const waMessage = `¡Hola! 👋 Quisiera encargar un *Sr. Waffle Armado a Gusto* 🧇\n\n` + 
                           `*Masa Base:* ${baseName}\n` + 
+                          `*Relleno:* ${spreadName}\n` + 
+                          `*Helado:* ${icecreamsName}\n` +
                           `*Toppings:* ${toppingsName}\n` + 
-                          `*Salsas:* ${syrupsName}\n` +
-                          `*Helado:* ${icecreamsName}\n\n` +
+                          `*Crema Batida:* ${whippedCreamText}\n` + 
+                          `*Salsas:* ${syrupsName}\n\n` +
                           `*Total:* ${formatCurrency(totalPrice)}\n` +
                           `¿Me confirman para retirar por el local? ¡Gracias!`;
 
@@ -411,7 +474,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!container) return;
 
     container.innerHTML = '';
-    const items = stock[category];
+    let items = stock[category] ? [...stock[category]] : [];
+
+    if (category === 'syrups') {
+      if (containerId === 'client-spreads-options') {
+        items = items.filter(item => item.id === 'syr_nutella' || item.id === 'syr_dulce_leche_spread');
+        items.unshift({
+          id: 'none',
+          name: 'Sin Relleno',
+          price: 0,
+          stock: 9999
+        });
+      } else if (containerId === 'client-syrups-options') {
+        items = items.filter(item => item.id !== 'syr_nutella' && item.id !== 'syr_dulce_leche_spread');
+      }
+    } else if (category === 'toppings') {
+      if (containerId === 'client-toppings-options') {
+        items = items.filter(item => item.id !== 'top_crema_batida');
+      } else if (containerId === 'client-whipped-cream-options') {
+        items = items.filter(item => item.id === 'top_crema_batida');
+        items.unshift({
+          id: 'none',
+          name: 'Sin Crema',
+          price: 0,
+          stock: 9999
+        });
+      }
+    }
 
     items.forEach(item => {
       const card = document.createElement('div');
@@ -422,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       card.innerHTML = `
         <div class="option-name">${item.name}</div>
-        <div class="option-price">+ ${formatCurrency(item.price)}</div>
+        <div class="option-price">${item.price > 0 ? '+ ' + formatCurrency(item.price) : 'Gratis'}</div>
         <div class="option-stock-warn">Sin Stock</div>
       `;
 
@@ -444,7 +533,16 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
         
-        if (selectionType === 'radio' && item.id === clientWaffle.base) {
+        let isSelected = false;
+        if (selectionType === 'radio') {
+          if (containerId === 'client-bases-options' && item.id === clientWaffle.base) isSelected = true;
+          if (containerId === 'client-spreads-options' && item.id === clientWaffle.spread) isSelected = true;
+          if (containerId === 'client-whipped-cream-options') {
+            if (clientWaffle.whippedCream && item.id === 'top_crema_batida') isSelected = true;
+            if (!clientWaffle.whippedCream && item.id === 'none') isSelected = true;
+          }
+        }
+        if (isSelected) {
           card.classList.add('selected');
         }
       }

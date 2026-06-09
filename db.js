@@ -36,12 +36,15 @@ const INITIAL_STOCK = {
     { id: 'top_chips', name: 'Chips de Chocolate', category: 'toppings', stock: 150, minStock: 25, price: 90, unit: 'porciones' },
     { id: 'top_marshmallows', name: 'Marshmallows', category: 'toppings', stock: 75, minStock: 12, price: 100, unit: 'porciones' },
     { id: 'top_rocklets', name: 'Rocklets', category: 'toppings', stock: 90, minStock: 15, price: 110, unit: 'porciones' },
-    { id: 'top_nuez', name: 'Nueces Picadas', category: 'toppings', stock: 40, minStock: 10, price: 140, unit: 'porciones' }
+    { id: 'top_nuez', name: 'Nueces Picadas', category: 'toppings', stock: 40, minStock: 10, price: 140, unit: 'porciones' },
+    { id: 'top_crema_batida', name: 'Crema Batida', category: 'toppings', stock: 80, minStock: 10, price: 120, unit: 'porciones' }
   ],
   syrups: [
     { id: 'syr_chocolate', name: 'Salsa de Chocolate', category: 'syrups', stock: 150, minStock: 30, price: 80, unit: 'porciones' },
     { id: 'syr_dulce_leche', name: 'Dulce de Leche', category: 'syrups', stock: 180, minStock: 40, price: 90, unit: 'porciones' },
-    { id: 'syr_caramelo', name: 'Salsa de Caramelo', category: 'syrups', stock: 95, minStock: 20, price: 80, unit: 'porciones' }
+    { id: 'syr_caramelo', name: 'Salsa de Caramelo', category: 'syrups', stock: 95, minStock: 20, price: 80, unit: 'porciones' },
+    { id: 'syr_nutella', name: 'Nutella', category: 'syrups', stock: 100, minStock: 15, price: 150, unit: 'porciones' },
+    { id: 'syr_dulce_leche_spread', name: 'Dulce de Leche (Relleno)', category: 'syrups', stock: 120, minStock: 20, price: 100, unit: 'porciones' }
   ],
   drinks: [
     { id: 'drink_agua', name: 'Agua Mineral (500ml)', category: 'drinks', stock: 45, minStock: 10, price: 250, unit: 'unidades' },
@@ -182,7 +185,27 @@ const initializeDataFiles = () => {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR);
   }
-  if (!fs.existsSync(STOCK_FILE)) writeJSON(STOCK_FILE, INITIAL_STOCK);
+  if (!fs.existsSync(STOCK_FILE)) {
+    writeJSON(STOCK_FILE, INITIAL_STOCK);
+  } else {
+    // Autocompletar insumos especiales si el archivo ya existe localmente
+    const stock = readJSON(STOCK_FILE);
+    let updated = false;
+    const ensureItem = (cat, newItem) => {
+      if (!stock[cat]) stock[cat] = [];
+      if (!stock[cat].some(i => i.id === newItem.id)) {
+        stock[cat].push(newItem);
+        updated = true;
+      }
+    };
+    ensureItem('syrups', { id: 'syr_nutella', name: 'Nutella', category: 'syrups', stock: 100, minStock: 15, price: 150, unit: 'porciones' });
+    ensureItem('syrups', { id: 'syr_dulce_leche_spread', name: 'Dulce de Leche (Relleno)', category: 'syrups', stock: 120, minStock: 20, price: 100, unit: 'porciones' });
+    ensureItem('toppings', { id: 'top_crema_batida', name: 'Crema Batida', category: 'toppings', stock: 80, minStock: 10, price: 120, unit: 'porciones' });
+    if (updated) {
+      writeJSON(STOCK_FILE, stock);
+      console.log('Insumos de armado autocompletados en stock.json local.');
+    }
+  }
   if (!fs.existsSync(MENU_FILE)) writeJSON(MENU_FILE, INITIAL_MENU);
   if (!fs.existsSync(SALES_FILE)) writeJSON(SALES_FILE, generateMockSales());
   if (!fs.existsSync(SETTINGS_FILE)) writeJSON(SETTINGS_FILE, INITIAL_SETTINGS);
@@ -297,6 +320,9 @@ const initPostgresTables = async () => {
         ['syr_chocolate', 'Salsa de Chocolate', 'syrups', 150, 30, 80, 'porciones'],
         ['syr_dulce_leche', 'Dulce de Leche', 'syrups', 180, 40, 90, 'porciones'],
         ['syr_caramelo', 'Salsa de Caramelo', 'syrups', 95, 20, 80, 'porciones'],
+        ['syr_nutella', 'Nutella', 'syrups', 100, 15, 150, 'porciones'],
+        ['syr_dulce_leche_spread', 'Dulce de Leche (Relleno)', 'syrups', 120, 20, 100, 'porciones'],
+        ['top_crema_batida', 'Crema Batida', 'toppings', 80, 10, 120, 'porciones'],
         
         ['drink_agua', 'Agua Mineral (500ml)', 'drinks', 45, 10, 250, 'unidades'],
         ['drink_cola', 'Gaseosa Cola (Lata)', 'drinks', 50, 12, 300, 'unidades'],
@@ -320,6 +346,20 @@ const initPostgresTables = async () => {
       ];
       for (const item of initialMenu) {
         await client.query('INSERT INTO menu (id, name, description, price, base, toppings, syrups, icecreams, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', item);
+      }
+    }
+
+    // Autosembrado de autocompletado para insumos nuevos en Postgres
+    const newItems = [
+      ['syr_nutella', 'Nutella', 'syrups', 100, 15, 150, 'porciones'],
+      ['syr_dulce_leche_spread', 'Dulce de Leche (Relleno)', 'syrups', 120, 20, 100, 'porciones'],
+      ['top_crema_batida', 'Crema Batida', 'toppings', 80, 10, 120, 'porciones']
+    ];
+    for (const item of newItems) {
+      const check = await client.query('SELECT COUNT(*) FROM stock WHERE id = $1', [item[0]]);
+      if (parseInt(check.rows[0].count) === 0) {
+        await client.query('INSERT INTO stock (id, name, category, stock, min_stock, price, unit) VALUES ($1, $2, $3, $4, $5, $6, $7)', item);
+        console.log(`Insumo especial Postgres autosembrado: ${item[1]}`);
       }
     }
 

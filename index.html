@@ -36,7 +36,7 @@
     <nav>
       <a class="nav-link active" data-view="inicio">Inicio</a>
       <a class="nav-link" data-view="menu">Nuestro Menú</a>
-      <a class="nav-link" data-view="builder">Armá tu Waffle</a>
+      <a class="nav-link" data-view="builder">Armá tu Sr. Waffle</a>
       <a class="nav-help-link" id="help-btn">Ayuda ❓</a>
     </nav>
   </header>
@@ -87,7 +87,7 @@
   <section id="view-builder" class="app-view builder-section">
     <div class="section-header" style="margin-bottom: 2.5rem;">
       <span class="hero-badge">Custom Waffle Creator</span>
-      <h2 class="section-title" style="font-family: var(--font-cursive); font-weight: normal; font-size: 3rem;">Armá tu Waffle</h2>
+      <h2 class="section-title" style="font-family: var(--font-cursive); font-weight: normal; font-size: 3rem;">Armá tu Sr. Waffle</h2>
       <p class="section-subtitle">
         Elegí tus ingredientes preferidos. Podrás ver tu creación en tiempo real y enviarla directamente a nuestro WhatsApp para preparar tu pedido.
       </p>
@@ -97,24 +97,36 @@
       <!-- Lado Izquierdo: Visualización 2D -->
       <div class="waffle-canvas-wrapper" id="client-waffle-canvas-wrapper">
         <div class="builder-neon-glow"></div>
-        <!-- Estructura visual del waffle -->
-        <div class="waffle-visual">
-          <!-- 25 Burbujas del Bubble Waffle en cuadricula -->
-          <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-          <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-          <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-          <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-          <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-        </div>
-        <!-- Rayas de Salsas (syrups) -->
-        <div class="syrup-overlay syrup-chocolate"></div>
-        <div class="syrup-overlay syrup-dulce-leche"></div>
-        <div class="syrup-overlay syrup-caramelo"></div>
         
-        <!-- Contenedor dinámico de toppings esparcidos -->
-        <div class="visual-toppings-container"></div>
-        <!-- Contenedor dinámico de helados -->
-        <div class="visual-icecreams-container"></div>
+        <!-- Contenedor del Waffle Centrado de 320x320 -->
+        <div class="waffle-assembly-box" style="position: relative; width: 320px; height: 320px; z-index: 2;">
+          <!-- Back Waffle (Peak pointing up) -->
+          <div class="waffle-back">
+            <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+            <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+          </div>
+          <!-- Relleno (spread) -->
+          <div class="spread-overlay" id="spread-overlay"></div>
+          <!-- Rayas de Salsas (syrups) -->
+          <div class="syrup-overlay syrup-chocolate"></div>
+          <div class="syrup-overlay syrup-dulce-leche"></div>
+          <div class="syrup-overlay syrup-caramelo"></div>
+          
+          <!-- Contenedor de crema batida visual -->
+          <div class="visual-whipped-cream" id="visual-whipped-cream"></div>
+          <!-- Contenedor dinámico de helados -->
+          <div class="visual-icecreams-container"></div>
+          
+          <!-- Front Waffle (Pocket pointing down) -->
+          <div class="waffle-front">
+            <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+            <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+            <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+          </div>
+          
+          <!-- Contenedor dinámico de toppings esparcidos -->
+          <div class="visual-toppings-container"></div>
+        </div>
       </div>
       
       <!-- Lado Derecho: Controles del Panel -->
@@ -127,21 +139,14 @@
         </div>
 
         <div class="builder-step">
-          <h3>Elegí tus Toppings (Hasta 4) <span>Paso 2</span></h3>
-          <div class="builder-options-grid" id="client-toppings-options">
+          <h3>Elegí el Relleno <span>Paso 2</span></h3>
+          <div class="builder-options-grid" id="client-spreads-options">
             <!-- Rellenado por app.js -->
           </div>
         </div>
 
         <div class="builder-step">
-          <h3>Elegí las Salsas (Hasta 2) <span>Paso 3</span></h3>
-          <div class="builder-options-grid" id="client-syrups-options">
-            <!-- Rellenado por app.js -->
-          </div>
-        </div>
-
-        <div class="builder-step">
-          <h3>Elegí el Helado (Hasta 3 bochas) <span>Paso 4</span></h3>
+          <h3>Elegí el Helado (Hasta 3 bochas) <span>Paso 3</span></h3>
           <div style="margin-bottom: 0.5rem;">
             <select id="client-icecream-count" style="background:#181818; border: 1px solid rgba(255,255,255,0.1); color:#fff; width:100%; border-radius:6px; padding:0.6rem; font-size:0.9rem; font-weight:600;">
               <option value="0">Sin helado</option>
@@ -155,15 +160,31 @@
           </div>
         </div>
 
+        <div class="builder-step">
+          <h3>Elegí tus Toppings (Hasta 4) <span>Paso 4</span></h3>
+          <div class="builder-options-grid" id="client-toppings-options">
+            <!-- Rellenado por app.js -->
+          </div>
+        </div>
+
+        <div class="builder-step">
+          <h3>¿Querés Crema Batida? <span>Paso 5</span></h3>
+          <div class="builder-options-grid" id="client-whipped-cream-options">
+            <!-- Rellenado por app.js -->
+          </div>
+        </div>
+
+        <div class="builder-step">
+          <h3>Elegí las Salsas (Hasta 2) <span>Paso 6</span></h3>
+          <div class="builder-options-grid" id="client-syrups-options">
+            <!-- Rellenado por app.js -->
+          </div>
+        </div>
+
         <div class="price-summary-box">
           <div class="price-summary-title">Total Estimado</div>
           <div class="price-summary-value" id="client-waffle-price-value">$0</div>
         </div>
-
-        <button class="btn-primary" id="client-send-wa-btn" style="background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); box-shadow: 0 5px 15px rgba(37, 211, 102, 0.2); width:100%; display:flex; align-items:center; justify-content:center; gap:10px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="lucide lucide-whatsapp"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>
-          Enviar Pedido por WhatsApp
-        </button>
       </div>
     </div>
   </section>
@@ -221,13 +242,15 @@
           <li><strong>Armar tu propio Waffle:</strong>
             <ul style="margin-left: 15px; margin-top: 5px; list-style-type: circle;">
               <li>Paso 1: Elegí tu <strong>Masa Base</strong> preferida (Tradicional, Chocolate o Red Velvet).</li>
-              <li>Paso 2: Agregá hasta 4 <strong>Toppings</strong> (chocolates, frutas, etc.).</li>
-              <li>Paso 3: Coroná tu waffle con hasta 2 <strong>Salsas</strong>.</li>
-              <li>Paso 4: Sumá hasta 3 bochas de tus sabores favoritos de <strong>Helado</strong>.</li>
+              <li>Paso 2: Elegí el <strong>Relleno</strong> untable para la masa (Nutella, Dulce de Leche o Nada).</li>
+              <li>Paso 3: Sumá hasta 3 bochas de tus sabores favoritos de <strong>Helado</strong>.</li>
+              <li>Paso 4: Agregá hasta 4 <strong>Toppings</strong> (chocolates, frutas, etc.).</li>
+              <li>Paso 5: Seleccioná si querés agregar <strong>Crema Batida</strong>.</li>
+              <li>Paso 6: Coroná tu waffle con hasta 2 <strong>Salsas</strong>.</li>
             </ul>
           </li>
-          <li><strong>Visualización en tiempo real:</strong> En el lado izquierdo verás cómo se va construyendo tu waffle dinámicamente.</li>
-          <li><strong>Realizar tu Pedido:</strong> Una vez conforme, hacé clic en <em>"Enviar Pedido por WhatsApp"</em>. Esto abrirá tu WhatsApp con el mensaje estructurado de tu waffle y precio final para que comencemos a prepararlo de inmediato.</li>
+          <li><strong>Visualización en tiempo real:</strong> En el lado izquierdo verás cómo se va construyendo tu waffle dinámicamente y el precio total estimado.</li>
+          <li><strong>Realizar tu Pedido:</strong> Diseñá el waffle a tu gusto y mostrale esta pantalla a nuestro personal en el local para que te lo preparemos exactamente como lo diseñaste.</li>
         </ol>
       </div>
 

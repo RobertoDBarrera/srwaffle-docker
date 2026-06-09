@@ -4,7 +4,7 @@
       "id": "base_tradicional",
       "name": "Masa Tradicional",
       "category": "bases",
-      "stock": 120,
+      "stock": 113,
       "minStock": 20,
       "price": 450,
       "unit": "porciones"
@@ -33,7 +33,7 @@
       "id": "top_oreo",
       "name": "Galletitas Oreo",
       "category": "toppings",
-      "stock": 85,
+      "stock": 78,
       "minStock": 15,
       "price": 120,
       "unit": "porciones"
@@ -91,6 +91,15 @@
       "minStock": 10,
       "price": 140,
       "unit": "porciones"
+    },
+    {
+      "id": "top_crema_batida",
+      "name": "Crema Batida",
+      "category": "toppings",
+      "stock": 73,
+      "minStock": 10,
+      "price": 120,
+      "unit": "porciones"
     }
   ],
   "syrups": [
@@ -98,7 +107,7 @@
       "id": "syr_chocolate",
       "name": "Salsa de Chocolate",
       "category": "syrups",
-      "stock": 150,
+      "stock": 143,
       "minStock": 30,
       "price": 80,
       "unit": "porciones"
@@ -119,6 +128,24 @@
       "stock": 95,
       "minStock": 20,
       "price": 80,
+      "unit": "porciones"
+    },
+    {
+      "id": "syr_nutella",
+      "name": "Nutella",
+      "category": "syrups",
+      "stock": 93,
+      "minStock": 15,
+      "price": 150,
+      "unit": "porciones"
+    },
+    {
+      "id": "syr_dulce_leche_spread",
+      "name": "Dulce de Leche (Relleno)",
+      "category": "syrups",
+      "stock": 120,
+      "minStock": 20,
+      "price": 100,
       "unit": "porciones"
     }
   ],
@@ -156,7 +183,7 @@
       "id": "ice_vainilla",
       "name": "Helado de Vainilla",
       "category": "icecreams",
-      "stock": 60,
+      "stock": 53,
       "minStock": 10,
       "price": 150,
       "unit": "bochas"
