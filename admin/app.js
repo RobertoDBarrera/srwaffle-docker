@@ -17,7 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     inventory: document.getElementById('admin-view-inventory'),
     'crud-stock': document.getElementById('admin-view-crud-stock'),
     'crud-menu': document.getElementById('admin-view-crud-menu'),
-    settings: document.getElementById('admin-view-settings')
+    settings: document.getElementById('admin-view-settings'),
+    developer: document.getElementById('admin-view-developer'),
+    company: document.getElementById('admin-view-company')
   };
 
   const adminMenuItems = document.querySelectorAll('.admin-menu-item');
@@ -132,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'crud-stock') renderCrudStock();
     if (viewName === 'crud-menu') renderCrudMenu();
     if (viewName === 'settings') resetSettingsForm();
+    if (viewName === 'developer') loadDeveloperSettingsPanel();
+    if (viewName === 'company') loadCompanySettingsPanel();
   };
 
   adminMenuItems.forEach(item => {
@@ -572,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="font-weight:600;">${item.name}</td>
         <td style="text-transform: capitalize; color:var(--text-secondary);">${translateCategory(item.category)}</td>
         <td>${formatCurrency(item.price)}</td>
+        <td>${formatCurrency(item.cost || 0)}</td>
         <td>
           <div style="display:flex; gap: 8px;">
             <button class="refund-btn edit-stock-item-btn" data-id="${item.id}" style="background:var(--neon-cyan); color:#000;">Editar</button>
@@ -592,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('stock-name').value = item.name;
           document.getElementById('stock-category').value = item.category;
           document.getElementById('stock-price').value = item.price;
+          document.getElementById('stock-cost').value = item.cost || 0;
           document.getElementById('stock-qty').value = item.stock;
           document.getElementById('stock-min').value = item.minStock;
           document.getElementById('stock-unit').value = item.unit;
@@ -642,6 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetStockForm = () => {
     document.getElementById('stock-crud-form').reset();
     document.getElementById('stock-edit-id').value = '';
+    document.getElementById('stock-cost').value = '0';
     document.getElementById('stock-form-title').textContent = 'Crear Insumo';
     document.getElementById('stock-form-cancel-btn').style.display = 'none';
   };
@@ -654,11 +661,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = document.getElementById('stock-name').value;
     const category = document.getElementById('stock-category').value;
     const price = parseInt(document.getElementById('stock-price').value);
+    const cost = parseInt(document.getElementById('stock-cost').value) || 0;
     const qty = parseInt(document.getElementById('stock-qty').value);
     const minStock = parseInt(document.getElementById('stock-min').value);
     const unit = document.getElementById('stock-unit').value;
 
-    const payload = { name, category, price, stock: qty, minStock, unit };
+    const payload = { name, category, price, cost, stock: qty, minStock, unit };
 
     try {
       let res;
@@ -740,12 +748,76 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
+  // --- COST CALCULATOR ANALYZER ---
+  const updateFormFinancialAnalysis = () => {
+    const costSpan = document.getElementById('menu-recipe-cost-calc');
+    const marginSpan = document.getElementById('menu-recipe-margin-calc');
+    if (!costSpan || !marginSpan) return;
+
+    let totalCost = 0;
+    
+    // Base
+    const baseId = document.getElementById('menu-base').value;
+    if (baseId) {
+      totalCost += getStockItem(baseId)?.cost || 0;
+    }
+
+    // Toppings
+    document.querySelectorAll('.menu-topping-checkbox:checked').forEach(chk => {
+      totalCost += getStockItem(chk.value)?.cost || 0;
+    });
+
+    // Syrups
+    document.querySelectorAll('.menu-syrup-checkbox:checked').forEach(chk => {
+      totalCost += getStockItem(chk.value)?.cost || 0;
+    });
+
+    // Ice creams
+    document.querySelectorAll('.menu-icecream-flavor-select').forEach(sel => {
+      totalCost += getStockItem(sel.value)?.cost || 0;
+    });
+
+    costSpan.textContent = formatCurrency(totalCost);
+
+    const price = parseInt(document.getElementById('menu-price').value) || 0;
+    const margin = price > 0 ? Math.round(((price - totalCost) / price) * 100) : 0;
+    marginSpan.textContent = `${margin}%`;
+  };
+
   // --- PANEL 4: GESTIÓN DE CARTA / MENÚ (CRUD + CARGA DE IMÁGENES) ---
   const renderCrudMenu = () => {
     renderBaseDropdown();
     renderToppingsChecklist();
     renderSyrupsChecklist();
     renderMenuListGrid();
+
+    // Event listeners para actualizar costos en vivo
+    const baseSelect = document.getElementById('menu-base');
+    const priceInput = document.getElementById('menu-price');
+    const iceCountSelect = document.getElementById('menu-icecream-count');
+
+    if (baseSelect) baseSelect.onchange = updateFormFinancialAnalysis;
+    if (priceInput) priceInput.oninput = updateFormFinancialAnalysis;
+    
+    if (iceCountSelect) {
+      const originalChange = iceCountSelect.onchange;
+      iceCountSelect.onchange = (e) => {
+        if (originalChange) originalChange(e);
+        document.querySelectorAll('.menu-icecream-flavor-select').forEach(sel => {
+          sel.onchange = updateFormFinancialAnalysis;
+        });
+        updateFormFinancialAnalysis();
+      };
+    }
+
+    document.querySelectorAll('.menu-topping-checkbox').forEach(chk => {
+      chk.onchange = updateFormFinancialAnalysis;
+    });
+    document.querySelectorAll('.menu-syrup-checkbox').forEach(chk => {
+      chk.onchange = updateFormFinancialAnalysis;
+    });
+
+    updateFormFinancialAnalysis();
   };
 
   const renderBaseDropdown = () => {
@@ -811,6 +883,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const syrupsText = waffle.syrups.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ');
       const icecreamsText = waffle.icecreams ? waffle.icecreams.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ') : '';
 
+      let recipeCost = getStockItem(waffle.base)?.cost || 0;
+      if (waffle.toppings) waffle.toppings.forEach(tId => { recipeCost += getStockItem(tId)?.cost || 0; });
+      if (waffle.syrups) waffle.syrups.forEach(sId => { recipeCost += getStockItem(sId)?.cost || 0; });
+      if (waffle.icecreams) waffle.icecreams.forEach(iId => { recipeCost += getStockItem(iId)?.cost || 0; });
+      const marginPercent = waffle.price > 0 ? Math.round(((waffle.price - recipeCost) / waffle.price) * 100) : 0;
+
       card.innerHTML = `
         ${imgHTML}
         <div class="menu-item-admin-body">
@@ -825,6 +903,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ${toppingsText ? `<span class="badge-tag">Tops: ${toppingsText}</span>` : ''}
             ${syrupsText ? `<span class="badge-tag">Salsas: ${syrupsText}</span>` : ''}
             ${icecreamsText ? `<span class="badge-tag" style="border-color:rgba(0, 245, 212, 0.3); color:var(--neon-cyan);">Helado: ${icecreamsText}</span>` : ''}
+          </div>
+
+          <div style="margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
+            <span>Costo Receta: <strong style="color:#fff;">${formatCurrency(recipeCost)}</strong></span>
+            <span>Margen: <strong style="color:var(--neon-yellow);">${marginPercent}%</strong></span>
           </div>
 
           <div class="menu-item-admin-actions">
@@ -864,6 +947,10 @@ document.addEventListener('DOMContentLoaded', () => {
             icecreamCountSelect.value = selectedIcecreams.length.toString();
           }
           renderIceCreamFlavorSelectors(selectedIcecreams.length, selectedIcecreams);
+          
+          document.querySelectorAll('.menu-icecream-flavor-select').forEach(sel => {
+            sel.onchange = updateFormFinancialAnalysis;
+          });
 
           // Imagen
           document.getElementById('menu-image-path').value = waffle.image || '';
@@ -878,6 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           document.getElementById('menu-form-title').textContent = 'Editar Waffle';
           document.getElementById('menu-form-cancel-btn').style.display = 'block';
+          updateFormFinancialAnalysis();
           document.getElementById('menu-name').focus();
         }
       };
@@ -1126,4 +1214,373 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === helpModal) helpModal.style.display = 'none';
     };
   }
+
+  // --- PANEL 6: CONFIGURACIÓN DE DESARROLLADOR ---
+  const devToggle = document.getElementById('developer-toggle');
+  const devStatusBadge = document.getElementById('developer-status-badge');
+
+  const updateDevStatusUI = (enabled) => {
+    if (!devStatusBadge || !devToggle) return;
+    if (enabled) {
+      devStatusBadge.textContent = 'MÓDULO ACTIVO: widget flotante 🎨 visible en las vistas';
+      devStatusBadge.style.color = 'var(--neon-cyan)';
+      devStatusBadge.style.backgroundColor = 'rgba(0, 245, 212, 0.05)';
+      devStatusBadge.style.borderColor = 'rgba(0, 245, 212, 0.3)';
+      devToggle.checked = true;
+    } else {
+      devStatusBadge.textContent = 'MÓDULO INACTIVO: widget flotante oculto';
+      devStatusBadge.style.color = 'var(--text-muted)';
+      devStatusBadge.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+      devStatusBadge.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+      devToggle.checked = false;
+    }
+  };
+
+  const loadDeveloperSettingsPanel = async () => {
+    try {
+      const res = await fetch('/api/developer/settings');
+      const data = await res.json();
+      updateDevStatusUI(data.developerMode);
+    } catch (err) {
+      console.error(err);
+      showToast('Error al conectar con la API de desarrollador', true);
+    }
+  };
+
+  if (devToggle) {
+    devToggle.onchange = async () => {
+      const isChecked = devToggle.checked;
+      try {
+        const res = await fetch('/api/developer/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ developerMode: isChecked })
+        });
+        if (res.ok) {
+          updateDevStatusUI(isChecked);
+          showToast(isChecked ? 'Módulo de personalización activado. Recargando...' : 'Módulo de personalización desactivado. Recargando...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          showToast('Error al actualizar configuración', true);
+          devToggle.checked = !isChecked;
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error de conexión con el servidor', true);
+        devToggle.checked = !isChecked;
+      }
+    };
+  }
+
+  // --- PANEL 7: CONFIGURACIÓN DE DATOS DE LA EMPRESA ---
+  const companyForm = document.getElementById('admin-company-form');
+  const companyNameInput = document.getElementById('company-name-input');
+  const companyAddressInput = document.getElementById('company-address-input');
+  const companyHoursInput = document.getElementById('company-hours-input');
+  const companyInstagramInput = document.getElementById('company-instagram-input');
+  const companyPhoneInput = document.getElementById('company-phone-input');
+  const companyWhatsappEnabledInput = document.getElementById('company-whatsapp-enabled-input');
+
+  const loadCompanySettingsPanel = async () => {
+    try {
+      const res = await fetch('/api/company/info');
+      const data = await res.json();
+      if (companyNameInput) companyNameInput.value = data.companyName || '';
+      if (companyAddressInput) companyAddressInput.value = data.companyAddress || '';
+      if (companyHoursInput) companyHoursInput.value = data.companyHours || '';
+      if (companyInstagramInput) companyInstagramInput.value = data.companyInstagram || '';
+      if (companyPhoneInput) companyPhoneInput.value = data.companyPhone || '';
+      if (companyWhatsappEnabledInput) companyWhatsappEnabledInput.checked = data.whatsappOrdersEnabled !== false;
+
+      // Cargar settings de Hero
+      window.currentHeroImages = data.heroImages || [];
+      const carouselToggle = document.getElementById('admin-hero-carousel-toggle');
+      if (carouselToggle) carouselToggle.checked = !!data.heroCarouselEnabled;
+      renderHeroPreviews();
+
+      // Cargar settings de Mapa
+      window.currentMapBgImage = data.mapBgImage || '';
+      window.currentMapPinX = data.mapPinX !== undefined ? data.mapPinX : 50;
+      window.currentMapPinY = data.mapPinY !== undefined ? data.mapPinY : 50;
+      renderMapPreview();
+
+      // Cargar settings del Programa de Fidelización
+      await loadLoyaltySettings();
+    } catch (err) {
+      console.error(err);
+      showToast('Error al cargar datos de la empresa', true);
+    }
+  };
+
+  const loadLoyaltySettings = async () => {
+    try {
+      const settingsRes = await fetch('/api/loyalty/settings');
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        const loyaltyToggle = document.getElementById('admin-loyalty-toggle');
+        const thresholdInput = document.getElementById('admin-loyalty-threshold');
+        if (loyaltyToggle) {
+          loyaltyToggle.checked = !!settingsData.loyaltyEnabled;
+        }
+        if (thresholdInput) {
+          thresholdInput.value = settingsData.loyaltyPointsThreshold || 100;
+        }
+      }
+
+      const customersRes = await fetch('/api/loyalty/customers');
+      if (customersRes.ok) {
+        const list = await customersRes.json();
+        const tbody = document.getElementById('admin-loyalty-customers-body');
+        if (tbody) {
+          tbody.innerHTML = '';
+          if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding: 10px;">Ningún cliente registrado aún</td></tr>';
+          } else {
+            list.forEach(cust => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${cust.phone}</td>
+                <td>${cust.name}</td>
+                <td style="font-weight:700; color:var(--neon-cyan);">${cust.points}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error al cargar datos de fidelización:', err);
+    }
+  };
+
+  // Guardar configuración completa de Fidelización (Toggle + Threshold)
+  const saveLoyaltySettings = async () => {
+    const loyaltyToggle = document.getElementById('admin-loyalty-toggle');
+    const thresholdInput = document.getElementById('admin-loyalty-threshold');
+    
+    try {
+      const payload = {
+        loyaltyEnabled: loyaltyToggle ? loyaltyToggle.checked : false,
+        loyaltyPointsThreshold: thresholdInput ? parseInt(thresholdInput.value) : 100
+      };
+      
+      const res = await fetch('/api/loyalty/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast('Configuración de fidelización actualizada ⭐');
+      } else {
+        showToast('Error al actualizar fidelización', true);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error al conectar con el servidor', true);
+    }
+  };
+
+  const loyaltyToggle = document.getElementById('admin-loyalty-toggle');
+  if (loyaltyToggle) {
+    loyaltyToggle.onchange = saveLoyaltySettings;
+  }
+  
+  const loyaltySaveBtn = document.getElementById('admin-loyalty-save-btn');
+  if (loyaltySaveBtn) {
+    loyaltySaveBtn.onclick = saveLoyaltySettings;
+  }
+
+  if (companyForm) {
+    companyForm.onsubmit = async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        companyName: companyNameInput.value.trim(),
+        companyAddress: companyAddressInput.value.trim(),
+        companyHours: companyHoursInput.value.trim(),
+        companyInstagram: companyInstagramInput.value.trim(),
+        companyPhone: companyPhoneInput.value.trim(),
+        whatsappOrdersEnabled: companyWhatsappEnabledInput ? companyWhatsappEnabledInput.checked : true
+      };
+
+      try {
+        const res = await fetch('/api/company/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          showToast('¡Datos de la empresa guardados con éxito!');
+        } else {
+          const errData = await res.json();
+          showToast(errData.error || 'Error al guardar datos', true);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error al conectar con el servidor', true);
+      }
+    };
+  }
+
+  // --- LÓGICA DE IMÁGENES HERO ---
+  window.currentHeroImages = [];
+  const heroUploadInput = document.getElementById('admin-hero-images-upload');
+  const heroUploadBtn = document.getElementById('admin-hero-upload-btn');
+  const heroPreviewContainer = document.getElementById('admin-hero-images-preview');
+  const heroSaveBtn = document.getElementById('admin-hero-save-btn');
+  const heroCarouselToggle = document.getElementById('admin-hero-carousel-toggle');
+
+  if (heroUploadBtn) {
+    heroUploadBtn.onclick = () => heroUploadInput.click();
+  }
+
+  if (heroUploadInput) {
+    heroUploadInput.onchange = (e) => {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          window.currentHeroImages.push(ev.target.result);
+          renderHeroPreviews();
+        };
+        reader.readAsDataURL(file);
+      });
+      heroUploadInput.value = '';
+    };
+  }
+
+  function renderHeroPreviews() {
+    if (!heroPreviewContainer) return;
+    heroPreviewContainer.innerHTML = '';
+    window.currentHeroImages.forEach((imgSrc, idx) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:2px solid rgba(255,255,255,0.1);';
+      
+      const img = document.createElement('img');
+      img.src = imgSrc;
+      img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+      
+      const delBtn = document.createElement('button');
+      delBtn.innerHTML = '×';
+      delBtn.style.cssText = 'position:absolute; top:2px; right:2px; background:rgba(255,0,0,0.8); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;';
+      delBtn.onclick = () => {
+        window.currentHeroImages.splice(idx, 1);
+        renderHeroPreviews();
+      };
+      
+      wrap.appendChild(img);
+      wrap.appendChild(delBtn);
+      heroPreviewContainer.appendChild(wrap);
+    });
+  }
+
+  if (heroSaveBtn) {
+    heroSaveBtn.onclick = async () => {
+      try {
+        const payload = {
+          heroImages: window.currentHeroImages,
+          heroCarouselEnabled: heroCarouselToggle ? heroCarouselToggle.checked : false
+        };
+        const res = await fetch('/api/company/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Imágenes de portada guardadas correctamente');
+        } else {
+          showToast('Error al guardar imágenes', true);
+        }
+      } catch (err) {
+        showToast('Error de conexión', true);
+      }
+    };
+  }
+
+  // --- LÓGICA DEL MAPA ---
+  window.currentMapBgImage = '';
+  window.currentMapPinX = 50;
+  window.currentMapPinY = 50;
+
+  const mapUploadInput = document.getElementById('admin-map-upload');
+  const mapUploadBtn = document.getElementById('admin-map-upload-btn');
+  const mapPreviewContainer = document.getElementById('admin-map-preview-container');
+  const mapPreviewImg = document.getElementById('admin-map-preview-img');
+  const mapPin = document.getElementById('admin-map-pin');
+  const mapSaveBtn = document.getElementById('admin-map-save-btn');
+
+  if (mapUploadBtn) {
+    mapUploadBtn.onclick = () => mapUploadInput.click();
+  }
+
+  if (mapUploadInput) {
+    mapUploadInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          window.currentMapBgImage = ev.target.result;
+          renderMapPreview();
+        };
+        reader.readAsDataURL(file);
+      }
+      mapUploadInput.value = '';
+    };
+  }
+
+  function renderMapPreview() {
+    if (!mapPreviewImg || !mapPin) return;
+    if (window.currentMapBgImage) {
+      mapPreviewImg.src = window.currentMapBgImage;
+      mapPreviewImg.style.display = 'block';
+      mapPin.style.display = 'block';
+      mapPin.style.left = window.currentMapPinX + '%';
+      mapPin.style.top = window.currentMapPinY + '%';
+    } else {
+      mapPreviewImg.style.display = 'none';
+      mapPin.style.display = 'none';
+    }
+  }
+
+  if (mapPreviewContainer) {
+    mapPreviewContainer.onclick = (e) => {
+      if (!window.currentMapBgImage) return; // Sólo mover pin si hay imagen
+      const rect = mapPreviewContainer.getBoundingClientRect();
+      const xPos = e.clientX - rect.left;
+      const yPos = e.clientY - rect.top;
+      
+      window.currentMapPinX = (xPos / rect.width) * 100;
+      window.currentMapPinY = (yPos / rect.height) * 100;
+      
+      renderMapPreview();
+    };
+  }
+
+  if (mapSaveBtn) {
+    mapSaveBtn.onclick = async () => {
+      try {
+        const payload = {
+          mapBgImage: window.currentMapBgImage,
+          mapPinX: window.currentMapPinX,
+          mapPinY: window.currentMapPinY
+        };
+        const res = await fetch('/api/company/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Mapa de ubicación guardado correctamente');
+        } else {
+          showToast('Error al guardar mapa', true);
+        }
+      } catch (err) {
+        showToast('Error de conexión', true);
+      }
+    };
+  }
+
 });

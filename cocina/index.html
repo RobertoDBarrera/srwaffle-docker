@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sr. Waffle | KDS Cocina</title>
+  <!-- Google Fonts: Outfit y Pacifico -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Pacifico&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #0a0a0c;
+      --bg-secondary: #121216;
+      --bg-card: rgba(30, 30, 38, 0.4);
+      --border-card: rgba(255, 255, 255, 0.08);
+      
+      --neon-purple: #9d4edd;
+      --neon-purple-glow: rgba(157, 78, 221, 0.3);
+      --neon-pink: #ff007f;
+      --neon-pink-glow: rgba(255, 0, 127, 0.3);
+      --neon-cyan: #00f5d4;
+      --neon-cyan-glow: rgba(0, 245, 212, 0.3);
+      --neon-yellow: #fee440;
+      --neon-yellow-glow: rgba(254, 228, 64, 0.3);
+      
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0bc;
+      --text-muted: #6c6c7c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(157, 78, 221, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 245, 212, 0.08) 0px, transparent 50%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(18, 18, 22, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo h1 {
+      font-family: 'Pacifico', cursive;
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(0, 245, 212, 0.2);
+    }
+
+    .header-tag {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan-glow);
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .stat-dot.pending {
+      background-color: var(--neon-pink);
+      box-shadow: 0 0 8px var(--neon-pink);
+    }
+    .stat-dot.preparing {
+      background-color: var(--neon-yellow);
+      box-shadow: 0 0 8px var(--neon-yellow);
+    }
+    .stat-dot.ready {
+      background-color: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .kds-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 24px;
+      flex-grow: 1;
+      max-width: 1800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .kds-column {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 140px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .kds-column-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kds-column-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-transform: uppercase;
+    }
+
+    .kds-column-badge {
+      background: rgba(255, 255, 255, 0.07);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* Column States colors */
+    .kds-column.pending-col {
+      border-top: 4px solid var(--neon-pink);
+    }
+    .kds-column.pending-col .kds-column-title {
+      color: var(--neon-pink);
+    }
+    .kds-column.pending-col .kds-column-badge {
+      color: var(--neon-pink);
+      background: rgba(255, 0, 127, 0.1);
+    }
+
+    .kds-column.preparing-col {
+      border-top: 4px solid var(--neon-yellow);
+    }
+    .kds-column.preparing-col .kds-column-title {
+      color: var(--neon-yellow);
+    }
+    .kds-column.preparing-col .kds-column-badge {
+      color: var(--neon-yellow);
+      background: rgba(254, 228, 64, 0.1);
+    }
+
+    .kds-column.ready-col {
+      border-top: 4px solid var(--neon-cyan);
+    }
+    .kds-column.ready-col .kds-column-title {
+      color: var(--neon-cyan);
+    }
+    .kds-column.ready-col .kds-column-badge {
+      color: var(--neon-cyan);
+      background: rgba(0, 245, 212, 0.1);
+    }
+
+    .kds-cards-list {
+      padding: 16px;
+      overflow-y: auto;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* KDS Order Card */
+    .order-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .order-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .order-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 10px;
+    }
+
+    .order-id {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .order-time {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .order-time.critical {
+      color: var(--neon-pink);
+      font-weight: 700;
+      animation: pulse 1s infinite alternate;
+    }
+
+    .order-items {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .order-item-detail {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 3px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .order-item-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .order-item-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .order-card-footer {
+      margin-top: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .order-payment {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .order-action-btn {
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* Action Buttons Colors */
+    .pending-col .order-action-btn {
+      background: rgba(255, 0, 127, 0.15);
+      border: 1px solid var(--neon-pink);
+      color: var(--neon-pink);
+      box-shadow: 0 0 10px var(--neon-pink-glow);
+    }
+    .pending-col .order-action-btn:hover {
+      background: var(--neon-pink);
+      color: #fff;
+      box-shadow: 0 0 15px var(--neon-pink);
+    }
+
+    .preparing-col .order-action-btn {
+      background: rgba(254, 228, 64, 0.15);
+      border: 1px solid var(--neon-yellow);
+      color: var(--neon-yellow);
+      box-shadow: 0 0 10px var(--neon-yellow-glow);
+    }
+    .preparing-col .order-action-btn:hover {
+      background: var(--neon-yellow);
+      color: #000;
+      box-shadow: 0 0 15px var(--neon-yellow);
+    }
+
+    .ready-col .order-action-btn {
+      background: rgba(0, 245, 212, 0.15);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan-glow);
+    }
+    .ready-col .order-action-btn:hover {
+      background: var(--neon-cyan);
+      color: #000;
+      box-shadow: 0 0 15px var(--neon-cyan);
+    }
+
+    /* Sound Switch */
+    .sound-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sound-toggle-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .sound-icon {
+      font-size: 1.1rem;
+    }
+
+    /* Toast Notification for new orders */
+    .kds-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background: rgba(18, 18, 22, 0.9);
+      border: 1px solid var(--neon-purple);
+      box-shadow: 0 0 20px var(--neon-purple-glow);
+      padding: 16px 24px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .kds-toast.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .kds-toast-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fff;
+    }
+
+    .kds-toast-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.6; }
+      to { opacity: 1; }
+    }
+
+    /* Custom Scrollbar */
+    .kds-cards-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .kds-cards-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .kds-cards-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+    }
+    .kds-cards-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    @media (max-width: 1024px) {
+      .kds-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 16px;
+      }
+      .kds-column {
+        height: auto;
+        max-height: 500px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-logo">
+      <h1>Sr. Waffle</h1>
+      <span class="header-tag">KDS Cocina 🍳</span>
+    </div>
+
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <!-- Sound toggle switch -->
+      <div class="sound-toggle-wrapper" id="sound-toggle" onclick="toggleSound()">
+        <span class="sound-icon">🔊</span>
+        <span class="sound-toggle-label">Notificaciones de Sonido</span>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-dot pending"></div>
+          <span class="stat-label">Pendientes:</span>
+          <span class="stat-value" id="count-pending">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot preparing"></div>
+          <span class="stat-label">Preparando:</span>
+          <span class="stat-value" id="count-preparing">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot ready"></div>
+          <span class="stat-label">Listos:</span>
+          <span class="stat-value" id="count-ready">0</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="kds-container">
+    <!-- Columna Pendientes -->
+    <section class="kds-column pending-col" id="col-pending">
+      <div class="kds-column-header">
+        <h2 class="kds-column-title">
+          <span>⏳</span> Pendientes
+        </h2>
+        <span class="kds-column-badge" id="badge-pending">0</span>
+      </div>
+      <div class="kds-cards-list" id="list-pending">
+        <!-- Render dinámico de tarjetas -->
+      </div>
+    </section>
+
+    <!-- Columna Preparando -->
+    <section class="kds-column preparing-col" id="col-preparing">
+      <div class="kds-column-header">
+        <h2 class="kds-column-title">
+          <span>🍳</span> Preparando
+        </h2>
+        <span class="kds-column-badge" id="badge-preparing">0</span>
+      </div>
+      <div class="kds-cards-list" id="list-preparing">
+        <!-- Render dinámico de tarjetas -->
+      </div>
+    </section>
+
+    <!-- Columna Listos -->
+    <section class="kds-column ready-col" id="col-ready">
+      <div class="kds-column-header">
+        <h2 class="kds-column-title">
+          <span>🛎️</span> Listos
+        </h2>
+        <span class="kds-column-badge" id="badge-ready">0</span>
+      </div>
+      <div class="kds-cards-list" id="list-ready">
+        <!-- Render dinámico de tarjetas -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast de aviso de nuevos pedidos -->
+  <div class="kds-toast" id="kds-toast">
+    <div style="font-size: 24px;">🔔</div>
+    <div>
+      <div class="kds-toast-title">¡Nuevo Pedido Recibido!</div>
+      <div class="kds-toast-desc" id="kds-toast-desc">Pedido #sale_xxx ingresó a la cola de preparación.</div>
+    </div>
+  </div>
+
+  <!-- Controlador principal -->
+  <script src="/theme-manager.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+</html>

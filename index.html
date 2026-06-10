@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sr. Waffle | No es un waffle común</title>
   <meta name="description" content="Probá los mejores bubble waffles personalizados de la Patagonia. Armalo a tu gusto con toppings de chocolates, galletitas, frutas y salsas.">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3">
   <style>
     .nav-help-link {
       color: var(--neon-purple);
@@ -31,7 +31,7 @@
   <header>
     <div class="logo-container">
       <div class="logo-waffle-icon"></div>
-      <span class="logo-text">Sr. Waffle</span>
+      <span class="logo-text" id="header-company-name">Sr. Waffle</span>
     </div>
     <nav>
       <a class="nav-link active" data-view="inicio">Inicio</a>
@@ -86,7 +86,6 @@
   <!-- VISTA 3: ARMADOR INTERACTIVO (CLIENTE) -->
   <section id="view-builder" class="app-view builder-section">
     <div class="section-header" style="margin-bottom: 2.5rem;">
-      <span class="hero-badge">Custom Waffle Creator</span>
       <h2 class="section-title" style="font-family: var(--font-cursive); font-weight: normal; font-size: 3rem;">Armá tu Sr. Waffle</h2>
       <p class="section-subtitle">
         Elegí tus ingredientes preferidos. Podrás ver tu creación en tiempo real y enviarla directamente a nuestro WhatsApp para preparar tu pedido.
@@ -181,10 +180,30 @@
           </div>
         </div>
 
+        <!-- Consulta de Puntos / Club Waffle -->
+        <div id="loyalty-client-section" style="display: none; margin-top: 1rem; margin-bottom: 1rem; padding: 15px; background: rgba(157, 78, 221, 0.05); border: 1px dashed rgba(157, 78, 221, 0.3); border-radius: 12px; text-align: left;">
+          <div style="font-size: 0.9rem; font-weight: 700; color: var(--neon-purple); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span>⭐ Sr. Waffle Club</span>
+            <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-secondary);">Consultar Puntos</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="loyalty-client-phone" placeholder="Teléfono (ej: 549...)" style="flex: 1; padding: 8px; font-size: 0.85rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; outline: none;">
+            <button type="button" id="loyalty-client-query-btn" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; height: 35px; min-width: 80px;">Consultar</button>
+          </div>
+          <div id="loyalty-client-result" style="display: none; margin-top: 10px; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+            <div style="color: #fff;">Hola, <span id="loyalty-client-name" style="font-weight: 600;"></span>!</div>
+            <div style="margin-top: 4px; color: var(--text-secondary);">Tus puntos acumulados: <span id="loyalty-client-points" style="font-weight: 700; color: var(--neon-cyan); font-size: 1.05rem;">0</span></div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;" id="loyalty-client-desc">Sumás puntos por tus compras en nuestro local.</div>
+          </div>
+        </div>
+
         <div class="price-summary-box">
           <div class="price-summary-title">Total Estimado</div>
           <div class="price-summary-value" id="client-waffle-price-value">$0</div>
         </div>
+        <button class="btn-primary" id="client-send-wa-btn" style="width: 100%; margin-top: 1.5rem; background: #25D366; border-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          Pedir por WhatsApp 💬
+        </button>
       </div>
     </div>
   </section>
@@ -198,27 +217,27 @@
   <section class="footer-section">
     <div class="footer-grid">
       <div class="footer-info">
-        <h3>Sr. Waffle</h3>
+        <h3 id="footer-company-name">Sr. Waffle</h3>
         <div class="footer-details">
           <div class="footer-detail-item">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)</span>
+            <span id="footer-company-address">Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)</span>
           </div>
           <div class="footer-detail-item">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>Lunes a Domingos: 10:00 hs a 22:00 hs</span>
+            <span id="footer-company-hours">Lunes a Domingos: 10:00 hs a 22:00 hs</span>
           </div>
           <div class="footer-detail-item">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-            <span>@srwaffle.patagonia</span>
+            <span id="footer-company-instagram">@srwaffle.patagonia</span>
           </div>
         </div>
       </div>
-      <div class="footer-map-container">
-        <div class="footer-map-placeholder">
-          <div class="map-glow-pin"></div>
-          <span style="font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Kiosco Sr. Waffle</span>
-          <span style="font-size:0.8rem; color:var(--text-muted);">Ubicados junto al patio de comidas</span>
+      <div class="footer-map-container" id="client-footer-map-container">
+        <div class="footer-map-placeholder" id="client-footer-map-bg" style="position:relative;">
+          <div class="map-glow-pin" id="client-footer-map-pin"></div>
+          <span style="font-weight: 700; text-transform: uppercase; letter-spacing: 1px;" id="client-footer-map-title">Kiosco Sr. Waffle</span>
+          <span style="font-size:0.8rem; color:var(--text-muted);" id="client-footer-map-desc">Ubicados junto al patio de comidas</span>
         </div>
       </div>
     </div>
@@ -261,7 +280,8 @@
   </div>
 
   <!-- CONTROLADORES JAVASCRIPT -->
+  <script src="/theme-manager.js?v=3"></script>
   <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

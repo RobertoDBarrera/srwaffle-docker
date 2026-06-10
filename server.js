@@ -99,7 +99,7 @@ app.post('/api/sales', async (req, res) => {
       })),
       total: parseInt(total),
       paymentMethod,
-      status: 'completed'
+      status: 'pending'
     };
 
     // Ejecutar checkout transaccional en Postgres
@@ -181,6 +181,210 @@ app.post('/api/auth/change-credentials', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al cambiar credenciales' });
+  }
+});
+
+// --- ENDPOINTS CONFIGURACIÓN DESARROLLADOR ---
+
+// GET: Obtener configuración de desarrollador y tema
+app.get('/api/developer/settings', async (req, res) => {
+  try {
+    const devSettings = await db.getDeveloperSettings();
+    res.json(devSettings);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener configuración de desarrollador' });
+  }
+});
+
+// POST: Habilitar/Deshabilitar módulo desarrollador
+app.post('/api/developer/settings', async (req, res) => {
+  try {
+    const { developerMode } = req.body;
+    if (developerMode === undefined) {
+      return res.status(400).json({ error: 'Falta el campo developerMode' });
+    }
+    await db.updateDeveloperSettings(developerMode, undefined);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar configuración de desarrollador' });
+  }
+});
+
+// POST: Actualizar colores del tema
+app.post('/api/developer/theme', async (req, res) => {
+  try {
+    const { themeColors } = req.body;
+    if (themeColors === undefined) {
+      return res.status(400).json({ error: 'Falta el campo themeColors' });
+    }
+    await db.updateDeveloperSettings(undefined, themeColors);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al guardar colores del tema' });
+  }
+});
+
+// POST: Resetear colores del tema
+app.post('/api/developer/theme/reset', async (req, res) => {
+  try {
+    await db.updateDeveloperSettings(undefined, {});
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al resetear colores del tema' });
+  }
+});
+
+// GET: Obtener información de la empresa
+app.get('/api/company/info', async (req, res) => {
+  try {
+    const info = await db.getCompanyInfo();
+    res.json(info);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener información de la empresa' });
+  }
+});
+
+// POST: Actualizar información de la empresa
+app.post('/api/company/info', async (req, res) => {
+  try {
+    const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY } = req.body;
+    
+    // Si no viene alguno de los principales, intentamos no pisar si es posible, pero requerimos los básicos si se envía el formulario de empresa.
+    // Como ahora puede ser una actualización parcial (sólo hero o sólo mapa), vamos a buscar los existentes y hacer merge.
+    const currentInfo = await db.getCompanyInfo();
+    
+    await db.updateCompanyInfo({
+      companyName: companyName !== undefined ? companyName : currentInfo.companyName,
+      companyAddress: companyAddress !== undefined ? companyAddress : currentInfo.companyAddress,
+      companyHours: companyHours !== undefined ? companyHours : currentInfo.companyHours,
+      companyInstagram: companyInstagram !== undefined ? companyInstagram : currentInfo.companyInstagram,
+      companyPhone: companyPhone !== undefined ? companyPhone : currentInfo.companyPhone,
+      whatsappOrdersEnabled: whatsappOrdersEnabled !== undefined ? whatsappOrdersEnabled : currentInfo.whatsappOrdersEnabled,
+      heroImages: heroImages !== undefined ? heroImages : currentInfo.heroImages,
+      heroCarouselEnabled: heroCarouselEnabled !== undefined ? heroCarouselEnabled : currentInfo.heroCarouselEnabled,
+      mapBgImage: mapBgImage !== undefined ? mapBgImage : currentInfo.mapBgImage,
+      mapPinX: mapPinX !== undefined ? mapPinX : currentInfo.mapPinX,
+      mapPinY: mapPinY !== undefined ? mapPinY : currentInfo.mapPinY
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al guardar información de la empresa' });
+  }
+});
+
+// POST: Guardar preset de desarrollador personalizado
+app.post('/api/developer/preset', async (req, res) => {
+  try {
+    const { name, colors } = req.body;
+    if (!name || !colors) {
+      return res.status(400).json({ error: 'Nombre y colores son requeridos' });
+    }
+    const newPreset = await db.saveCustomPreset({ name, colors });
+    res.json({ success: true, preset: newPreset });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al guardar preset personalizado' });
+  }
+});
+
+// DELETE: Eliminar preset de desarrollador personalizado
+app.delete('/api/developer/preset/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.deleteCustomPreset(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar preset personalizado' });
+  }
+});
+
+// PUT: Actualizar estado de una venta (KDS)
+app.put('/api/sales/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ error: 'Falta el campo status' });
+    }
+    await db.updateSaleStatus(id, status);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar el estado de la venta' });
+  }
+});
+
+// GET: Obtener estado de fidelización
+app.get('/api/loyalty/settings', async (req, res) => {
+  try {
+    const settings = await db.getLoyaltySettings();
+    res.json(settings);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener configuración de fidelización' });
+  }
+});
+
+// POST: Modificar estado de fidelización
+app.post('/api/loyalty/settings', async (req, res) => {
+  try {
+    const { loyaltyEnabled, loyaltyPointsThreshold } = req.body;
+    if (loyaltyEnabled === undefined) {
+      return res.status(400).json({ error: 'Falta el campo loyaltyEnabled' });
+    }
+    await db.updateLoyaltySettings(loyaltyEnabled, loyaltyPointsThreshold);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar configuración de fidelización' });
+  }
+});
+
+// GET: Buscar cliente de fidelización
+app.get('/api/loyalty/customer/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const customer = await db.getLoyaltyCustomer(phone);
+    if (!customer) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    res.json(customer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener cliente de fidelización' });
+  }
+});
+
+// POST: Crear o acumular puntos a un cliente
+app.post('/api/loyalty/customer', async (req, res) => {
+  try {
+    const { phone, name, pointsToAdd } = req.body;
+    if (!phone || !name || pointsToAdd === undefined) {
+      return res.status(400).json({ error: 'Teléfono, nombre y puntos a agregar son requeridos' });
+    }
+    const customer = await db.updateLoyaltyPoints(phone, name, parseInt(pointsToAdd));
+    res.json({ success: true, customer });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar puntos de fidelización' });
+  }
+});
+
+// GET: Obtener lista de clientes de fidelización
+app.get('/api/loyalty/customers', async (req, res) => {
+  try {
+    const list = await db.getLoyaltyCustomers();
+    res.json(list);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener lista de clientes' });
   }
 });
 

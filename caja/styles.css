@@ -5,7 +5,11 @@
   --bg-primary: #121212;
   --bg-secondary: #1a1a1a;
   --bg-tertiary: #242424;
-  --bg-card: rgba(30, 30, 30, 0.75);
+  --bg-card-raw: #1e1e1e;
+  --bg-card: color-mix(in srgb, var(--bg-card-raw) 75%, transparent);
+  --bg-header-raw: #121212;
+  --bg-header: color-mix(in srgb, var(--bg-header-raw) 85%, transparent);
+  --bg-footer: #0c0c0c;
   
   --neon-purple: #9d4edd;
   --neon-purple-glow: rgba(157, 78, 221, 0.5);
@@ -46,7 +50,7 @@ body {
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(38, 38, 38, 0.4) 0%, transparent 100%),
     radial-gradient(circle at 90% 80%, rgba(30, 30, 30, 0.6) 0%, transparent 100%),
-    linear-gradient(135deg, #111111 0%, #1c1c1c 100%);
+    linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   background-attachment: fixed;
 }
 
@@ -123,7 +127,7 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 5%;
-  background-color: rgba(18, 18, 18, 0.85);
+  background-color: var(--bg-header);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -468,7 +472,7 @@ nav {
 /* Ubicación y Footer */
 .footer-section {
   padding: 5rem 10% 2rem;
-  background-color: #0c0c0c;
+  background-color: var(--bg-footer);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 

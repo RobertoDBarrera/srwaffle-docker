@@ -1,10 +1,13 @@
 // Lógica del Módulo de Caja POS - Sr. Waffle
 document.addEventListener('DOMContentLoaded', () => {
   // --- INICIALIZACIÓN DE ESTADO ---
-  let stock = [];
+  let stock = {};
   let menu = [];
   let cart = [];
   let selectedPaymentMethod = 'Efectivo';
+  let loyaltyEnabled = false;
+  let loyaltyPointsThreshold = 100;
+  let currentLoyaltyCustomer = null;
   
   let pinInput = '';
 
@@ -77,6 +80,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const menuRes = await fetch('/api/menu');
       menu = await menuRes.json();
+
+      try {
+        const settingsRes = await fetch('/api/loyalty/settings');
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          loyaltyEnabled = !!settingsData.loyaltyEnabled;
+          loyaltyPointsThreshold = settingsData.loyaltyPointsThreshold || 100;
+        }
+      } catch (err) {
+        console.warn('Error al obtener configuracion de fidelizacion:', err);
+      }
     } catch (error) {
       console.error('Error al cargar datos del servidor:', error);
       showToast('Error al conectar con el servidor', true);
@@ -267,6 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderPOS = () => {
     renderPOSCatalog();
     renderCart();
+    
+    const loyaltySec = document.getElementById('loyalty-pos-section');
+    if (loyaltySec) {
+      loyaltySec.style.display = loyaltyEnabled ? 'block' : 'none';
+    }
   };
 
   const renderPOSCatalog = () => {
@@ -702,6 +721,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const total = cart.reduce((sum, item) => sum + item.price, 0);
     document.getElementById('pos-total').textContent = formatCurrency(total);
 
+    if (loyaltyEnabled) {
+      const pointsToAddSpan = document.getElementById('loyalty-points-to-add');
+      if (pointsToAddSpan) {
+        pointsToAddSpan.textContent = Math.floor(total / loyaltyPointsThreshold);
+      }
+    }
+
     const paymentButtons = document.querySelectorAll('.payment-btn');
     paymentButtons.forEach(btn => {
       const method = btn.getAttribute('data-method');
@@ -724,12 +750,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cart.length === 0) return;
 
     try {
+      const total = cart.reduce((sum, item) => sum + item.price, 0);
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart,
-          total: cart.reduce((sum, item) => sum + item.price, 0),
+          total: total,
           paymentMethod: selectedPaymentMethod
         })
       });
@@ -741,6 +768,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      // Si el programa está activo y hay un cliente identificado, registrar/acumular puntos
+      if (loyaltyEnabled && currentLoyaltyCustomer) {
+        const phoneInput = document.getElementById('loyalty-phone');
+        const customerNameInput = document.getElementById('loyalty-name');
+        const phone = phoneInput ? phoneInput.value.trim() : '';
+        const name = customerNameInput ? (customerNameInput.value.trim() || 'Cliente Waffle Club') : 'Cliente Waffle Club';
+        const pointsToSum = Math.floor(total / loyaltyPointsThreshold);
+
+        if (phone && pointsToSum > 0) {
+          try {
+            await fetch('/api/loyalty/customer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone,
+                name,
+                pointsToAdd: pointsToSum
+              })
+            });
+          } catch (err) {
+            console.error('Error al registrar puntos de fidelización:', err);
+          }
+        }
+      }
+
+      // Limpiar inputs de fidelización
+      const phoneInput = document.getElementById('loyalty-phone');
+      const customerNameInput = document.getElementById('loyalty-name');
+      const searchStatus = document.getElementById('loyalty-search-status');
+      const customerInfoDiv = document.getElementById('loyalty-customer-info');
+      
+      if (phoneInput) phoneInput.value = '';
+      if (customerNameInput) customerNameInput.value = '';
+      if (searchStatus) searchStatus.textContent = '';
+      if (customerInfoDiv) customerInfoDiv.style.display = 'none';
+      currentLoyaltyCustomer = null;
+
       showToast('¡Venta registrada con éxito!');
       cart = [];
       await loadState();
@@ -750,6 +814,64 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Error al conectar con el servidor', true);
     }
   };
+
+  // --- LOGICA DE EVENTOS DE FIDELIZACIÓN EN CAJA ---
+  const initLoyaltyEventListeners = () => {
+    const findBtn = document.getElementById('loyalty-find-btn');
+    const phoneInput = document.getElementById('loyalty-phone');
+    const searchStatus = document.getElementById('loyalty-search-status');
+    const customerInfoDiv = document.getElementById('loyalty-customer-info');
+    const customerNameInput = document.getElementById('loyalty-name');
+    const currentPointsSpan = document.getElementById('loyalty-points-current');
+    const pointsToAddSpan = document.getElementById('loyalty-points-to-add');
+
+    if (findBtn && phoneInput) {
+      findBtn.onclick = async (e) => {
+        if (e) e.preventDefault();
+        const phone = phoneInput.value.trim();
+        if (!phone) {
+          showToast('Ingrese un número de teléfono', true);
+          return;
+        }
+        searchStatus.textContent = 'Buscando...';
+        customerInfoDiv.style.display = 'none';
+        currentLoyaltyCustomer = null;
+
+        try {
+          const res = await fetch(`/api/loyalty/customer/${phone}`);
+          if (res.ok) {
+            const customer = await res.json();
+            currentLoyaltyCustomer = customer;
+            searchStatus.textContent = 'Club Waffle ⭐';
+            if (customerNameInput) customerNameInput.value = customer.name;
+            if (currentPointsSpan) currentPointsSpan.textContent = customer.points;
+            if (pointsToAddSpan) {
+              const total = cart.reduce((sum, item) => sum + item.price, 0);
+              pointsToAddSpan.textContent = Math.floor(total / 100);
+            }
+            customerInfoDiv.style.display = 'flex';
+          } else if (res.status === 404) {
+            searchStatus.textContent = 'Cliente Nuevo';
+            if (customerNameInput) customerNameInput.value = '';
+            if (currentPointsSpan) currentPointsSpan.textContent = '0';
+            if (pointsToAddSpan) {
+              const total = cart.reduce((sum, item) => sum + item.price, 0);
+              pointsToAddSpan.textContent = Math.floor(total / 100);
+            }
+            customerInfoDiv.style.display = 'flex';
+            currentLoyaltyCustomer = { phone, name: '', points: 0, isNew: true };
+          } else {
+            searchStatus.textContent = 'No Encontrado';
+          }
+        } catch (e) {
+          console.error(e);
+          searchStatus.textContent = 'Error';
+        }
+      };
+    }
+  };
+
+  initLoyaltyEventListeners();
 
   // --- VERIFICAR ESTADO DE AUTENTICACIÓN INICIAL ---
   if (sessionStorage.getItem('caja_authenticated') === 'true') {

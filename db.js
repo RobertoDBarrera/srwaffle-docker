@@ -21,6 +21,7 @@ const STOCK_FILE = path.join(DATA_DIR, 'stock.json');
 const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const SALES_FILE = path.join(DATA_DIR, 'sales.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const LOYALTY_CUSTOMERS_FILE = path.join(DATA_DIR, 'loyalty_customers.json');
 
 // --- VALORES INICIALES DE SEMILLA ---
 const INITIAL_STOCK = {
@@ -96,7 +97,21 @@ const INITIAL_MENU = [
 
 const INITIAL_SETTINGS = {
   adminPassword: 'admin',
-  cashierPin: '1234'
+  cashierPin: '1234',
+  developerMode: false,
+  themeColors: {},
+  companyName: 'Sr. Waffle',
+  companyAddress: 'Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)',
+  companyHours: 'Lunes a Domingos: 10:00 hs a 22:00 hs',
+  companyInstagram: '@srwaffle.patagonia',
+  companyPhone: '5491123456789',
+  whatsappOrdersEnabled: true,
+  customPresets: [],
+  heroImages: ['suit_1786.jpg'],
+  heroCarouselEnabled: false,
+  mapBgImage: '',
+  mapPinX: 50,
+  mapPinY: 50
 };
 
 const generateMockSales = () => {
@@ -162,6 +177,7 @@ function readJSON(filePath) {
     if (filePath === MENU_FILE) return INITIAL_MENU;
     if (filePath === SALES_FILE) return generateMockSales();
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
+    if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
   }
   try {
     const data = fs.readFileSync(filePath, 'utf8');
@@ -171,6 +187,7 @@ function readJSON(filePath) {
     if (filePath === MENU_FILE) return INITIAL_MENU;
     if (filePath === SALES_FILE) return [];
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
+    if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
   }
 }
 
@@ -209,6 +226,7 @@ const initializeDataFiles = () => {
   if (!fs.existsSync(MENU_FILE)) writeJSON(MENU_FILE, INITIAL_MENU);
   if (!fs.existsSync(SALES_FILE)) writeJSON(SALES_FILE, generateMockSales());
   if (!fs.existsSync(SETTINGS_FILE)) writeJSON(SETTINGS_FILE, INITIAL_SETTINGS);
+  if (!fs.existsSync(LOYALTY_CUSTOMERS_FILE)) writeJSON(LOYALTY_CUSTOMERS_FILE, []);
 };
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
@@ -255,6 +273,22 @@ const initPostgresTables = async () => {
         cashier_pin VARCHAR(4) NOT NULL
       )
     `);
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS developer_mode BOOLEAN DEFAULT FALSE;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS theme_colors TEXT DEFAULT \'{}\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) DEFAULT \'Sr. Waffle\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_address VARCHAR(255) DEFAULT \'Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_hours VARCHAR(255) DEFAULT \'Lunes a Domingos: 10:00 hs a 22:00 hs\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_instagram VARCHAR(255) DEFAULT \'@srwaffle.patagonia\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_phone VARCHAR(255) DEFAULT \'5491123456789\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_orders_enabled BOOLEAN DEFAULT TRUE;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS loyalty_enabled BOOLEAN DEFAULT FALSE;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS loyalty_points_threshold INTEGER DEFAULT 100;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS custom_presets TEXT DEFAULT \'[]\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS hero_images TEXT DEFAULT \'{}\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS hero_carousel_enabled BOOLEAN DEFAULT FALSE;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_bg_image TEXT DEFAULT \'\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_pin_x INTEGER DEFAULT 50;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_pin_y INTEGER DEFAULT 50;');
 
     // stock
     await client.query(`
@@ -265,6 +299,7 @@ const initPostgresTables = async () => {
         stock INTEGER NOT NULL DEFAULT 0,
         min_stock INTEGER NOT NULL DEFAULT 0,
         price INTEGER NOT NULL DEFAULT 0,
+        cost INTEGER NOT NULL DEFAULT 0,
         unit VARCHAR(50) NOT NULL DEFAULT 'porciones'
       )
     `);
@@ -293,6 +328,15 @@ const initPostgresTables = async () => {
         total INTEGER NOT NULL,
         payment_method VARCHAR(50) NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'completed'
+      )
+    `);
+
+    // loyalty customers
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_customers (
+        phone VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        points INTEGER NOT NULL DEFAULT 0
       )
     `);
 
@@ -402,6 +446,179 @@ const updateSettings = async (newAdminPassword, newCashierPin) => {
   }
 };
 
+const getDeveloperSettings = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT developer_mode AS "developerMode", theme_colors AS "themeColors", custom_presets AS "customPresets" FROM settings LIMIT 1');
+    const row = res.rows[0] || { developerMode: false, themeColors: '{}', customPresets: '[]' };
+    let themeColors = {};
+    let customPresets = [];
+    try {
+      themeColors = typeof row.themeColors === 'string' ? JSON.parse(row.themeColors || '{}') : (row.themeColors || {});
+    } catch (e) {
+      console.error('Error parsing themeColors from database:', e);
+    }
+    try {
+      customPresets = typeof row.customPresets === 'string' ? JSON.parse(row.customPresets || '[]') : (row.customPresets || []);
+    } catch (e) {
+      console.error('Error parsing customPresets from database:', e);
+    }
+    return {
+      developerMode: !!row.developerMode,
+      themeColors: themeColors,
+      customPresets: customPresets
+    };
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    return {
+      developerMode: settings.developerMode !== undefined ? !!settings.developerMode : false,
+      themeColors: settings.themeColors || {},
+      customPresets: settings.customPresets || []
+    };
+  }
+};
+
+const updateDeveloperSettings = async (developerMode, themeColors) => {
+  if (usePostgres) {
+    const current = await getDeveloperSettings();
+    const mode = developerMode !== undefined ? developerMode : current.developerMode;
+    const colors = themeColors !== undefined ? JSON.stringify(themeColors) : JSON.stringify(current.themeColors);
+    await pool.query('UPDATE settings SET developer_mode = $1, theme_colors = $2 WHERE id = 1', [mode, colors]);
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    if (developerMode !== undefined) settings.developerMode = developerMode;
+    if (themeColors !== undefined) settings.themeColors = themeColors;
+    writeJSON(SETTINGS_FILE, settings);
+  }
+};
+
+const getCompanyInfo = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT company_name, company_address, company_hours, company_instagram, company_phone, whatsapp_orders_enabled, hero_images, hero_carousel_enabled, map_bg_image, map_pin_x, map_pin_y FROM settings LIMIT 1');
+    const row = res.rows[0] || {};
+    
+    let parsedHeroImages = ['suit_1786.jpg'];
+    if (row.hero_images) {
+      try {
+        parsedHeroImages = JSON.parse(row.hero_images);
+      } catch (e) {
+        console.error('Error parsing hero_images:', e);
+      }
+    }
+
+    return {
+      companyName: row.company_name || 'Sr. Waffle',
+      companyAddress: row.company_address || 'Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)',
+      companyHours: row.company_hours || 'Lunes a Domingos: 10:00 hs a 22:00 hs',
+      companyInstagram: row.company_instagram || '@srwaffle.patagonia',
+      companyPhone: row.company_phone || '5491123456789',
+      whatsappOrdersEnabled: row.whatsapp_orders_enabled !== false,
+      heroImages: parsedHeroImages,
+      heroCarouselEnabled: !!row.hero_carousel_enabled,
+      mapBgImage: row.map_bg_image || '',
+      mapPinX: row.map_pin_x !== null && row.map_pin_x !== undefined ? row.map_pin_x : 50,
+      mapPinY: row.map_pin_y !== null && row.map_pin_y !== undefined ? row.map_pin_y : 50
+    };
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    return {
+      companyName: settings.companyName || 'Sr. Waffle',
+      companyAddress: settings.companyAddress || 'Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)',
+      companyHours: settings.companyHours || 'Lunes a Domingos: 10:00 hs a 22:00 hs',
+      companyInstagram: settings.companyInstagram || '@srwaffle.patagonia',
+      companyPhone: settings.companyPhone || '5491123456789',
+      whatsappOrdersEnabled: settings.whatsappOrdersEnabled !== false,
+      heroImages: settings.heroImages || ['suit_1786.jpg'],
+      heroCarouselEnabled: !!settings.heroCarouselEnabled,
+      mapBgImage: settings.mapBgImage || '',
+      mapPinX: settings.mapPinX !== undefined ? settings.mapPinX : 50,
+      mapPinY: settings.mapPinY !== undefined ? settings.mapPinY : 50
+    };
+  }
+};
+
+const updateCompanyInfo = async (info) => {
+  const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY } = info;
+  
+  if (usePostgres) {
+    await pool.query(
+      'UPDATE settings SET company_name = $1, company_address = $2, company_hours = $3, company_instagram = $4, company_phone = $5, whatsapp_orders_enabled = $6, hero_images = $7, hero_carousel_enabled = $8, map_bg_image = $9, map_pin_x = $10, map_pin_y = $11 WHERE id = 1',
+      [
+        companyName, companyAddress, companyHours, companyInstagram, companyPhone, !!whatsappOrdersEnabled,
+        heroImages ? JSON.stringify(heroImages) : '[]', !!heroCarouselEnabled, mapBgImage || '', 
+        mapPinX !== undefined ? parseInt(mapPinX) : 50, mapPinY !== undefined ? parseInt(mapPinY) : 50
+      ]
+    );
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    settings.companyName = companyName;
+    settings.companyAddress = companyAddress;
+    settings.companyHours = companyHours;
+    settings.companyInstagram = companyInstagram;
+    settings.companyPhone = companyPhone;
+    settings.whatsappOrdersEnabled = !!whatsappOrdersEnabled;
+    
+    if (heroImages !== undefined) settings.heroImages = heroImages;
+    if (heroCarouselEnabled !== undefined) settings.heroCarouselEnabled = !!heroCarouselEnabled;
+    if (mapBgImage !== undefined) settings.mapBgImage = mapBgImage;
+    if (mapPinX !== undefined) settings.mapPinX = parseInt(mapPinX);
+    if (mapPinY !== undefined) settings.mapPinY = parseInt(mapPinY);
+    
+    writeJSON(SETTINGS_FILE, settings);
+  }
+};
+
+const getCustomPresets = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT custom_presets AS "customPresets" FROM settings LIMIT 1');
+    const row = res.rows[0] || { customPresets: '[]' };
+    try {
+      return typeof row.customPresets === 'string' ? JSON.parse(row.customPresets || '[]') : (row.customPresets || []);
+    } catch (e) {
+      console.error('Error parsing custom_presets:', e);
+      return [];
+    }
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    return settings.customPresets || [];
+  }
+};
+
+const saveCustomPreset = async (preset) => {
+  const presets = await getCustomPresets();
+  const index = presets.findIndex(p => p.name === preset.name);
+  const newPreset = {
+    id: preset.id || `preset_${Date.now()}`,
+    name: preset.name,
+    colors: preset.colors
+  };
+  if (index !== -1) {
+    presets[index] = newPreset;
+  } else {
+    presets.push(newPreset);
+  }
+  
+  if (usePostgres) {
+    await pool.query('UPDATE settings SET custom_presets = $1 WHERE id = 1', [JSON.stringify(presets)]);
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    settings.customPresets = presets;
+    writeJSON(SETTINGS_FILE, settings);
+  }
+  return newPreset;
+};
+
+const deleteCustomPreset = async (id) => {
+  let presets = await getCustomPresets();
+  presets = presets.filter(p => p.id !== id);
+  if (usePostgres) {
+    await pool.query('UPDATE settings SET custom_presets = $1 WHERE id = 1', [JSON.stringify(presets)]);
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    settings.customPresets = presets;
+    writeJSON(SETTINGS_FILE, settings);
+  }
+};
+
 const getStock = async () => {
   if (usePostgres) {
     const res = await pool.query('SELECT * FROM stock');
@@ -416,6 +633,7 @@ const getStock = async () => {
           stock: row.stock,
           minStock: row.min_stock,
           price: row.price,
+          cost: row.cost || 0,
           unit: row.unit
         });
       }
@@ -428,15 +646,15 @@ const getStock = async () => {
 
 const createStockItem = async (item) => {
   if (usePostgres) {
-    const { id, name, category, stock, minStock, price, unit } = item;
+    const { id, name, category, stock, minStock, price, cost, unit } = item;
     await pool.query(
-      'INSERT INTO stock (id, name, category, stock, min_stock, price, unit) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [id, name, category, stock, minStock, price, unit]
+      'INSERT INTO stock (id, name, category, stock, min_stock, price, cost, unit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [id, name, category, stock, minStock, price, cost || 0, unit]
     );
   } else {
     const stock = readJSON(STOCK_FILE);
     if (!stock[item.category]) stock[item.category] = [];
-    stock[item.category].push(item);
+    stock[item.category].push({ cost: 0, ...item });
     writeJSON(STOCK_FILE, stock);
   }
   return item;
@@ -444,10 +662,10 @@ const createStockItem = async (item) => {
 
 const updateStockItem = async (id, item) => {
   if (usePostgres) {
-    const { name, category, stock, minStock, price, unit } = item;
+    const { name, category, stock, minStock, price, cost, unit } = item;
     await pool.query(
-      'UPDATE stock SET name = $1, category = $2, stock = $3, min_stock = $4, price = $5, unit = $6 WHERE id = $7',
-      [name, category, stock, minStock, price, unit, id]
+      'UPDATE stock SET name = $1, category = $2, stock = $3, min_stock = $4, price = $5, cost = $6, unit = $7 WHERE id = $8',
+      [name, category, stock, minStock, price, cost || 0, unit, id]
     );
   } else {
     const stock = readJSON(STOCK_FILE);
@@ -457,9 +675,9 @@ const updateStockItem = async (id, item) => {
         if (item.category !== cat) {
           stock[cat].splice(idx, 1);
           if (!stock[item.category]) stock[item.category] = [];
-          stock[item.category].push({ id, ...item });
+          stock[item.category].push({ id, cost: 0, ...item });
         } else {
-          stock[cat][idx] = { id, ...item };
+          stock[cat][idx] = { id, cost: 0, ...item };
         }
         break;
       }
@@ -487,13 +705,15 @@ const deleteStockItem = async (id) => {
 
 const updateStockItemFields = async (id, fields) => {
   if (usePostgres) {
-    const { price, minStock, stockToAdd } = fields;
-    if (price !== undefined && minStock !== undefined) {
-      await pool.query('UPDATE stock SET price = $1, min_stock = $2 WHERE id = $3', [price, minStock, id]);
-    } else if (price !== undefined) {
+    const { price, minStock, stockToAdd, cost } = fields;
+    if (price !== undefined) {
       await pool.query('UPDATE stock SET price = $1 WHERE id = $2', [price, id]);
-    } else if (minStock !== undefined) {
+    }
+    if (minStock !== undefined) {
       await pool.query('UPDATE stock SET min_stock = $1 WHERE id = $2', [minStock, id]);
+    }
+    if (cost !== undefined) {
+      await pool.query('UPDATE stock SET cost = $1 WHERE id = $2', [cost, id]);
     }
     if (stockToAdd !== undefined) {
       await pool.query('UPDATE stock SET stock = stock + $1 WHERE id = $2', [stockToAdd, id]);
@@ -508,6 +728,7 @@ const updateStockItemFields = async (id, fields) => {
       stock: row.stock,
       minStock: row.min_stock,
       price: row.price,
+      cost: row.cost || 0,
       unit: row.unit
     };
   } else {
@@ -518,6 +739,7 @@ const updateStockItemFields = async (id, fields) => {
       if (item) {
         if (fields.price !== undefined) item.price = fields.price;
         if (fields.minStock !== undefined) item.minStock = fields.minStock;
+        if (fields.cost !== undefined) item.cost = fields.cost;
         if (fields.stockToAdd !== undefined) item.stock += fields.stockToAdd;
         foundItem = item;
         break;
@@ -831,11 +1053,115 @@ const executeRefund = async (saleId, menu) => {
   }
 };
 
+const getLoyaltySettings = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT loyalty_enabled AS "loyaltyEnabled", loyalty_points_threshold AS "loyaltyPointsThreshold" FROM settings LIMIT 1');
+    const row = res.rows[0] || {};
+    return {
+      loyaltyEnabled: !!row.loyaltyEnabled,
+      loyaltyPointsThreshold: row.loyaltyPointsThreshold || 100
+    };
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    return {
+      loyaltyEnabled: !!settings.loyaltyEnabled,
+      loyaltyPointsThreshold: settings.loyaltyPointsThreshold || 100
+    };
+  }
+};
+
+const updateLoyaltySettings = async (enabled, threshold) => {
+  if (usePostgres) {
+    let query = 'UPDATE settings SET loyalty_enabled = $1';
+    let params = [!!enabled];
+    if (threshold !== undefined) {
+      query += ', loyalty_points_threshold = $2';
+      params.push(parseInt(threshold));
+    }
+    query += ' WHERE id = 1';
+    await pool.query(query, params);
+  } else {
+    const settings = readJSON(SETTINGS_FILE);
+    settings.loyaltyEnabled = !!enabled;
+    if (threshold !== undefined) settings.loyaltyPointsThreshold = parseInt(threshold);
+    writeJSON(SETTINGS_FILE, settings);
+  }
+};
+
+const getLoyaltyCustomer = async (phone) => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT phone, name, points FROM loyalty_customers WHERE phone = $1', [phone]);
+    return res.rows[0] || null;
+  } else {
+    const customers = readJSON(LOYALTY_CUSTOMERS_FILE);
+    return customers.find(c => c.phone === phone) || null;
+  }
+};
+
+const updateLoyaltyPoints = async (phone, name, pointsToAdd) => {
+  if (usePostgres) {
+    const customer = await getLoyaltyCustomer(phone);
+    if (customer) {
+      const newPoints = customer.points + parseInt(pointsToAdd);
+      await pool.query('UPDATE loyalty_customers SET name = $1, points = $2 WHERE phone = $3', [name, newPoints, phone]);
+      return { phone, name, points: newPoints };
+    } else {
+      await pool.query('INSERT INTO loyalty_customers (phone, name, points) VALUES ($1, $2, $3)', [phone, name, parseInt(pointsToAdd)]);
+      return { phone, name, points: parseInt(pointsToAdd) };
+    }
+  } else {
+    const customers = readJSON(LOYALTY_CUSTOMERS_FILE);
+    const customerIdx = customers.findIndex(c => c.phone === phone);
+    if (customerIdx !== -1) {
+      customers[customerIdx].name = name;
+      customers[customerIdx].points += parseInt(pointsToAdd);
+      writeJSON(LOYALTY_CUSTOMERS_FILE, customers);
+      return customers[customerIdx];
+    } else {
+      const newCustomer = { phone, name, points: parseInt(pointsToAdd) };
+      customers.push(newCustomer);
+      writeJSON(LOYALTY_CUSTOMERS_FILE, customers);
+      return newCustomer;
+    }
+  }
+};
+
+const getLoyaltyCustomers = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT phone, name, points FROM loyalty_customers ORDER BY points DESC');
+    return res.rows;
+  } else {
+    const customers = readJSON(LOYALTY_CUSTOMERS_FILE);
+    return customers.sort((a, b) => b.points - a.points);
+  }
+};
+
+const updateSaleStatus = async (saleId, status) => {
+  if (usePostgres) {
+    await pool.query('UPDATE sales SET status = $1 WHERE id = $2', [status, saleId]);
+  } else {
+    const sales = readJSON(SALES_FILE);
+    const saleIdx = sales.findIndex(s => s.id === saleId);
+    if (saleIdx !== -1) {
+      sales[saleIdx].status = status;
+      writeJSON(SALES_FILE, sales);
+    }
+  }
+  return { success: true };
+};
+
 module.exports = {
   pool,
   initDb,
   getSettings,
   updateSettings,
+  getDeveloperSettings,
+  updateDeveloperSettings,
+  getCompanyInfo,
+  updateCompanyInfo,
+  getCustomPresets,
+  saveCustomPreset,
+  deleteCustomPreset,
   getStock,
   createStockItem,
   updateStockItem,
@@ -848,5 +1174,11 @@ module.exports = {
   getSales,
   getSaleById,
   executeSale,
-  executeRefund
+  executeRefund,
+  getLoyaltySettings,
+  updateLoyaltySettings,
+  getLoyaltyCustomer,
+  updateLoyaltyPoints,
+  getLoyaltyCustomers,
+  updateSaleStatus
 };

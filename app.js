@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- INICIALIZACIÓN DE ESTADO ---
   let stock = [];
   let menu = [];
+  let loyaltyEnabled = false;
 
   // Carga stock y menú desde la API REST local
   const loadState = async () => {
@@ -12,6 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const menuRes = await fetch('/api/menu');
       menu = await menuRes.json();
+
+      try {
+        const settingsRes = await fetch('/api/loyalty/settings');
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          loyaltyEnabled = !!settingsData.loyaltyEnabled;
+          const loyaltySection = document.getElementById('loyalty-client-section');
+          if (loyaltySection) {
+            loyaltySection.style.display = loyaltyEnabled ? 'block' : 'none';
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching loyalty settings:', err);
+      }
     } catch (error) {
       console.error('Error al cargar datos de la API local:', error);
       // Fallback a data.js si no responde el servidor local
@@ -19,6 +34,92 @@ document.addEventListener('DOMContentLoaded', () => {
         stock = window.SrWaffleData.INITIAL_STOCK;
         menu = window.SrWaffleData.INITIAL_MENU;
       }
+    }
+  };
+
+  let companyInfo = {
+    companyName: 'Sr. Waffle',
+    companyAddress: 'Shopping Portal Patagonia, Bariloche, Río Negro (Kiosco PB)',
+    companyHours: 'Lunes a Domingos: 10:00 hs a 22:00 hs',
+    companyInstagram: '@srwaffle.patagonia',
+    companyPhone: '5491123456789'
+  };
+
+  const loadCompanyInfo = async () => {
+    try {
+      const res = await fetch('/api/company/info');
+      companyInfo = await res.json();
+      
+      const headerName = document.getElementById('header-company-name');
+      const footerName = document.getElementById('footer-company-name');
+      const footerAddress = document.getElementById('footer-company-address');
+      const footerHours = document.getElementById('footer-company-hours');
+      const footerInstagram = document.getElementById('footer-company-instagram');
+      const waBtn = document.getElementById('client-send-wa-btn');
+      
+      if (headerName) headerName.textContent = companyInfo.companyName;
+      if (footerName) footerName.textContent = companyInfo.companyName;
+      if (footerAddress) footerAddress.textContent = companyInfo.companyAddress;
+      if (footerHours) footerHours.textContent = companyInfo.companyHours;
+      if (footerInstagram) footerInstagram.textContent = companyInfo.companyInstagram;
+      if (waBtn) {
+        waBtn.style.display = companyInfo.whatsappOrdersEnabled !== false ? 'flex' : 'none';
+      }
+
+      // Aplicar Hero Images
+      const heroContainer = document.querySelector('.hero-image-container');
+      if (heroContainer && companyInfo.heroImages && companyInfo.heroImages.length > 0) {
+        // Limpiar imágenes previas
+        const oldImages = heroContainer.querySelectorAll('.hero-image');
+        oldImages.forEach(img => img.remove());
+        
+        companyInfo.heroImages.forEach((imgSrc, index) => {
+          const img = document.createElement('img');
+          img.src = imgSrc;
+          img.className = 'hero-image';
+          if (index > 0) img.style.opacity = '0'; // Ocultar las demás inicialmente
+          if (index > 0) img.style.position = 'absolute';
+          if (index > 0) img.style.top = '0';
+          if (index > 0) img.style.left = '0';
+          img.style.transition = 'opacity 1s ease-in-out';
+          heroContainer.appendChild(img);
+        });
+
+        if (companyInfo.heroCarouselEnabled && companyInfo.heroImages.length > 1) {
+          let currentHeroIdx = 0;
+          setInterval(() => {
+            const images = heroContainer.querySelectorAll('.hero-image');
+            images[currentHeroIdx].style.opacity = '0';
+            currentHeroIdx = (currentHeroIdx + 1) % images.length;
+            images[currentHeroIdx].style.opacity = '1';
+          }, 4000);
+        }
+      }
+
+      // Aplicar Mapa
+      const mapContainer = document.getElementById('client-footer-map-bg');
+      const mapPin = document.getElementById('client-footer-map-pin');
+      const mapTitle = document.getElementById('client-footer-map-title');
+      const mapDesc = document.getElementById('client-footer-map-desc');
+      if (mapContainer && companyInfo.mapBgImage) {
+        mapContainer.style.backgroundImage = `url(${companyInfo.mapBgImage})`;
+        mapContainer.style.backgroundSize = 'cover';
+        mapContainer.style.backgroundPosition = 'center';
+        
+        // Ocultar texto por defecto si hay imagen
+        if (mapTitle) mapTitle.style.display = 'none';
+        if (mapDesc) mapDesc.style.display = 'none';
+
+        if (mapPin) {
+          mapPin.style.position = 'absolute';
+          mapPin.style.left = companyInfo.mapPinX + '%';
+          mapPin.style.top = companyInfo.mapPinY + '%';
+          mapPin.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+
+    } catch (error) {
+      console.error('Error al cargar datos de empresa:', error);
     }
   };
 
@@ -284,6 +385,41 @@ document.addEventListener('DOMContentLoaded', () => {
       icecreams: []
     };
 
+    // Registrar eventos del buscador de puntos del Club Waffle
+    const queryBtn = document.getElementById('loyalty-client-query-btn');
+    const clientPhoneInput = document.getElementById('loyalty-client-phone');
+    const clientResultDiv = document.getElementById('loyalty-client-result');
+    const clientNameSpan = document.getElementById('loyalty-client-name');
+    const clientPointsSpan = document.getElementById('loyalty-client-points');
+
+    if (queryBtn && clientPhoneInput) {
+      queryBtn.onclick = async (e) => {
+        if (e) e.preventDefault();
+        const phone = clientPhoneInput.value.trim();
+        if (!phone) {
+          showToast('Por favor, ingresá tu número de teléfono', true);
+          return;
+        }
+        try {
+          const res = await fetch(`/api/loyalty/customer/${phone}`);
+          if (res.ok) {
+            const customer = await res.json();
+            if (clientNameSpan) clientNameSpan.textContent = customer.name;
+            if (clientPointsSpan) clientPointsSpan.textContent = customer.points;
+            if (clientResultDiv) clientResultDiv.style.display = 'block';
+          } else if (res.status === 404) {
+            showToast('No tenés puntos acumulados aún. ¡Registrate al comprar en caja!', true);
+            if (clientResultDiv) clientResultDiv.style.display = 'none';
+          } else {
+            showToast('Error al consultar puntos', true);
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Error de conexión', true);
+        }
+      };
+    }
+
     renderBuilderOptions('client-bases-options', 'bases', 'radio', (baseId) => {
       clientWaffle.base = baseId;
       updateClientBuilderUI();
@@ -452,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                           `*Total:* ${formatCurrency(totalPrice)}\n` +
                           `¿Me confirman para retirar por el local? ¡Gracias!`;
 
-        const waUrl = `https://wa.me/5491123456789?text=${encodeURIComponent(waMessage)}`;
+        const waUrl = `https://wa.me/${companyInfo.companyPhone}?text=${encodeURIComponent(waMessage)}`;
         window.open(waUrl, '_blank');
       };
     }
@@ -553,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- ARRANQUE DE LA APP ---
   loadState().then(() => {
+    loadCompanyInfo();
     switchView('inicio');
   });
 
