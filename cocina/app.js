@@ -1,274 +1,370 @@
-// Sr. Waffle KDS App - Kitchen Display System Control
-let soundEnabled = true;
-let knownOrderIds = new Set();
-let isFirstLoad = true;
+document.addEventListener('DOMContentLoaded', () => {
+  let employees = [];
+  let currentUser = null;
+  let tickets = [];
+  let soundEnabled = false;
+  let lastTicketCount = 0;
+  let pollingInterval = null;
+  let kdsAlertTime = 10;
 
-const POLL_INTERVAL = 5000; // 5 segundos
+  // DOM Elements - Login
+  const loginOverlay = document.getElementById('kds-login-overlay');
+  const empSelect = document.getElementById('kds-employee-select');
+  const pinDots = [
+    document.getElementById('dot-0'),
+    document.getElementById('dot-1'),
+    document.getElementById('dot-2'),
+    document.getElementById('dot-3')
+  ];
+  let currentPin = '';
 
-// Elementos del DOM
-const listPending = document.getElementById('list-pending');
-const listPreparing = document.getElementById('list-preparing');
-const listReady = document.getElementById('list-ready');
+  // DOM Elements - Layout
+  const currentUserBadge = document.getElementById('kds-current-user');
+  const logoutBtn = document.getElementById('logout-btn');
+  const toggleSoundBtn = document.getElementById('toggle-sound-btn');
+  const soundIconOn = document.getElementById('sound-icon-on');
+  const soundIconOff = document.getElementById('sound-icon-off');
+  const notificationSound = document.getElementById('notification-sound');
+  const toast = document.getElementById('toast');
 
-const countPending = document.getElementById('count-pending');
-const countPreparing = document.getElementById('count-preparing');
-const countReady = document.getElementById('count-ready');
+  // DOM Elements - Kanban
+  const containers = {
+    pending: document.getElementById('container-pending'),
+    preparing: document.getElementById('container-preparing'),
+    ready: document.getElementById('container-ready')
+  };
+  const counts = {
+    pending: document.getElementById('count-pending'),
+    preparing: document.getElementById('count-preparing'),
+    ready: document.getElementById('count-ready')
+  };
 
-const badgePending = document.getElementById('badge-pending');
-const badgePreparing = document.getElementById('badge-preparing');
-const badgeReady = document.getElementById('badge-ready');
-
-const soundToggle = document.getElementById('sound-toggle');
-const kdsToast = document.getElementById('kds-toast');
-const kdsToastDesc = document.getElementById('kds-toast-desc');
-
-// Cargar estado inicial del sonido
-if (localStorage.getItem('kds_sound_enabled') !== null) {
-  soundEnabled = localStorage.getItem('kds_sound_enabled') === 'true';
-  updateSoundUI();
-}
-
-function updateSoundUI() {
-  const soundIcon = soundToggle.querySelector('.sound-icon');
-  const soundLabel = soundToggle.querySelector('.sound-toggle-label');
-  if (soundEnabled) {
-    soundIcon.textContent = '🔊';
-    soundLabel.textContent = 'Notificaciones de Sonido: Activo';
-    soundToggle.style.borderColor = 'var(--neon-cyan)';
-    soundToggle.style.boxShadow = '0 0 8px var(--neon-cyan-glow)';
-  } else {
-    soundIcon.textContent = '🔇';
-    soundLabel.textContent = 'Notificaciones de Sonido: Silenciado';
-    soundToggle.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-    soundToggle.style.boxShadow = 'none';
-  }
-}
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  localStorage.setItem('kds_sound_enabled', soundEnabled);
-  updateSoundUI();
-  
-  // Reproducir un pitido de confirmación al activar
-  if (soundEnabled) {
-    playChime();
-  }
-}
-
-// Reproducir sonido usando la API Web Audio (chime agradable)
-function playChime() {
-  if (!soundEnabled) return;
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // --- INITIALIZATION ---
+  const init = async () => {
+    await fetchEmployees();
+    checkSession();
     
-    const playNote = (freq, startTime, duration) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-      
-      gain.gain.setValueAtTime(0.1, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    
-    const now = audioCtx.currentTime;
-    // Chime futurista: nota C5 seguido de E5
-    playNote(523.25, now, 0.25); // C5
-    playNote(659.25, now + 0.12, 0.4); // E5
-  } catch (e) {
-    console.error('Error al reproducir el chime del KDS:', e);
-  }
-}
-
-function showNewOrderToast(orderId) {
-  kdsToastDesc.textContent = `Pedido #${orderId} ingresó a la cola de preparación.`;
-  kdsToast.classList.add('active');
-  setTimeout(() => {
-    kdsToast.classList.remove('active');
-  }, 4000);
-}
-
-// Calcular minutos transcurridos
-function getMinutesElapsed(dateString) {
-  const diffMs = new Date() - new Date(dateString);
-  const diffMins = Math.floor(diffMs / 60000);
-  return diffMins < 0 ? 0 : diffMins;
-}
-
-// Actualizar el estado de la venta en el backend
-async function updateOrderStatus(saleId, newStatus) {
-  try {
-    const res = await fetch(`/api/sales/${saleId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ status: newStatus })
-    });
-    if (!res.ok) throw new Error('Error al actualizar el estado');
-    
-    // Recargar inmediatamente para reflejar el cambio
-    fetchOrders();
-  } catch (err) {
-    console.error(err);
-    alert('Error de red al actualizar el estado del pedido: ' + err.message);
-  }
-}
-
-// Crear tarjeta de pedido HTML
-function createOrderCard(sale) {
-  const card = document.createElement('div');
-  card.className = 'order-card';
-  card.dataset.id = sale.id;
-
-  const mins = getMinutesElapsed(sale.date);
-  const timeClass = mins >= 10 ? 'order-time critical' : 'order-time';
-  const timeText = mins >= 10 ? `⚠️ Hace ${mins} min` : `⏳ Hace ${mins} min`;
-
-  // Encabezado
-  const header = document.createElement('div');
-  header.className = 'order-card-header';
-  
-  const orderIdSpan = document.createElement('span');
-  orderIdSpan.className = 'order-id';
-  orderIdSpan.textContent = `#${sale.id.replace('sale_', '')}`;
-  
-  const orderTimeSpan = document.createElement('span');
-  orderTimeSpan.className = timeClass;
-  orderTimeSpan.textContent = timeText;
-  
-  header.appendChild(orderIdSpan);
-  header.appendChild(orderTimeSpan);
-  card.appendChild(header);
-
-  // Detalle de Items
-  const itemsContainer = document.createElement('div');
-  itemsContainer.className = 'order-items';
-  
-  sale.items.forEach(item => {
-    const detail = document.createElement('div');
-    detail.className = 'order-item-detail';
-    
-    const name = document.createElement('div');
-    name.className = 'order-item-name';
-    name.textContent = item.name;
-    
-    const desc = document.createElement('div');
-    desc.className = 'order-item-desc';
-    desc.textContent = item.details || '';
-    
-    detail.appendChild(name);
-    detail.appendChild(desc);
-    itemsContainer.appendChild(detail);
-  });
-  card.appendChild(itemsContainer);
-
-  // Footer (Método de Pago + Botón de acción)
-  const footer = document.createElement('div');
-  footer.className = 'order-card-footer';
-  
-  const payment = document.createElement('span');
-  payment.className = 'order-payment';
-  payment.textContent = sale.paymentMethod || 'Efectivo';
-  
-  let btnText = 'Preparar 🍳';
-  let nextStatus = 'preparing';
-  
-  if (sale.status === 'preparing') {
-    btnText = 'Listo 🛎️';
-    nextStatus = 'ready';
-  } else if (sale.status === 'ready') {
-    btnText = 'Entregar 📦';
-    nextStatus = 'completed';
-  }
-  
-  const actionBtn = document.createElement('button');
-  actionBtn.className = 'order-action-btn';
-  actionBtn.textContent = btnText;
-  actionBtn.onclick = () => updateOrderStatus(sale.id, nextStatus);
-  
-  footer.appendChild(payment);
-  footer.appendChild(actionBtn);
-  card.appendChild(footer);
-
-  return card;
-}
-
-// Obtener pedidos y renderizar
-async function fetchOrders() {
-  try {
-    const res = await fetch('/api/sales');
-    if (!res.ok) throw new Error('API unreachable');
-    const sales = await res.json();
-    
-    // Filtrar pedidos que no estén completados ni reembolsados
-    const activeSales = sales.filter(s => s.status === 'pending' || s.status === 'preparing' || s.status === 'ready');
-    
-    // Limpiar listas
-    listPending.innerHTML = '';
-    listPreparing.innerHTML = '';
-    listReady.innerHTML = '';
-    
-    let counts = { pending: 0, preparing: 0, ready: 0 };
-    let newOrderDetected = false;
-    let newestId = '';
-    
-    // Ordenar de más viejos a más nuevos (para priorizar atención)
-    activeSales.reverse().forEach(sale => {
-      // Registrar si es un pedido nuevo
-      if (!knownOrderIds.has(sale.id)) {
-        knownOrderIds.add(sale.id);
-        if (sale.status === 'pending') {
-          newOrderDetected = true;
-          newestId = sale.id;
+    // Cargar logo de empresa
+    try {
+      const compRes = await fetch('/api/company/info');
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        const headerTitle = document.querySelector('.kds-brand h1');
+        if (headerTitle && compData.companyLogo) {
+          let logoImg = document.getElementById('dynamic-kds-logo');
+          if (!logoImg) {
+            logoImg = document.createElement('img');
+            logoImg.id = 'dynamic-kds-logo';
+            logoImg.style.cssText = 'width:36px; height:36px; border-radius:50%; object-fit:cover; margin-right:10px; vertical-align: middle;';
+            headerTitle.parentNode.insertBefore(logoImg, headerTitle);
+            headerTitle.style.display = 'inline-block';
+            headerTitle.style.verticalAlign = 'middle';
+          }
+          logoImg.src = compData.companyLogo;
+        }
+        if (compData.kdsAlertTime !== undefined) {
+          kdsAlertTime = compData.kdsAlertTime;
         }
       }
-      
-      const card = createOrderCard(sale);
-      
-      if (sale.status === 'pending') {
-        listPending.appendChild(card);
-        counts.pending++;
-      } else if (sale.status === 'preparing') {
-        listPreparing.appendChild(card);
-        counts.preparing++;
-      } else if (sale.status === 'ready') {
-        listReady.appendChild(card);
-        counts.ready++;
+    } catch (e) {
+      console.error('Error al cargar logo', e);
+    }
+  };
+
+  // --- TOAST NOTIFICATION ---
+  const showToast = (msg, isError = false) => {
+    toast.textContent = msg;
+    if (isError) toast.classList.add('error');
+    else toast.classList.remove('error');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  };
+
+  // --- LOGIN LOGIC ---
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch('/api/employees');
+      if (res.ok) {
+        employees = await res.json();
+        empSelect.innerHTML = '<option value="">Selecciona tu usuario...</option>';
+        const kitchenStaff = employees.filter(e => e.active && e.role === 'kitchen');
+        kitchenStaff.forEach(e => {
+          empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+        });
+        if (kitchenStaff.length === 0) {
+           empSelect.innerHTML = '<option value="">No hay cocineros activos. Creá uno en el Admin.</option>';
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      showToast('Error al conectar con el servidor', true);
+    }
+  };
+
+  const checkSession = () => {
+    const savedUser = sessionStorage.getItem('kdsUser');
+    if (savedUser) {
+      currentUser = JSON.parse(savedUser);
+      startSession();
+    } else {
+      loginOverlay.style.display = 'flex';
+    }
+  };
+
+  const startSession = () => {
+    loginOverlay.style.display = 'none';
+    currentUserBadge.textContent = currentUser.name;
+    startPolling();
+  };
+
+  const logout = () => {
+    sessionStorage.removeItem('kdsUser');
+    currentUser = null;
+    currentPin = '';
+    updatePinDots();
+    empSelect.value = '';
+    stopPolling();
+    loginOverlay.style.display = 'flex';
+  };
+
+  const updatePinDots = () => {
+    pinDots.forEach((dot, idx) => {
+      if (idx < currentPin.length) dot.classList.add('filled');
+      else dot.classList.remove('filled');
+    });
+  };
+
+  const handlePinInput = (num) => {
+    if (currentPin.length < 4) {
+      currentPin += num;
+      updatePinDots();
+      if (currentPin.length === 4) {
+        verifyLogin();
+      }
+    }
+  };
+
+  const verifyLogin = () => {
+    const empId = empSelect.value;
+    if (!empId) {
+      showToast('Selecciona un usuario primero', true);
+      currentPin = '';
+      updatePinDots();
+      return;
+    }
+
+    const emp = employees.find(e => e.id === empId);
+    if (emp && emp.pin === currentPin) {
+      currentUser = { id: emp.id, name: emp.name };
+      sessionStorage.setItem('kdsUser', JSON.stringify(currentUser));
+      startSession();
+    } else {
+      showToast('PIN incorrecto', true);
+      currentPin = '';
+      updatePinDots();
+      // Vibrate effect
+      pinDots.forEach(dot => {
+        dot.style.transform = 'translateX(-5px)';
+        setTimeout(() => dot.style.transform = 'translateX(5px)', 50);
+        setTimeout(() => dot.style.transform = 'translateX(0)', 100);
+      });
+    }
+  };
+
+  // Bind keyboard
+  document.querySelectorAll('.pin-btn[data-num]').forEach(btn => {
+    btn.addEventListener('click', () => handlePinInput(btn.dataset.num));
+  });
+
+  document.querySelector('.pin-clear').addEventListener('click', () => {
+    currentPin = currentPin.slice(0, -1);
+    updatePinDots();
+  });
+
+  document.querySelector('.pin-clear-all').addEventListener('click', () => {
+    currentPin = '';
+    updatePinDots();
+  });
+
+  logoutBtn.addEventListener('click', logout);
+
+  // --- CONTROL DEL MODAL DE AYUDA KDS ---
+  const helpBtn = document.getElementById('help-btn');
+  const helpModal = document.getElementById('help-modal');
+  const helpClose = document.getElementById('help-modal-close');
+
+  if (helpBtn && helpModal && helpClose) {
+    helpBtn.addEventListener('click', () => {
+      helpModal.style.display = 'flex';
+    });
+    helpClose.addEventListener('click', () => {
+      helpModal.style.display = 'none';
+    });
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) {
+        helpModal.style.display = 'none';
       }
     });
-    
-    // Actualizar contadores y badges
-    countPending.textContent = counts.pending;
-    badgePending.textContent = counts.pending;
-    
-    countPreparing.textContent = counts.preparing;
-    badgePreparing.textContent = counts.preparing;
-    
-    countReady.textContent = counts.ready;
-    badgeReady.textContent = counts.ready;
-    
-    // Si no es la primera carga y se detectó un pedido nuevo en estado 'pending', alertar
-    if (!isFirstLoad && newOrderDetected) {
-      playChime();
-      showNewOrderToast(newestId.replace('sale_', ''));
-    }
-    
-    isFirstLoad = false;
-  } catch (err) {
-    console.error('Error al obtener ventas del KDS:', err);
   }
-}
 
-// Cargar datos inicialmente
-fetchOrders();
+  // --- WEB AUDIO API (BEEP SYNTH) ---
+  const playBeep = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.3);
+    } catch (e) {
+      console.log('Web Audio API no soportada', e);
+    }
+  };
 
-// Polling periódico
-setInterval(fetchOrders, POLL_INTERVAL);
+  // --- KDS LOGIC ---
+  const toggleSound = () => {
+    soundEnabled = !soundEnabled;
+    if (soundEnabled) {
+      soundIconOn.style.display = 'block';
+      soundIconOff.style.display = 'none';
+      playBeep();
+      showToast('Sonido activado');
+    } else {
+      soundIconOn.style.display = 'none';
+      soundIconOff.style.display = 'block';
+      showToast('Sonido desactivado');
+    }
+  };
+
+  toggleSoundBtn.addEventListener('click', toggleSound);
+
+  const startPolling = () => {
+    fetchTickets();
+    pollingInterval = setInterval(fetchTickets, 5000);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) clearInterval(pollingInterval);
+  };
+
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch('/api/kitchen/tickets');
+      if (res.ok) {
+        const newTickets = await res.json();
+        const pendingCount = newTickets.filter(t => t.kdsStatus === 'pending').length;
+        
+        // Play sound if there are more pending tickets than before
+        if (soundEnabled && pendingCount > lastTicketCount) {
+          playBeep();
+        }
+        lastTicketCount = pendingCount;
+        
+        tickets = newTickets;
+        renderTickets();
+      }
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+    }
+  };
+
+  const renderTickets = () => {
+    // Clear containers
+    Object.values(containers).forEach(c => c.innerHTML = '');
+    
+    const countData = { pending: 0, preparing: 0, ready: 0 };
+
+    tickets.forEach(ticket => {
+      const status = ticket.kdsStatus;
+      if (!containers[status]) return; // Skip if status not in columns (e.g. delivered)
+      
+      countData[status]++;
+      
+      const ticketEl = document.createElement('div');
+      ticketEl.className = 'kds-ticket';
+      
+      const orderDate = new Date(ticket.createdAt || ticket.created_at || Date.now());
+      const now = new Date();
+      const diffMins = Math.floor((now - orderDate) / 60000);
+      const isUrgent = diffMins >= kdsAlertTime && status !== 'ready';
+      const timeStr = `${orderDate.getHours().toString().padStart(2, '0')}:${orderDate.getMinutes().toString().padStart(2, '0')}`;
+
+      let itemsHtml = '';
+      ticket.items.forEach(item => {
+        let detailsHtml = '';
+        if (item.details) {
+          // If details is an array, join it. If string, replace newlines with br.
+          let dText = Array.isArray(item.details) ? item.details.join(', ') : item.details.replace(/\n/g, '<br>');
+          detailsHtml = `<span class="ticket-item-details">• ${dText}</span>`;
+        }
+        itemsHtml += `
+          <div class="ticket-item">
+            <span class="ticket-item-name">${item.quantity || item.qty || 1}x ${item.name}</span>
+            ${detailsHtml}
+          </div>
+        `;
+      });
+
+      let actionsHtml = '';
+      if (status === 'pending') {
+        actionsHtml = `<button class="btn-action btn-prepare" onclick="changeTicketStatus('${ticket.id}', 'preparing')">Preparar</button>`;
+      } else if (status === 'preparing') {
+        actionsHtml = `<button class="btn-action btn-ready" onclick="changeTicketStatus('${ticket.id}', 'ready')">Listo</button>`;
+      } else if (status === 'ready') {
+        actionsHtml = `<button class="btn-action btn-deliver" onclick="changeTicketStatus('${ticket.id}', 'delivered')">Entregado</button>`;
+      }
+
+      ticketEl.innerHTML = `
+        <div class="ticket-header">
+          <span class="ticket-id">#${ticket.id.split('_')[1].slice(-4)}</span>
+          <span class="ticket-time ${isUrgent ? 'urgent' : ''}">${timeStr} ${isUrgent ? '(+' + diffMins + 'm)' : ''}</span>
+        </div>
+        <div class="ticket-items">
+          ${itemsHtml}
+        </div>
+        <div class="ticket-footer">
+          ${actionsHtml}
+        </div>
+      `;
+
+      containers[status].appendChild(ticketEl);
+    });
+
+    counts.pending.textContent = countData.pending;
+    counts.preparing.textContent = countData.preparing;
+    counts.ready.textContent = countData.ready;
+  };
+
+  window.changeTicketStatus = async (id, status) => {
+    try {
+      const res = await fetch(`/api/kitchen/tickets/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        // Optimistic UI update
+        const ticket = tickets.find(t => t.id === id);
+        if (ticket) ticket.kdsStatus = status;
+        renderTickets();
+      } else {
+        showToast('Error al actualizar ticket', true);
+      }
+    } catch (error) {
+      console.error(error);
+      showToast('Error de red', true);
+    }
+  };
+
+  init();
+});

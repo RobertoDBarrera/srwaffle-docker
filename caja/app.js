@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let loyaltyEnabled = false;
   let loyaltyPointsThreshold = 100;
   let currentLoyaltyCustomer = null;
+  let employees = [];
   
   let pinInput = '';
 
@@ -217,15 +218,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pinInput.length === 4) {
       setTimeout(async () => {
         try {
+          const empSelect = document.getElementById('caja-employee-select');
+          const employeeId = empSelect ? empSelect.value : null;
+
+          if (!employeeId) {
+            showToast('Seleccioná un cajero primero', true);
+            pinInput = '';
+            updatePinDots();
+            return;
+          }
+
           const res = await fetch('/api/auth/verify-cashier', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: pinInput })
+            body: JSON.stringify({ pin: pinInput, employeeId })
           });
           const data = await res.json();
 
           if (data.success) {
             sessionStorage.setItem('caja_authenticated', 'true');
+            sessionStorage.setItem('caja_cashier_name', data.cashierName || 'Cajero');
             loginOverlay.style.display = 'none';
             showToast('Caja abierta con éxito');
             pinInput = '';
@@ -751,13 +763,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const total = cart.reduce((sum, item) => sum + item.price, 0);
+      const cashierName = sessionStorage.getItem('caja_cashier_name') || 'Administrador';
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart,
           total: total,
-          paymentMethod: selectedPaymentMethod
+          paymentMethod: selectedPaymentMethod,
+          cashierName: cashierName
         })
       });
 
@@ -874,12 +888,54 @@ document.addEventListener('DOMContentLoaded', () => {
   initLoyaltyEventListeners();
 
   // --- VERIFICAR ESTADO DE AUTENTICACIÓN INICIAL ---
-  if (sessionStorage.getItem('caja_authenticated') === 'true') {
-    loginOverlay.style.display = 'none';
-    startCaja();
-  } else {
-    loginOverlay.style.display = 'flex';
-  }
+  const initApp = async () => {
+    try {
+      const empRes = await fetch('/api/employees');
+      if (empRes.ok) {
+        employees = await empRes.json();
+        const empSelect = document.getElementById('caja-employee-select');
+        if (empSelect) {
+          empSelect.innerHTML = '<option value="">Selecciona tu usuario...</option>';
+          const activeEmployees = employees.filter(e => e.active && e.role !== 'kitchen');
+          activeEmployees.forEach(e => {
+            empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error al cargar empleados', e);
+    }
+
+    if (sessionStorage.getItem('caja_authenticated') === 'true') {
+      loginOverlay.style.display = 'none';
+      startCaja();
+    } else {
+      loginOverlay.style.display = 'flex';
+    }
+
+    // Cargar logo de empresa
+    try {
+      const compRes = await fetch('/api/company/info');
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        const sidebarText = document.querySelector('.caja-brand .logo-text');
+        if (sidebarText && compData.companyLogo) {
+          let logoImg = document.getElementById('dynamic-caja-logo');
+          if (!logoImg) {
+            logoImg = document.createElement('img');
+            logoImg.id = 'dynamic-caja-logo';
+            logoImg.style.cssText = 'width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:10px;';
+            sidebarText.parentNode.insertBefore(logoImg, sidebarText);
+          }
+          logoImg.src = compData.companyLogo;
+        }
+      }
+    } catch (e) {
+      console.error('Error al cargar logo', e);
+    }
+  };
+
+  initApp();
 
   // --- CONTROL DEL MODAL DE AYUDA POS ---
   const helpBtn = document.getElementById('help-btn');

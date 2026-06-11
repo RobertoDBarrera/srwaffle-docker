@@ -22,6 +22,7 @@ const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const SALES_FILE = path.join(DATA_DIR, 'sales.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const LOYALTY_CUSTOMERS_FILE = path.join(DATA_DIR, 'loyalty_customers.json');
+const EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.json');
 
 // --- VALORES INICIALES DE SEMILLA ---
 const INITIAL_STOCK = {
@@ -164,7 +165,8 @@ const generateMockSales = () => {
       items: items,
       total: total,
       paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
-      status: 'completed'
+      status: 'completed',
+      cashierName: 'Administrador'
     });
   }
   return sales;
@@ -178,6 +180,7 @@ function readJSON(filePath) {
     if (filePath === SALES_FILE) return generateMockSales();
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
     if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
+    if (filePath === EMPLOYEES_FILE) return [];
   }
   try {
     const data = fs.readFileSync(filePath, 'utf8');
@@ -188,6 +191,7 @@ function readJSON(filePath) {
     if (filePath === SALES_FILE) return [];
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
     if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
+    if (filePath === EMPLOYEES_FILE) return [];
   }
 }
 
@@ -227,6 +231,7 @@ const initializeDataFiles = () => {
   if (!fs.existsSync(SALES_FILE)) writeJSON(SALES_FILE, generateMockSales());
   if (!fs.existsSync(SETTINGS_FILE)) writeJSON(SETTINGS_FILE, INITIAL_SETTINGS);
   if (!fs.existsSync(LOYALTY_CUSTOMERS_FILE)) writeJSON(LOYALTY_CUSTOMERS_FILE, []);
+  if (!fs.existsSync(EMPLOYEES_FILE)) writeJSON(EMPLOYEES_FILE, []);
 };
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
@@ -280,6 +285,8 @@ const initPostgresTables = async () => {
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_hours VARCHAR(255) DEFAULT \'Lunes a Domingos: 10:00 hs a 22:00 hs\';');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_instagram VARCHAR(255) DEFAULT \'@srwaffle.patagonia\';');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_phone VARCHAR(255) DEFAULT \'5491123456789\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_logo TEXT DEFAULT \'\';');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS kds_alert_time INTEGER DEFAULT 10;');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_orders_enabled BOOLEAN DEFAULT TRUE;');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS loyalty_enabled BOOLEAN DEFAULT FALSE;');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS loyalty_points_threshold INTEGER DEFAULT 100;');
@@ -330,6 +337,8 @@ const initPostgresTables = async () => {
         status VARCHAR(50) NOT NULL DEFAULT 'completed'
       )
     `);
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_name VARCHAR(255) DEFAULT \'Administrador\';');
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS kds_completed_at TIMESTAMPTZ;');
 
     // loyalty customers
     await client.query(`
@@ -337,6 +346,18 @@ const initPostgresTables = async () => {
         phone VARCHAR(50) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         points INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+    // employees
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS employees (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        pin VARCHAR(4) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'cashier',
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -516,7 +537,9 @@ const getCompanyInfo = async () => {
       heroCarouselEnabled: !!row.hero_carousel_enabled,
       mapBgImage: row.map_bg_image || '',
       mapPinX: row.map_pin_x !== null && row.map_pin_x !== undefined ? row.map_pin_x : 50,
-      mapPinY: row.map_pin_y !== null && row.map_pin_y !== undefined ? row.map_pin_y : 50
+      mapPinY: row.map_pin_y !== null && row.map_pin_y !== undefined ? row.map_pin_y : 50,
+      companyLogo: row.company_logo || '',
+      kdsAlertTime: row.kds_alert_time !== null && row.kds_alert_time !== undefined ? row.kds_alert_time : 10
     };
   } else {
     const settings = readJSON(SETTINGS_FILE);
@@ -531,21 +554,25 @@ const getCompanyInfo = async () => {
       heroCarouselEnabled: !!settings.heroCarouselEnabled,
       mapBgImage: settings.mapBgImage || '',
       mapPinX: settings.mapPinX !== undefined ? settings.mapPinX : 50,
-      mapPinY: settings.mapPinY !== undefined ? settings.mapPinY : 50
+      mapPinY: settings.mapPinY !== undefined ? settings.mapPinY : 50,
+      companyLogo: settings.companyLogo || '',
+      kdsAlertTime: settings.kdsAlertTime !== undefined ? settings.kdsAlertTime : 10
     };
   }
 };
 
 const updateCompanyInfo = async (info) => {
-  const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY } = info;
+  const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY, companyLogo, kdsAlertTime } = info;
   
   if (usePostgres) {
     await pool.query(
-      'UPDATE settings SET company_name = $1, company_address = $2, company_hours = $3, company_instagram = $4, company_phone = $5, whatsapp_orders_enabled = $6, hero_images = $7, hero_carousel_enabled = $8, map_bg_image = $9, map_pin_x = $10, map_pin_y = $11 WHERE id = 1',
+      'UPDATE settings SET company_name = $1, company_address = $2, company_hours = $3, company_instagram = $4, company_phone = $5, whatsapp_orders_enabled = $6, hero_images = $7, hero_carousel_enabled = $8, map_bg_image = $9, map_pin_x = $10, map_pin_y = $11, company_logo = $12, kds_alert_time = $13 WHERE id = 1',
       [
         companyName, companyAddress, companyHours, companyInstagram, companyPhone, !!whatsappOrdersEnabled,
         heroImages ? JSON.stringify(heroImages) : '[]', !!heroCarouselEnabled, mapBgImage || '', 
-        mapPinX !== undefined ? parseInt(mapPinX) : 50, mapPinY !== undefined ? parseInt(mapPinY) : 50
+        mapPinX !== undefined ? parseInt(mapPinX) : 50, mapPinY !== undefined ? parseInt(mapPinY) : 50,
+        companyLogo || '',
+        kdsAlertTime !== undefined ? parseInt(kdsAlertTime) : 10
       ]
     );
   } else {
@@ -562,6 +589,8 @@ const updateCompanyInfo = async (info) => {
     if (mapBgImage !== undefined) settings.mapBgImage = mapBgImage;
     if (mapPinX !== undefined) settings.mapPinX = parseInt(mapPinX);
     if (mapPinY !== undefined) settings.mapPinY = parseInt(mapPinY);
+    if (companyLogo !== undefined) settings.companyLogo = companyLogo;
+    if (kdsAlertTime !== undefined) settings.kdsAlertTime = parseInt(kdsAlertTime);
     
     writeJSON(SETTINGS_FILE, settings);
   }
@@ -616,6 +645,84 @@ const deleteCustomPreset = async (id) => {
     const settings = readJSON(SETTINGS_FILE);
     settings.customPresets = presets;
     writeJSON(SETTINGS_FILE, settings);
+  }
+};
+
+// --- CRUD EMPLEADOS ---
+
+const getEmployees = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT * FROM employees ORDER BY created_at ASC');
+    return res.rows;
+  } else {
+    return readJSON(EMPLOYEES_FILE);
+  }
+};
+
+const createEmployee = async (employee) => {
+  if (usePostgres) {
+    await pool.query(
+      'INSERT INTO employees (id, name, pin, role, active) VALUES ($1, $2, $3, $4, $5)',
+      [employee.id, employee.name, employee.pin, employee.role || 'cashier', employee.active !== false]
+    );
+  } else {
+    const employees = readJSON(EMPLOYEES_FILE);
+    employees.push({
+      ...employee,
+      role: employee.role || 'cashier',
+      active: employee.active !== false,
+      created_at: new Date().toISOString()
+    });
+    writeJSON(EMPLOYEES_FILE, employees);
+  }
+};
+
+const updateEmployee = async (id, data) => {
+  if (usePostgres) {
+    let query = 'UPDATE employees SET ';
+    const params = [];
+    let idx = 1;
+    if (data.name !== undefined) {
+      query += `name = $${idx}, `;
+      params.push(data.name);
+      idx++;
+    }
+    if (data.pin !== undefined) {
+      query += `pin = $${idx}, `;
+      params.push(data.pin);
+      idx++;
+    }
+    if (data.active !== undefined) {
+      query += `active = $${idx}, `;
+      params.push(data.active);
+      idx++;
+    }
+    if (data.role !== undefined) {
+      query += `role = $${idx}, `;
+      params.push(data.role);
+      idx++;
+    }
+    query = query.slice(0, -2); // quitar última coma
+    query += ` WHERE id = $${idx}`;
+    params.push(id);
+    await pool.query(query, params);
+  } else {
+    const employees = readJSON(EMPLOYEES_FILE);
+    const index = employees.findIndex(e => e.id === id);
+    if (index !== -1) {
+      employees[index] = { ...employees[index], ...data };
+      writeJSON(EMPLOYEES_FILE, employees);
+    }
+  }
+};
+
+const deleteEmployee = async (id) => {
+  if (usePostgres) {
+    await pool.query('DELETE FROM employees WHERE id = $1', [id]);
+  } else {
+    const employees = readJSON(EMPLOYEES_FILE);
+    const filtered = employees.filter(e => e.id !== id);
+    writeJSON(EMPLOYEES_FILE, filtered);
   }
 };
 
@@ -823,7 +930,9 @@ const getSales = async () => {
       items: row.items,
       total: row.total,
       paymentMethod: row.payment_method,
-      status: row.status
+      status: row.status,
+      cashierName: row.cashier_name || 'Administrador',
+      kdsCompletedAt: row.kds_completed_at ? row.kds_completed_at.toISOString() : null
     }));
   } else {
     return readJSON(SALES_FILE);
@@ -841,11 +950,25 @@ const getSaleById = async (saleId) => {
       items: row.items,
       total: row.total,
       paymentMethod: row.payment_method,
-      status: row.status
+      status: row.status,
+      cashierName: row.cashier_name || 'Administrador'
     };
   } else {
     const sales = readJSON(SALES_FILE);
     return sales.find(s => s.id === saleId) || null;
+  }
+};
+
+const createSale = async (sale) => {
+  if (usePostgres) {
+    await pool.query(
+      'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, sale.status || 'completed', sale.cashierName || 'Administrador']
+    );
+  } else {
+    const sales = readJSON(SALES_FILE);
+    sales.push({ ...sale, cashierName: sale.cashierName || 'Administrador', status: sale.status || 'completed' });
+    writeJSON(SALES_FILE, sales);
   }
 };
 
@@ -863,8 +986,8 @@ const executeSale = async (sale, deductions) => {
         await client.query('UPDATE stock SET stock = stock - $1 WHERE id = $2', [reqQty, itemId]);
       }
       await client.query(
-        'INSERT INTO sales (id, items, total, payment_method, status) VALUES ($1, $2, $3, $4, $5)',
-        [sale.id, JSON.stringify(sale.items), sale.total, sale.paymentMethod, 'completed']
+        'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, 'completed', sale.cashierName || 'Administrador']
       );
       await client.query('COMMIT');
       return { success: true };
@@ -899,7 +1022,7 @@ const executeSale = async (sale, deductions) => {
       item.stock -= deductions[itemId];
     }
 
-    sales.unshift(sale);
+    sales.unshift({ ...sale, cashierName: sale.cashierName || 'Administrador', status: 'completed', kdsStatus: 'pending' });
     writeJSON(STOCK_FILE, stock);
     writeJSON(SALES_FILE, sales);
     return { success: true };
@@ -1150,6 +1273,72 @@ const updateSaleStatus = async (saleId, status) => {
   return { success: true };
 };
 
+const getKitchenTickets = async () => {
+  if (usePostgres) {
+    const res = await pool.query("SELECT * FROM sales WHERE kdsStatus IN ('pending', 'preparing', 'ready') ORDER BY created_at ASC");
+    return res.rows;
+  } else {
+    const sales = readJSON(SALES_FILE);
+    return sales.filter(s => s.kdsStatus === 'pending' || s.kdsStatus === 'preparing' || s.kdsStatus === 'ready').reverse(); // reverse for chronological if unshifted
+  }
+};
+
+const updateKitchenTicketStatus = async (saleId, status) => {
+  const isCompleted = status === 'ready' || status === 'delivered';
+  
+  if (usePostgres) {
+    if (isCompleted) {
+      await pool.query('UPDATE sales SET "kdsStatus" = $1, kds_completed_at = CURRENT_TIMESTAMP WHERE id = $2 AND kds_completed_at IS NULL', [status, saleId]);
+      // If it was already completed (e.g., from ready to delivered), we just update the status so we don't overwrite the original ready time.
+      await pool.query('UPDATE sales SET "kdsStatus" = $1 WHERE id = $2', [status, saleId]);
+    } else {
+      await pool.query('UPDATE sales SET "kdsStatus" = $1 WHERE id = $2', [status, saleId]);
+    }
+  } else {
+    const sales = readJSON(SALES_FILE);
+    const saleIdx = sales.findIndex(s => s.id === saleId);
+    if (saleIdx !== -1) {
+      sales[saleIdx].kdsStatus = status;
+      if (isCompleted && !sales[saleIdx].kdsCompletedAt) {
+        sales[saleIdx].kdsCompletedAt = new Date().toISOString();
+      }
+      writeJSON(SALES_FILE, sales);
+    }
+  }
+  return { success: true };
+};
+
+// --- ORDER TRACKING ---
+const getTicketStatus = async (ticketNum) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (usePostgres) {
+    const res = await pool.query(
+      "SELECT id, kds_status as \"kdsStatus\", items FROM sales WHERE date >= $1 AND id LIKE $2 ORDER BY date DESC LIMIT 1",
+      [today, `%${ticketNum}`]
+    );
+    if (res.rows.length > 0) {
+      return res.rows[0];
+    }
+    return null;
+  } else {
+    const sales = readJSON(SALES_FILE);
+    const recentSale = sales.reverse().find(s => {
+      const saleDate = new Date(s.date || s.created_at);
+      return saleDate >= today && s.id.endsWith(ticketNum);
+    });
+    if (recentSale) {
+      return {
+        id: recentSale.id,
+        kdsStatus: recentSale.kdsStatus || 'pending',
+        items: recentSale.items
+      };
+    }
+    return null;
+  }
+};
+
 module.exports = {
   pool,
   initDb,
@@ -1173,6 +1362,7 @@ module.exports = {
   deleteMenuItem,
   getSales,
   getSaleById,
+  createSale,
   executeSale,
   executeRefund,
   getLoyaltySettings,
@@ -1180,5 +1370,12 @@ module.exports = {
   getLoyaltyCustomer,
   updateLoyaltyPoints,
   getLoyaltyCustomers,
-  updateSaleStatus
+  updateSaleStatus,
+  getKitchenTickets,
+  updateKitchenTicketStatus,
+  getEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+  getTicketStatus
 };

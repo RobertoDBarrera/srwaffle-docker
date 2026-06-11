@@ -57,7 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const footerInstagram = document.getElementById('footer-company-instagram');
       const waBtn = document.getElementById('client-send-wa-btn');
       
-      if (headerName) headerName.textContent = companyInfo.companyName;
+      if (headerName) {
+        headerName.textContent = companyInfo.companyName;
+        if (companyInfo.companyLogo) {
+          let logoImg = document.getElementById('dynamic-header-logo');
+          if (!logoImg) {
+            logoImg = document.createElement('img');
+            logoImg.id = 'dynamic-header-logo';
+            logoImg.style.cssText = 'width:36px; height:36px; border-radius:50%; object-fit:cover; margin-right:10px;';
+            headerName.parentNode.insertBefore(logoImg, headerName);
+          }
+          logoImg.src = companyInfo.companyLogo;
+        }
+      }
       if (footerName) footerName.textContent = companyInfo.companyName;
       if (footerAddress) footerAddress.textContent = companyInfo.companyAddress;
       if (footerHours) footerHours.textContent = companyInfo.companyHours;
@@ -692,6 +704,159 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCompanyInfo();
     switchView('inicio');
   });
+  // --- TRACKING EN VIVO ---
+  const trackerBtn = document.getElementById('tracker-btn');
+  const trackerModal = document.getElementById('tracker-modal');
+  const trackerClose = document.getElementById('tracker-modal-close');
+  const trackerSearchBtn = document.getElementById('tracker-search-btn');
+  const trackerInput = document.getElementById('tracker-input');
+  const trackerResult = document.getElementById('tracker-result');
+  const trackerMessage = document.getElementById('tracker-message');
+
+  const stepPending = document.getElementById('step-pending');
+  const stepPreparing = document.getElementById('step-preparing');
+  const stepReady = document.getElementById('step-ready');
+  const lineFill = document.getElementById('tracker-line-fill');
+
+  if (trackerBtn && trackerModal) {
+    trackerBtn.onclick = () => {
+      trackerModal.style.display = 'flex';
+      trackerInput.value = '';
+      trackerResult.style.display = 'none';
+    };
+    trackerClose.onclick = () => trackerModal.style.display = 'none';
+    trackerModal.onclick = (e) => {
+      if (e.target === trackerModal) trackerModal.style.display = 'none';
+    };
+
+    trackerSearchBtn.onclick = async () => {
+      const ticket = trackerInput.value.trim();
+      if (ticket.length !== 4) {
+        alert('Por favor, ingresá los 4 dígitos de tu ticket.');
+        return;
+      }
+      
+      trackerSearchBtn.innerText = 'Buscando...';
+      try {
+        const res = await fetch(`/api/tracking/${ticket}`);
+        if (!res.ok) {
+          trackerResult.style.display = 'block';
+          trackerMessage.innerText = 'Ticket no encontrado o ya entregado.';
+          trackerMessage.style.color = '#ff4d4d';
+          lineFill.style.width = '0%';
+          [stepPending, stepPreparing, stepReady].forEach(step => {
+            step.querySelector('.step-circle').style.background = '#333';
+            step.querySelector('.step-circle').style.borderColor = '#555';
+          });
+        } else {
+          const data = await res.json();
+          trackerResult.style.display = 'block';
+          trackerMessage.style.color = 'white';
+          
+          // Reset
+          [stepPending, stepPreparing, stepReady].forEach(step => {
+            step.querySelector('.step-circle').style.background = '#333';
+            step.querySelector('.step-circle').style.borderColor = '#555';
+          });
+
+          const setActive = (step) => {
+            step.querySelector('.step-circle').style.background = 'var(--neon-cyan)';
+            step.querySelector('.step-circle').style.borderColor = 'white';
+            step.querySelector('.step-circle').style.boxShadow = '0 0 15px var(--neon-cyan-glow)';
+          };
+
+          if (data.kdsStatus === 'pending') {
+            trackerMessage.innerText = '¡Pedido recibido! Pronto comenzaremos a prepararlo.';
+            lineFill.style.width = '0%';
+            setActive(stepPending);
+          } else if (data.kdsStatus === 'preparing') {
+            trackerMessage.innerText = '¡Tus waffles están en el horno! Huele delicioso...';
+            lineFill.style.width = '50%';
+            setActive(stepPending);
+            setActive(stepPreparing);
+          } else if (data.kdsStatus === 'ready') {
+            trackerMessage.innerText = '¡Listos! Acercate al mostrador para retirarlos.';
+            lineFill.style.width = '100%';
+            setActive(stepPending);
+            setActive(stepPreparing);
+            setActive(stepReady);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        trackerSearchBtn.innerText = 'Buscar';
+      }
+    };
+  }
+
+  // --- MODO SORPRESA ---
+  const surpriseBtn = document.getElementById('btn-surprise-me');
+  if (surpriseBtn) {
+    surpriseBtn.onclick = () => {
+      // Evitar doble click
+      surpriseBtn.disabled = true;
+      surpriseBtn.innerText = 'Mezclando... 🎰';
+
+      const bases = stock.bases || [];
+      const toppings = stock.toppings || [];
+      const syrups = stock.syrups || [];
+      const icecreams = stock.icecreams || [];
+
+      if (!bases.length) {
+        surpriseBtn.disabled = false;
+        surpriseBtn.innerText = '¡Sorpréndeme! 🎲';
+        return;
+      }
+
+      let shuffles = 0;
+      const maxShuffles = 15;
+      const interval = setInterval(() => {
+        // Seleccion aleatoria
+        waffleState.base = bases[Math.floor(Math.random() * bases.length)].id;
+        
+        waffleState.toppings = [];
+        if (toppings.length > 0) {
+          const t1 = toppings[Math.floor(Math.random() * toppings.length)].id;
+          waffleState.toppings.push(t1);
+          if (toppings.length > 1 && Math.random() > 0.5) {
+            let t2 = toppings[Math.floor(Math.random() * toppings.length)].id;
+            if (t2 !== t1) waffleState.toppings.push(t2);
+          }
+        }
+
+        waffleState.syrups = [];
+        if (syrups.length > 0 && Math.random() > 0.3) {
+          waffleState.syrups.push(syrups[Math.floor(Math.random() * syrups.length)].id);
+        }
+
+        waffleState.icecreams = [];
+        if (icecreams.length > 0 && Math.random() > 0.4) {
+          waffleState.icecreams.push(icecreams[Math.floor(Math.random() * icecreams.length)].id);
+        }
+
+        waffleState.whippedCream = Math.random() > 0.5;
+
+        // Renderizado rapido
+        renderClientWaffle();
+        renderBuilderCategories();
+        
+        shuffles++;
+        if (shuffles >= maxShuffles) {
+          clearInterval(interval);
+          surpriseBtn.disabled = false;
+          surpriseBtn.innerText = '¡Sorpréndeme! 🎲';
+          
+          // Animar el lienzo como celebración
+          const canvas = document.getElementById('client-waffle-canvas-wrapper');
+          if (canvas) {
+            canvas.style.transform = 'scale(1.05)';
+            setTimeout(() => canvas.style.transform = 'scale(1)', 300);
+          }
+        }
+      }, 100); // 100ms per shuffle
+    };
+  }
 
   // --- CONTROL DEL MODAL DE AYUDA CLIENTE ---
   const helpBtn = document.getElementById('help-btn');

@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let stock = [];
   let sales = [];
   let menu = [];
+  let employees = [];
   let currentAdminView = 'analytics';
 
   // --- ELEMENTOS DEL DOM ---
@@ -19,7 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     'crud-menu': document.getElementById('admin-view-crud-menu'),
     settings: document.getElementById('admin-view-settings'),
     developer: document.getElementById('admin-view-developer'),
-    company: document.getElementById('admin-view-company')
+    company: document.getElementById('admin-view-company'),
+    'settings-ui': document.getElementById('admin-view-settings-ui'),
+    docs: document.getElementById('admin-view-docs'),
+    empleados: document.getElementById('admin-view-empleados')
   };
 
   const adminMenuItems = document.querySelectorAll('.admin-menu-item');
@@ -58,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const menuRes = await fetch('/api/menu');
       menu = await menuRes.json();
+
+      const empRes = await fetch('/api/employees');
+      employees = await empRes.json();
     } catch (error) {
       console.error('Error al cargar datos del servidor:', error);
       showToast('Error al conectar con el servidor', true);
@@ -134,8 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'crud-stock') renderCrudStock();
     if (viewName === 'crud-menu') renderCrudMenu();
     if (viewName === 'settings') resetSettingsForm();
+    if (viewName === 'docs') loadDocsView();
     if (viewName === 'developer') loadDeveloperSettingsPanel();
-    if (viewName === 'company') loadCompanySettingsPanel();
+    if (viewName === 'company' || viewName === 'settings-ui') loadCompanySettingsPanel();
+    if (viewName === 'empleados') renderCrudEmployees();
   };
 
   adminMenuItems.forEach(item => {
@@ -146,14 +155,46 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- PANEL 1: ANALYTICS & HISTORIAL DE VENTAS ---
+  const getFilteredSales = () => {
+    const startInput = document.getElementById('filter-start-date');
+    const endInput = document.getElementById('filter-end-date');
+
+    // Por defecto hoy si están vacíos
+    if (startInput && !startInput.value) {
+      const today = new Date();
+      const offset = today.getTimezoneOffset() * 60000;
+      startInput.value = (new Date(today - offset)).toISOString().split('T')[0];
+    }
+    if (endInput && !endInput.value) {
+      const today = new Date();
+      const offset = today.getTimezoneOffset() * 60000;
+      endInput.value = (new Date(today - offset)).toISOString().split('T')[0];
+    }
+
+    if (startInput && endInput && startInput.value && endInput.value) {
+      const startParts = startInput.value.split('-');
+      const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2], 0, 0, 0);
+
+      const endParts = endInput.value.split('-');
+      const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2], 23, 59, 59, 999);
+
+      return sales.filter(s => {
+        const d = new Date(s.date);
+        return d >= startDate && d <= endDate;
+      });
+    }
+    return sales;
+  };
+
   const renderAnalytics = () => {
-    const activeSales = sales.filter(s => s.status === 'completed');
+    const filteredSales = getFilteredSales();
+    const activeSales = filteredSales.filter(s => s.status === 'completed');
     const totalEarnings = activeSales.reduce((sum, s) => sum + s.total, 0);
     const totalOrders = activeSales.length;
     const avgTicket = totalOrders > 0 ? totalEarnings / totalOrders : 0;
     
     const toppingCounts = {};
-    sales.forEach(sale => {
+    filteredSales.forEach(sale => {
       if (sale.status !== 'completed') return;
       sale.items.forEach(item => {
         if (item.details) {
@@ -175,14 +216,64 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    let totalKitchenMins = 0;
+    let completedKitchenTickets = 0;
+    activeSales.forEach(sale => {
+      if (sale.kdsCompletedAt && sale.date) {
+        const diffMins = (new Date(sale.kdsCompletedAt) - new Date(sale.date)) / 60000;
+        if (diffMins > 0) {
+          totalKitchenMins += diffMins;
+          completedKitchenTickets++;
+        }
+      }
+    });
+    const avgKitchenTime = completedKitchenTickets > 0 ? (totalKitchenMins / completedKitchenTickets) : 0;
+
     document.getElementById('stat-earnings').textContent = formatCurrency(totalEarnings);
     document.getElementById('stat-orders').textContent = totalOrders;
-    document.getElementById('stat-ticket').textContent = formatCurrency(avgTicket);
+    
+    const avgTicketEl = document.getElementById('stat-avg-ticket') || document.getElementById('stat-ticket');
+    if (avgTicketEl) avgTicketEl.textContent = formatCurrency(avgTicket);
+    
+    const avgKitchenTimeEl = document.getElementById('stat-avg-kitchen-time');
+    if (avgKitchenTimeEl) {
+      avgKitchenTimeEl.textContent = avgKitchenTime > 0 ? `${Math.round(avgKitchenTime)} min` : '-- min';
+    }
+    
     document.getElementById('stat-topping').textContent = bestTopping === 'Ninguno' ? 'N/A' : `${bestTopping} (${maxToppingCount} u)`;
+
+    // VENTAS POR CAJERO
+    const cashierStats = {};
+    activeSales.forEach(sale => {
+      const cashier = sale.cashierName || 'Administrador';
+      if (!cashierStats[cashier]) {
+        cashierStats[cashier] = { ops: 0, total: 0 };
+      }
+      cashierStats[cashier].ops += 1;
+      cashierStats[cashier].total += sale.total;
+    });
+
+    const tbodyCashiers = document.getElementById('sales-by-cashier-body');
+    if (tbodyCashiers) {
+      tbodyCashiers.innerHTML = '';
+      Object.keys(cashierStats).forEach(cName => {
+        const stats = cashierStats[cName];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight: 600;">${cName}</td>
+          <td>${stats.ops}</td>
+          <td style="color: var(--neon-green); font-weight: bold;">${formatCurrency(stats.total)}</td>
+        `;
+        tbodyCashiers.appendChild(tr);
+      });
+      if (Object.keys(cashierStats).length === 0) {
+        tbodyCashiers.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">No hay ventas registradas.</td></tr>';
+      }
+    }
 
     renderSalesChart(activeSales);
     renderToppingsRanking(toppingCounts);
-    renderTransactionsTable();
+    renderTransactionsTable(filteredSales);
   };
 
   const renderSalesChart = (activeSales) => {
@@ -190,18 +281,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!chartContainer) return;
 
     chartContainer.innerHTML = '';
+    chartContainer.style.overflowX = 'auto';
+    chartContainer.style.justifyContent = 'flex-start';
 
     const dailySales = {};
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const now = new Date();
+    
+    const startInput = document.getElementById('filter-start-date');
+    const endInput = document.getElementById('filter-end-date');
+    
+    let startDate, endDate;
+    if (startInput && endInput && startInput.value && endInput.value) {
+      const sParts = startInput.value.split('-');
+      startDate = new Date(sParts[0], sParts[1]-1, sParts[2]);
+      const eParts = endInput.value.split('-');
+      endDate = new Date(eParts[0], eParts[1]-1, eParts[2]);
+    } else {
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setDate(endDate.getDate() - 6);
+    }
 
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const dateString = d.toDateString();
+    // Limitar a un rango máximo razonable si se seleccionan muchos días para no colgar el navegador
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > 90) {
+      startDate = new Date(endDate);
+      startDate.setDate(endDate.getDate() - 90);
+    }
+
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const dateString = current.toDateString();
       dailySales[dateString] = {
-        label: `${dayNames[d.getDay()]} ${d.getDate()}`,
+        label: `${dayNames[current.getDay()]} ${current.getDate()}`,
         amount: 0
       };
+      current.setDate(current.getDate() + 1);
     }
 
     activeSales.forEach(sale => {
@@ -265,13 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  const renderTransactionsTable = () => {
+  const renderTransactionsTable = (salesData = sales) => {
     const container = document.getElementById('transactions-table-body');
     if (!container) return;
 
     container.innerHTML = '';
 
-    sales.forEach(sale => {
+    salesData.forEach(sale => {
       const tr = document.createElement('tr');
       const dateFormatted = new Date(sale.date).toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
       const itemsList = sale.items.map(i => i.name).join(' + ');
@@ -329,7 +445,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exportar reporte CSV
   document.getElementById('export-report-btn').onclick = () => {
-    if (sales.length === 0) {
+    const filteredSales = typeof getFilteredSales === 'function' ? getFilteredSales() : sales;
+    if (filteredSales.length === 0) {
       showToast('No hay transacciones para exportar', true);
       return;
     }
@@ -337,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let csvContent = '\uFEFF'; // UTF-8 BOM
     csvContent += 'ID Venta,Fecha,Productos,Total Venta,Metodo Pago,Estado\n';
 
-    sales.forEach(sale => {
+    filteredSales.forEach(sale => {
       const prodNames = sale.items.map(i => i.name).join(' | ');
       const dateStr = new Date(sale.date).toLocaleString('es-AR');
       csvContent += `"${sale.id}","${dateStr}","${prodNames}",${sale.total},"${sale.paymentMethod}","${sale.status === 'refunded' ? 'Reembolsado' : 'Completado'}"\n`;
@@ -352,6 +469,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.removeChild(link);
     showToast('Reporte CSV descargado');
   };
+
+  // Filtros de fecha
+  const btnApplyFilter = document.getElementById('btn-apply-date-filter');
+  if (btnApplyFilter) {
+    btnApplyFilter.onclick = () => {
+      renderAnalytics();
+    };
+  }
+
+  const btnClearFilter = document.getElementById('btn-clear-date-filter');
+  if (btnClearFilter) {
+    btnClearFilter.onclick = () => {
+      const startInput = document.getElementById('filter-start-date');
+      const endInput = document.getElementById('filter-end-date');
+      if (startInput) startInput.value = '';
+      if (endInput) endInput.value = '';
+      renderAnalytics();
+    };
+  }
 
   // --- PANEL 2: CONTROL DE STOCK (TABLA PRINCIPAL) ---
   const renderInventory = () => {
@@ -1281,6 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const companyHoursInput = document.getElementById('company-hours-input');
   const companyInstagramInput = document.getElementById('company-instagram-input');
   const companyPhoneInput = document.getElementById('company-phone-input');
+  const kdsAlertTimeInput = document.getElementById('kds-alert-time-input');
   const companyWhatsappEnabledInput = document.getElementById('company-whatsapp-enabled-input');
 
   const loadCompanySettingsPanel = async () => {
@@ -1292,7 +1429,35 @@ document.addEventListener('DOMContentLoaded', () => {
       if (companyHoursInput) companyHoursInput.value = data.companyHours || '';
       if (companyInstagramInput) companyInstagramInput.value = data.companyInstagram || '';
       if (companyPhoneInput) companyPhoneInput.value = data.companyPhone || '';
+      if (kdsAlertTimeInput) kdsAlertTimeInput.value = data.kdsAlertTime || 10;
       if (companyWhatsappEnabledInput) companyWhatsappEnabledInput.checked = data.whatsappOrdersEnabled !== false;
+
+      // Cargar settings de Logo
+      window.currentCompanyLogo = data.companyLogo || '';
+      const logoPreview = document.getElementById('company-logo-preview');
+      const logoPlaceholder = document.getElementById('company-logo-placeholder');
+      if (logoPreview && logoPlaceholder) {
+        if (window.currentCompanyLogo) {
+          logoPreview.src = window.currentCompanyLogo;
+          logoPreview.style.display = 'block';
+          logoPlaceholder.style.display = 'none';
+        } else {
+          logoPreview.style.display = 'none';
+          logoPlaceholder.style.display = 'block';
+        }
+      }
+      
+      const adminSidebarText = document.querySelector('.admin-sidebar .logo-text');
+      if (adminSidebarText && window.currentCompanyLogo) {
+        let adminLogoImg = document.getElementById('dynamic-admin-logo');
+        if (!adminLogoImg) {
+          adminLogoImg = document.createElement('img');
+          adminLogoImg.id = 'dynamic-admin-logo';
+          adminLogoImg.style.cssText = 'width:36px; height:36px; border-radius:50%; object-fit:cover; margin-right:10px;';
+          adminSidebarText.parentNode.insertBefore(adminLogoImg, adminSidebarText);
+        }
+        adminLogoImg.src = window.currentCompanyLogo;
+      }
 
       // Cargar settings de Hero
       window.currentHeroImages = data.heroImages || [];
@@ -1392,6 +1557,28 @@ document.addEventListener('DOMContentLoaded', () => {
     loyaltySaveBtn.onclick = saveLoyaltySettings;
   }
 
+  const kdsAlertSaveBtn = document.getElementById('kds-alert-save-btn');
+  if (kdsAlertSaveBtn && kdsAlertTimeInput) {
+    kdsAlertSaveBtn.onclick = async () => {
+      try {
+        const payload = { kdsAlertTime: parseInt(kdsAlertTimeInput.value) || 10 };
+        const res = await fetch('/api/company/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Tiempo de Alerta Inteligente guardado');
+        } else {
+          showToast('Error al guardar el tiempo de alerta', true);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error al conectar con el servidor', true);
+      }
+    };
+  }
+
   if (companyForm) {
     companyForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -1421,6 +1608,53 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         console.error(err);
         showToast('Error al conectar con el servidor', true);
+      }
+    };
+  }
+
+  // --- LÓGICA DE LOGO DE EMPRESA ---
+  const companyLogoInput = document.getElementById('company-logo-file');
+  const companyLogoSaveBtn = document.getElementById('company-logo-save-btn');
+  const companyLogoPreview = document.getElementById('company-logo-preview');
+  const companyLogoPlaceholder = document.getElementById('company-logo-placeholder');
+
+  if (companyLogoInput) {
+    companyLogoInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          window.currentCompanyLogo = ev.target.result;
+          if (companyLogoPreview && companyLogoPlaceholder) {
+            companyLogoPreview.src = window.currentCompanyLogo;
+            companyLogoPreview.style.display = 'block';
+            companyLogoPlaceholder.style.display = 'none';
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      companyLogoInput.value = '';
+    };
+  }
+
+  if (companyLogoSaveBtn) {
+    companyLogoSaveBtn.onclick = async () => {
+      try {
+        const payload = {
+          companyLogo: window.currentCompanyLogo || ''
+        };
+        const res = await fetch('/api/company/info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Logo guardado con éxito');
+        } else {
+          showToast('Error al guardar logo', true);
+        }
+      } catch (err) {
+        showToast('Error de conexión', true);
       }
     };
   }
@@ -1582,5 +1816,195 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
   }
+
+  // --- PANEL 8: GESTIÓN DE EMPLEADOS / CAJEROS ---
+  
+  const renderCrudEmployees = () => {
+    const tbody = document.getElementById('employees-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (employees.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No hay cajeros registrados.</td></tr>';
+      return;
+    }
+
+    employees.forEach(emp => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${emp.name}</strong></td>
+        <td><span style="font-family: monospace; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">****</span></td>
+        <td><span style="color: var(--neon-cyan); font-weight: bold; text-transform: capitalize;">${emp.role === 'kitchen' ? 'Cocinero' : 'Cajero'}</span></td>
+        <td><span class="status-badge ${emp.active ? 'status-completed' : 'status-cancelled'}">${emp.active ? 'Activo' : 'Inactivo'}</span></td>
+        <td>
+          <button class="action-btn text-warning" onclick="editEmployee('${emp.id}')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2-2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="action-btn text-danger" onclick="deleteEmployee('${emp.id}')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
+
+  const showEmployeeForm = (employee = null) => {
+    document.getElementById('employee-modal').style.display = 'flex';
+    
+    if (employee) {
+      document.getElementById('employee-modal-title').textContent = 'Editar Empleado';
+      document.getElementById('employee-id').value = employee.id;
+      document.getElementById('employee-name').value = employee.name;
+      document.getElementById('employee-pin').value = employee.pin;
+      document.getElementById('employee-role').value = employee.role || 'cashier';
+      document.getElementById('employee-active').value = employee.active ? 'true' : 'false';
+    } else {
+      document.getElementById('employee-modal-title').textContent = 'Crear Empleado';
+      document.getElementById('employee-name').value = '';
+      document.getElementById('employee-pin').value = '';
+      document.getElementById('employee-id').value = '';
+    }
+  };
+
+  document.getElementById('btn-add-employee')?.addEventListener('click', () => {
+    showEmployeeForm();
+  });
+
+  document.getElementById('employee-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('employee-modal').style.display = 'none';
+  });
+
+  window.editEmployee = (id) => {
+    const emp = employees.find(e => e.id === id);
+    if (emp) showEmployeeForm(emp);
+  };
+
+  window.deleteEmployee = async (id) => {
+    if (confirm('¿Estás seguro de eliminar este empleado?')) {
+      try {
+        const res = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Empleado eliminado');
+          await loadState();
+          renderCrudEmployees();
+        } else {
+          showToast('Error al eliminar empleado', true);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Error de red', true);
+      }
+    }
+  };
+
+  document.getElementById('employee-save-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('employee-id').value;
+    const name = document.getElementById('employee-name').value.trim();
+    const pin = document.getElementById('employee-pin').value.trim();
+    const role = document.getElementById('employee-role').value;
+    const active = document.getElementById('employee-active').value === 'true';
+
+    if (!name || !pin) {
+      showToast('Nombre y PIN son obligatorios', true);
+      return;
+    }
+
+    const payload = { name, pin, role, active };
+
+    try {
+      let res;
+      if (id) {
+        res = await fetch(`/api/employees/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch('/api/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (res.ok) {
+        showToast(id ? 'Empleado actualizado' : 'Empleado creado');
+        document.getElementById('employee-modal').style.display = 'none';
+        await loadState();
+        renderCrudEmployees();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Error al guardar empleado', true);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error de red', true);
+    }
+  });
+
+  // --- PANEL 9: DOCUMENTACION ---
+  const loadDocsView = async () => {
+    try {
+      const res = await fetch('/api/docs');
+      const files = await res.json();
+      const docsList = document.getElementById('docs-list');
+      const docsContent = document.getElementById('docs-content');
+      
+      docsList.innerHTML = '';
+      
+      if (files.length === 0) {
+        docsList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">No se encontraron manuales.</p>';
+        return;
+      }
+
+      files.forEach(file => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-secondary';
+        btn.style.textAlign = 'center';
+        btn.style.padding = '0.6rem 1rem';
+        btn.style.fontSize = '0.85rem';
+        btn.style.borderColor = 'rgba(255,255,255,0.1)';
+        btn.style.flex = '1 1 auto';
+        btn.textContent = file.replace('.md', '').replace(/_/g, ' ');
+        
+        btn.onclick = async () => {
+          // Remover clase activa de los demás
+          Array.from(docsList.children).forEach(c => c.style.borderColor = 'rgba(255,255,255,0.1)');
+          btn.style.borderColor = 'var(--neon-cyan)';
+          
+          docsContent.innerHTML = '<p style="color:var(--text-muted); text-align:center; margin-top:50px;">Cargando documento...</p>';
+          
+          try {
+            const docRes = await fetch(`/documentacion/${file}`);
+            if (docRes.ok) {
+              const markdown = await docRes.text();
+              // Usar marked si está disponible
+              if (typeof marked !== 'undefined') {
+                docsContent.innerHTML = `<div class="markdown-body">${marked.parse(markdown)}</div>`;
+              } else {
+                docsContent.innerHTML = `<pre style="white-space:pre-wrap;">${markdown}</pre>`;
+              }
+            } else {
+              docsContent.innerHTML = '<p style="color:var(--neon-pink); text-align:center;">Error al cargar el archivo.</p>';
+            }
+          } catch (e) {
+            docsContent.innerHTML = '<p style="color:var(--neon-pink); text-align:center;">Error de red al cargar el archivo.</p>';
+          }
+        };
+        
+        docsList.appendChild(btn);
+      });
+      
+    } catch (e) {
+      console.error(e);
+      showToast('Error al cargar lista de documentación', true);
+    }
+  };
+
+  // --- INICIO APP ---
+  loadState();
 
 });

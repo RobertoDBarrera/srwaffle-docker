@@ -121,7 +121,19 @@ CREATE TABLE sales (
     items JSONB NOT NULL,                   -- Estructura de productos vendidos
     total INTEGER NOT NULL,
     payment_method VARCHAR(50) NOT NULL,   -- 'Efectivo', 'Mercado Pago', 'Tarjeta'
-    status VARCHAR(50) NOT NULL DEFAULT 'completed' -- 'completed', 'refunded'
+    status VARCHAR(50) NOT NULL DEFAULT 'completed', -- 'completed', 'refunded'
+    kds_status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'preparing', 'ready', 'delivered'
+    cashier_name VARCHAR(255)
+);
+
+-- Tabla: employees (Gestión de Personal)
+CREATE TABLE employees (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    pin VARCHAR(4) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'cashier', -- 'cashier', 'kitchen'
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -142,11 +154,12 @@ Si se registra una venta incorrecta:
 3.  Hacer clic en el botón rojo **Devolver**.
 4.  **Consecuencia:** La venta cambiará de estado a "Reembolsado" y el stock de todos los insumos descontados en esa venta (masa, toppings, bebidas, helados) se sumará automáticamente de regreso al inventario en la BD.
 
-### C) Exportar Auditorías
-Para realizar conciliaciones de caja o auditorías periódicas:
+### C) Exportar Auditorías y Filtrado de Fechas
+Para realizar conciliaciones de caja o analizar periodos específicos:
 1.  En el Panel de Administración, ir a **Historial y Métricas**.
-2.  Hacer clic en el botón **Exportar CSV**.
-3.  Se descargará un archivo CSV compatible con Excel con el detalle de todas las transacciones históricas registradas.
+2.  (Opcional) Utilizá los selectores de **Fecha Inicio** y **Fecha Fin** junto al botón **Filtrar** para ver únicamente las ventas de ese rango.
+3.  Hacer clic en el botón **Exportar CSV**.
+4.  Se descargará un archivo CSV compatible con Excel con el detalle de las transacciones correspondientes al periodo visualizado.
 
 ---
 
@@ -164,7 +177,11 @@ Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin 
 
 3. **Panel de Administración (`/admin`):**
    - **Acceso:** Ubicado directamente como una pestaña destacada en el menú de navegación del sidebar lateral izquierdo, separado por una línea divisoria elegante y acompañado de un icono de pregunta (`Ayuda / Guía`).
-   - **Guía:** Detalla el uso de métricas e ingresos, el proceso de reembolsos/devoluciones de ventas que restituye el stock automáticamente en base de datos, el reabastecimiento de insumos físicos (restock), la edición de waffles de la carta, la subida de imágenes y la gestión de la contraseña y PIN.
+   - **Guía:** Detalla el uso de métricas e ingresos con filtrado de fechas, el proceso de reembolsos/devoluciones de ventas que restituye el stock automáticamente en base de datos, el reabastecimiento de insumos físicos (restock), la edición de waffles de la carta, las opciones configurables (Logo, Mapa, Fidelización, Alerta en Cocina), la gestión de la contraseña y PIN, y la administración de empleados (cajeros y cocineros).
+
+4. **Kitchen Display System - KDS (`/cocina`):**
+   - **Acceso:** Integrado en el encabezado superior derecho, junto al control de volumen de notificaciones (`Ayuda / Guía`).
+   - **Guía:** Explica el inicio de sesión por PIN de 4 dígitos para cocineros, el flujo de tickets por estados (Nuevos Pedidos -> En Preparación -> Listos -> Entregados), el funcionamiento de las notificaciones sonoras, y las alertas visuales para pedidos demorados (más de 10 minutos).
 
 Cada una de estas opciones abre un modal translúcido con efecto glassmorphism (`backdrop-filter: blur`) que se integra de manera armónica al estilo cyberpunk de la aplicación.
 

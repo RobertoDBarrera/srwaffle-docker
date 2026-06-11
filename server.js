@@ -12,6 +12,17 @@ app.use(express.json({ limit: '50mb' }));
 
 // --- API ENDPOINTS ---
 
+// GET: Obtener lista de documentacion
+app.get('/api/docs', (req, res) => {
+  const docsPath = path.join(__dirname, 'documentacion');
+  if (fs.existsSync(docsPath)) {
+    const files = fs.readdirSync(docsPath).filter(f => f.endsWith('.md'));
+    res.json(files);
+  } else {
+    res.json([]);
+  }
+});
+
 // GET: Obtener Inventario
 app.get('/api/stock', async (req, res) => {
   try {
@@ -99,7 +110,8 @@ app.post('/api/sales', async (req, res) => {
       })),
       total: parseInt(total),
       paymentMethod,
-      status: 'pending'
+      status: 'pending',
+      cashierName: req.body.cashierName || 'Administrador'
     };
 
     // Ejecutar checkout transaccional en Postgres
@@ -139,10 +151,23 @@ app.post('/api/sales/refund', async (req, res) => {
 // POST: Verificar PIN del cajero
 app.post('/api/auth/verify-cashier', async (req, res) => {
   try {
-    const { pin } = req.body;
+    const { employeeId, pin } = req.body;
+    
+    // Si envían employeeId, buscamos en la tabla empleados
+    if (employeeId) {
+      const employees = await db.getEmployees();
+      const emp = employees.find(e => e.id === employeeId && e.active);
+      if (emp && emp.pin === pin) {
+        return res.json({ success: true, cashierName: emp.name });
+      } else {
+        return res.json({ success: false });
+      }
+    }
+    
+    // Fallback: verificar PIN genérico de caja (legacy)
     const settings = await db.getSettings();
     if (settings && settings.cashierPin === pin) {
-      res.json({ success: true });
+      res.json({ success: true, cashierName: 'Caja Principal' });
     } else {
       res.json({ success: false });
     }
@@ -183,6 +208,7 @@ app.post('/api/auth/change-credentials', async (req, res) => {
     res.status(500).json({ error: 'Error al cambiar credenciales' });
   }
 });
+
 
 // --- ENDPOINTS CONFIGURACIÓN DESARROLLADOR ---
 
@@ -252,7 +278,7 @@ app.get('/api/company/info', async (req, res) => {
 // POST: Actualizar información de la empresa
 app.post('/api/company/info', async (req, res) => {
   try {
-    const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY } = req.body;
+    const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY, companyLogo, kdsAlertTime } = req.body;
     
     // Si no viene alguno de los principales, intentamos no pisar si es posible, pero requerimos los básicos si se envía el formulario de empresa.
     // Como ahora puede ser una actualización parcial (sólo hero o sólo mapa), vamos a buscar los existentes y hacer merge.
@@ -269,7 +295,9 @@ app.post('/api/company/info', async (req, res) => {
       heroCarouselEnabled: heroCarouselEnabled !== undefined ? heroCarouselEnabled : currentInfo.heroCarouselEnabled,
       mapBgImage: mapBgImage !== undefined ? mapBgImage : currentInfo.mapBgImage,
       mapPinX: mapPinX !== undefined ? mapPinX : currentInfo.mapPinX,
-      mapPinY: mapPinY !== undefined ? mapPinY : currentInfo.mapPinY
+      mapPinY: mapPinY !== undefined ? mapPinY : currentInfo.mapPinY,
+      companyLogo: companyLogo !== undefined ? companyLogo : currentInfo.companyLogo,
+      kdsAlertTime: kdsAlertTime !== undefined ? kdsAlertTime : currentInfo.kdsAlertTime
     });
     res.json({ success: true });
   } catch (error) {
@@ -456,6 +484,61 @@ app.delete('/api/menu/:id', async (req, res) => {
   }
 });
 
+// --- ENDPOINTS CRUD EMPLEADOS ---
+
+// GET: Lista de empleados
+app.get('/api/employees', async (req, res) => {
+  try {
+    const list = await db.getEmployees();
+    res.json(list);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener empleados' });
+  }
+});
+
+// POST: Crear empleado
+app.post('/api/employees', async (req, res) => {
+  try {
+    const { name, pin, role, active } = req.body;
+    if (!name || !pin) {
+      return res.status(400).json({ error: 'Nombre y PIN son requeridos' });
+    }
+    const newId = `emp_${Date.now()}`;
+    const newEmp = { id: newId, name, pin, role, active };
+    await db.createEmployee(newEmp);
+    res.json({ success: true, employee: newEmp });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear empleado' });
+  }
+});
+
+// PUT: Actualizar empleado
+app.put('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, pin, active } = req.body;
+    await db.updateEmployee(id, { name, pin, active });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar empleado' });
+  }
+});
+
+// DELETE: Borrar empleado
+app.delete('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.deleteEmployee(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar empleado' });
+  }
+});
+
 // --- ENDPOINTS CRUD STOCK / INGREDIENTES ---
 
 // POST: Crear un nuevo ingrediente/insumo
@@ -549,8 +632,110 @@ app.post('/api/menu/upload-image', (req, res) => {
     
     res.json({ success: true, fileName: uniqueFileName });
   } catch (error) {
-    console.error('Error al subir imagen:', error);
     res.status(500).json({ error: 'Error al guardar la imagen en el servidor' });
+  }
+});
+
+// --- ENDPOINTS EMPLEADOS ---
+app.get('/api/employees', async (req, res) => {
+  try {
+    const employees = await db.getEmployees();
+    res.json(employees);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener empleados' });
+  }
+});
+
+app.post('/api/employees', async (req, res) => {
+  try {
+    const { name, pin, role, active } = req.body;
+    if (!name || !pin) return res.status(400).json({ error: 'Nombre y PIN son obligatorios' });
+    
+    const newEmployee = {
+      id: 'emp_' + Date.now(),
+      name,
+      pin,
+      role,
+      active
+    };
+    
+    await db.createEmployee(newEmployee);
+    res.json({ success: true, employee: newEmployee });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear empleado' });
+  }
+});
+
+app.put('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, pin, role, active } = req.body;
+    const employee = await db.updateEmployee(id, { name, pin, role, active });
+    if (!employee) return res.status(404).json({ error: 'Empleado no encontrado' });
+    res.json({ success: true, employee });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar empleado' });
+  }
+});
+
+app.delete('/api/employees/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.deleteEmployee(id);
+    if (!result) return res.status(404).json({ error: 'Empleado no encontrado' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar empleado' });
+  }
+});
+
+// --- ENDPOINTS KITCHEN DISPLAY SYSTEM (KDS) ---
+
+// GET: Lista de pedidos pendientes en cocina
+app.get('/api/kitchen/tickets', async (req, res) => {
+  try {
+    const tickets = await db.getKitchenTickets();
+    res.json(tickets);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener los tickets de cocina' });
+  }
+});
+
+// PUT: Cambiar estado del ticket de cocina
+app.put('/api/kitchen/tickets/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!['pending', 'preparing', 'ready', 'delivered'].includes(status)) {
+      return res.status(400).json({ error: 'Estado de KDS inválido' });
+    }
+    await db.updateKitchenTicketStatus(id, status);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar el estado del ticket en cocina' });
+  }
+});
+// --- ENDPOINTS ORDER TRACKING ---
+app.get('/api/tracking/:ticket', async (req, res) => {
+  try {
+    const { ticket } = req.params;
+    if (!ticket || ticket.length !== 4) {
+      return res.status(400).json({ error: 'El número de ticket debe tener 4 dígitos' });
+    }
+    const status = await db.getTicketStatus(ticket);
+    if (!status) {
+      return res.status(404).json({ error: 'Ticket no encontrado o ya entregado hoy' });
+    }
+    res.json(status);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al rastrear ticket' });
   }
 });
 
@@ -558,6 +743,7 @@ app.post('/api/menu/upload-image', (req, res) => {
 app.use(express.static(path.join(__dirname)));
 app.use('/caja', express.static(path.join(__dirname, 'caja')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.use('/cocina', express.static(path.join(__dirname, 'cocina')));
 
 // Iniciar el servidor con la inicialización automática de la Base de Datos
 db.initDb().then(() => {
@@ -568,6 +754,7 @@ db.initDb().then(() => {
     console.log(`  Accede localmente en:`);
     console.log(`  - Cliente: http://localhost:${PORT}`);
     console.log(`  - Caja POS (Solo Ventas): http://localhost:${PORT}/caja`);
+    console.log(`  - Cocina KDS: http://localhost:${PORT}/cocina`);
     console.log(`  - Panel de Administración: http://localhost:${PORT}/admin`);
     console.log(`=========================================`);
   });

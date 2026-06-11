@@ -37,6 +37,7 @@
       <a class="nav-link active" data-view="inicio">Inicio</a>
       <a class="nav-link" data-view="menu">Nuestro Menú</a>
       <a class="nav-link" data-view="builder">Armá tu Sr. Waffle</a>
+      <a class="nav-help-link" id="tracker-btn" style="color: var(--neon-cyan);">Rastrear Pedido 📍</a>
       <a class="nav-help-link" id="help-btn">Ayuda ❓</a>
     </nav>
   </header>
@@ -275,6 +276,45 @@
 
       <div class="modal-actions" style="margin-top: 20px; justify-content: center;">
         <button class="btn-primary" id="help-modal-close" style="padding: 0.6rem 2rem; border-radius: 20px;">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE TRACKING -->
+  <div class="pos-modal-overlay" id="tracker-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 550px; width: 90%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan-glow); text-align: center;">
+      <h2 style="font-family: var(--font-cursive); font-size: 2.2rem; color: var(--neon-cyan); margin-bottom: 5px;">Seguimiento en Vivo</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">Ingresá el número de ticket que te dieron en caja (4 dígitos).</p>
+      
+      <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 25px;">
+        <input type="text" id="tracker-input" placeholder="Ej: 3559" maxlength="4" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 15px; border-radius: 8px; font-size: 1.2rem; text-align: center; width: 120px; letter-spacing: 2px;">
+        <button class="btn-primary" id="tracker-search-btn" style="background: var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan-glow);">Buscar</button>
+      </div>
+
+      <div id="tracker-result" style="display: none; margin-top: 20px;">
+        <div class="tracker-status-bar" style="display: flex; justify-content: space-between; position: relative; margin-bottom: 30px;">
+          <div style="position: absolute; top: 50%; left: 10%; right: 10%; height: 4px; background: rgba(255,255,255,0.1); z-index: 1; transform: translateY(-50%);"></div>
+          <div id="tracker-line-fill" style="position: absolute; top: 50%; left: 10%; width: 0%; height: 4px; background: var(--neon-cyan); z-index: 2; transform: translateY(-50%); transition: width 0.5s ease; box-shadow: 0 0 10px var(--neon-cyan-glow);"></div>
+          
+          <div class="tracker-step" id="step-pending" style="z-index: 3; display: flex; flex-direction: column; align-items: center; width: 33%;">
+            <div class="step-circle" style="width: 30px; height: 30px; border-radius: 50%; background: #333; border: 2px solid #555; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; transition: all 0.3s ease;">📝</div>
+            <span style="font-size: 0.8rem; color: #888; font-weight: bold;">Recibido</span>
+          </div>
+          <div class="tracker-step" id="step-preparing" style="z-index: 3; display: flex; flex-direction: column; align-items: center; width: 33%;">
+            <div class="step-circle" style="width: 30px; height: 30px; border-radius: 50%; background: #333; border: 2px solid #555; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; transition: all 0.3s ease;">👨‍🍳</div>
+            <span style="font-size: 0.8rem; color: #888; font-weight: bold;">Preparando</span>
+          </div>
+          <div class="tracker-step" id="step-ready" style="z-index: 3; display: flex; flex-direction: column; align-items: center; width: 33%;">
+            <div class="step-circle" style="width: 30px; height: 30px; border-radius: 50%; background: #333; border: 2px solid #555; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; transition: all 0.3s ease;">✨</div>
+            <span style="font-size: 0.8rem; color: #888; font-weight: bold;">¡Listo!</span>
+          </div>
+        </div>
+        
+        <p id="tracker-message" style="font-size: 1.1rem; color: white; font-weight: bold; min-height: 25px;"></p>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 25px; justify-content: center;">
+        <button class="btn-secondary" id="tracker-modal-close" style="padding: 0.6rem 2rem; border-radius: 20px;">Cerrar</button>
       </div>
     </div>
   </div>

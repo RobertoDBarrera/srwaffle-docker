@@ -263,6 +263,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Seguridad
         </div>
+        <div class="admin-menu-item" data-admin-view="settings-ui">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Opciones Configurables
+        </div>
         <div class="admin-menu-item" data-admin-view="developer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
           Módulo Dev
@@ -271,7 +275,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-store"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
           Datos Empresa
         </div>
+        <div class="admin-menu-item" data-admin-view="empleados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Empleados
+        </div>
         <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 15px 0;"></div>
+        <div class="admin-menu-item" data-admin-view="docs" style="color: var(--neon-cyan);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open" style="stroke: var(--neon-cyan);"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Documentación
+        </div>
         <div class="admin-menu-item" id="help-btn" style="color: var(--neon-purple);">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle" style="stroke: var(--neon-purple);"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
           Ayuda / Guía
@@ -288,11 +300,18 @@
 
       <!-- ================= VISTA 1: ANALYTICS ================= -->
       <div id="admin-view-analytics" class="admin-view-panel active">
-        <div class="inventory-controls" style="margin-bottom: 1.5rem;">
+        <div class="inventory-controls" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px;">
           <h2 style="font-size: 1.8rem; font-weight: 700;">Métricas y Log de Ventas</h2>
-          <button class="btn-secondary" id="export-report-btn" style="padding: 0.5rem 1.2rem; border-color: var(--neon-cyan); color: var(--neon-cyan);">
-            Exportar CSV
-          </button>
+          <div style="display:flex; gap:10px; align-items:center; flex-grow: 1; justify-content: flex-end; flex-wrap: wrap;">
+            <input type="date" id="filter-start-date" class="form-control" style="width: auto;" title="Fecha inicio">
+            <span style="color:var(--text-muted)">a</span>
+            <input type="date" id="filter-end-date" class="form-control" style="width: auto;" title="Fecha fin">
+            <button class="btn-primary" id="btn-apply-date-filter" style="padding: 0.5rem 1rem;">Filtrar</button>
+            <button class="btn-secondary" id="btn-clear-date-filter" style="padding: 0.5rem 1rem;" title="Ver ventas del día">Limpiar</button>
+            <button class="btn-secondary" id="export-report-btn" style="padding: 0.5rem 1.2rem; border-color: var(--neon-cyan); color: var(--neon-cyan);">
+              Exportar CSV
+            </button>
+          </div>
         </div>
 
         <div class="analytics-grid-metrics">
@@ -304,15 +323,37 @@
             <div class="metric-title">Ventas Registradas</div>
             <div class="metric-value" id="stat-orders">0</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-title">Ticket Promedio</div>
-            <div class="metric-value" id="stat-ticket">$0</div>
+          <div class="stat-card">
+            <h3 class="stat-title">Ticket Promedio</h3>
+            <p class="stat-value" id="stat-avg-ticket">$0</p>
           </div>
           <div class="metric-card neon-border-pink">
             <div class="metric-title">Topping Más Vendido</div>
             <div class="metric-value neon-text-pink" id="stat-topping" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center; height: 100%;">Cargando...</div>
           </div>
+          <div class="metric-card" style="border-color: var(--neon-cyan);">
+            <div class="metric-title">Tiempo Promedio Cocina</div>
+            <div class="metric-value" style="color: var(--neon-cyan);" id="stat-avg-kitchen-time">-- min</div>
+          </div>
         </div>
+
+        <h3 style="margin-top: 40px; margin-bottom: 20px; font-family: var(--font-cursive); font-size: 2rem;">Ventas por Cajero</h3>
+        <div class="table-container">
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Cajero</th>
+                <th>Operaciones</th>
+                <th>Recaudación</th>
+              </tr>
+            </thead>
+            <tbody id="sales-by-cashier-body">
+              <!-- Se llena por JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 40px; margin-bottom: 20px; font-family: var(--font-cursive); font-size: 2rem;">Últimas Operaciones</h3>
 
         <div class="analytics-charts-grid">
           <div class="chart-panel">
@@ -667,6 +708,43 @@
             <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1.5rem;">Guardar Cambios</button>
           </form>
         </div>
+      </div>
+
+      <!-- PANEL NUEVO: OPCIONES CONFIGURABLES -->
+      <div id="admin-view-settings-ui" class="admin-view-panel">
+        <div class="view-header">
+          <h2 class="view-title">Opciones Configurables</h2>
+          <p style="color:var(--text-secondary); margin-top:5px;">Personalizá la experiencia visual y funcional del sistema.</p>
+        </div>
+
+        <!-- Alerta de Cocina -->
+        <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
+          <h3 style="margin-bottom: 1.5rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple); text-align:center;">Alerta Inteligente KDS</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 15px; text-align:center;">
+            Minutos antes de que un pedido en cocina empiece a parpadear en rojo alertando urgencia.
+          </p>
+          <div class="form-group" style="display:flex; gap:10px; align-items:center; justify-content:center;">
+            <input type="number" id="kds-alert-time-input" class="form-control" placeholder="Ej: 10" min="1" max="120" required style="width: 150px;">
+            <button type="button" class="btn-primary" id="kds-alert-save-btn">Guardar Tiempo</button>
+          </div>
+        </div>
+
+        <!-- Personalización del Logo -->
+        <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
+          <h3 style="margin-bottom: 1.5rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple); text-align:center;">Logo de la Empresa</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 15px; text-align:center;">
+            Subí el logotipo que se mostrará junto al nombre de la marca en todas las pantallas. Se recomienda formato cuadrado o circular (PNG transparente).
+          </p>
+          <div class="form-group" style="text-align:center;">
+            <div style="width:100px; height:100px; border-radius:50%; overflow:hidden; border:2px dashed var(--neon-purple); margin:0 auto 15px; display:flex; align-items:center; justify-content:center; background:#1c1c1c;">
+              <img id="company-logo-preview" style="width:100%; height:100%; object-fit:cover; display:none;" />
+              <span id="company-logo-placeholder" style="color:var(--text-muted); font-size:0.8rem;">Sin Logo</span>
+            </div>
+            <input type="file" id="company-logo-file" accept="image/*" style="display:none;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('company-logo-file').click()">Seleccionar Imagen</button>
+            <button type="button" class="btn-primary" id="company-logo-save-btn" style="margin-left: 10px;">Subir y Guardar</button>
+          </div>
+        </div>
 
         <!-- Personalización de Cabecera (Hero) -->
         <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
@@ -758,13 +836,57 @@
         </div>
       </div>
 
+      <!-- PANEL 8: GESTIÓN DE EMPLEADOS / CAJEROS -->
+      <div id="admin-view-empleados" class="admin-view-panel">
+        <div class="view-header">
+          <h2 class="view-title">Empleados</h2>
+          <button class="btn-primary" id="btn-add-employee">Nuevo Empleado</button>
+        </div>
+
+        <div class="table-container">
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>PIN</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="employees-table-body">
+              <!-- Rellenado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= VISTA 9: DOCUMENTACION ================= -->
+      <div id="admin-view-docs" class="admin-view-panel">
+        <div class="inventory-controls" style="margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.8rem; font-weight: 700;">Visor de Documentación</h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; height: calc(100vh - 150px);">
+          <div style="width: 100%; background: rgba(18,18,18,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 15px;">
+            <h3 style="font-size: 1.1rem; color: var(--neon-cyan); margin-bottom: 15px;">Manuales</h3>
+            <div id="docs-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <!-- Cargado dinámicamente -->
+            </div>
+          </div>
+          <div style="flex-grow: 1; background: rgba(18,18,18,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; overflow-y: auto; color: var(--text-secondary);" id="docs-content">
+            <div style="text-align: center; margin-top: 100px; color: var(--text-muted);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 64px; height: 64px; margin-bottom: 15px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <p>Seleccioná un documento de la lista para leerlo</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
   <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
   <div class="toast-notification" id="toast">Notificación de Sistema</div>
-
-
 
   <!-- MODAL DE AYUDA -->
   <div class="pos-modal-overlay" id="help-modal" style="display: none; z-index: 99999;">
@@ -777,9 +899,10 @@
         <ol style="margin-left: 20px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
           <li><strong>Historial y Métricas:</strong>
             <ul style="margin-left: 15px; margin-top: 5px; list-style-type: circle;">
-              <li>Visualizá ingresos, tickets promedio e insumos más vendidos.</li>
+              <li>Visualizá ingresos, tiempos de cocina, tickets promedio e insumos más vendidos.</li>
+              <li>Usá los <strong>selectores de fecha</strong> para filtrar el histórico. El gráfico y la tabla se actualizarán dinámicamente.</li>
               <li>Hacé clic en <em>"Devolver"</em> en una venta para revertirla (restituye el stock en inventario y cancela la orden).</li>
-              <li>Hacé clic en <em>"Exportar CSV"</em> para descargar una auditoría en Excel.</li>
+              <li>Hacé clic en <em>"Exportar CSV"</em> para descargar una auditoría en Excel del rango de fechas filtrado.</li>
             </ul>
           </li>
           <li><strong>Control de Stock:</strong> Monitoreá el stock físico. Las barras cambian de color (Cian: OK, Amarillo: Bajo, Rojo: Crítico). Hacé clic en <code>+</code> para reabastecer (restock) rápidamente.</li>
@@ -791,7 +914,9 @@
               <li>Cargá fotos locales haciendo clic en <em>"Cargar Imagen"</em> (se procesa y previsualiza al instante).</li>
             </ul>
           </li>
-          <li><strong>Seguridad:</strong> Modificá la contraseña general de administración y el PIN de la Caja Registradora desde esta sección.</li>
+          <li><strong>Opciones Configurables:</strong> Personalizá visualmente el sistema. Modificá el logo, imágenes de portada (Hero), mapa de ubicación, activa el Club Waffle (fidelización) y el Tiempo de Alerta en Cocina.</li>
+          <li><strong>Gestión de Personal:</strong> Creá y editá perfiles de empleados. Asignales un rol (Cajero o Cocinero) y un PIN de 4 dígitos para que puedan ingresar a sus respectivos módulos (`/caja` o `/cocina`).</li>
+          <li><strong>Seguridad:</strong> Modificá la contraseña general de administración y el PIN maestro de la Caja desde esta sección.</li>
         </ol>
       </div>
 
@@ -800,8 +925,47 @@
       </div>
     </div>
   </div>
+  <!-- MODAL DE EMPLEADO -->
+  <div class="pos-modal-overlay" id="employee-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 480px; width: 95%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan-glow);">
+      <h3 style="margin-bottom: 1.2rem; font-size: 1.4rem;" id="employee-modal-title">Nuevo Empleado</h3>
+      <input type="hidden" id="employee-id">
+      
+      <div class="form-group">
+        <label>Nombre y Apellido</label>
+        <input type="text" id="employee-name" class="form-control" placeholder="Ej: Juan Pérez" required>
+      </div>
+      
+      <div class="form-group">
+        <label>PIN de Acceso (4 dígitos)</label>
+        <input type="password" id="employee-pin" class="form-control" maxlength="4" placeholder="Ej: 1234" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Rol / Puesto</label>
+        <select id="employee-role" class="form-control">
+          <option value="cashier">Cajero / Mostrador</option>
+          <option value="kitchen">Cocinero</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="employee-active" class="form-control">
+          <option value="true">Activo (Puede iniciar sesión)</option>
+          <option value="false">Inactivo (Suspendido)</option>
+        </select>
+      </div>
+      
+      <div style="display:flex; gap:15px; margin-top:25px;">
+        <button class="btn-secondary" id="employee-cancel-btn" style="flex:1; padding: 0.9rem 1rem;">Cancelar</button>
+        <button class="btn-primary" id="employee-save-btn" style="flex:1; padding: 0.9rem 1rem;">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- CONTROLADORES JAVASCRIPT -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="/theme-manager.js?v=3"></script>
   <script src="app.js?v=3"></script>
 </body>
