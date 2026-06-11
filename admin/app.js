@@ -1294,21 +1294,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPassword = document.getElementById('settings-current-pwd').value;
     const newAdminPassword = document.getElementById('settings-new-admin-pwd').value;
     const confirmAdminPwd = document.getElementById('settings-new-admin-pwd-confirm').value;
-    const newCashierPin = document.getElementById('settings-new-cashier-pin').value;
 
     if (newAdminPassword && newAdminPassword !== confirmAdminPwd) {
       showToast('La nueva contraseña de administrador no coincide con la confirmación', true);
       return;
     }
 
-    if (!newAdminPassword && !newCashierPin) {
-      showToast('Debe ingresar al menos una nueva contraseña de administrador o PIN de caja', true);
+    if (!newAdminPassword) {
+      showToast('Debe ingresar una nueva contraseña de administrador', true);
       return;
     }
 
-    const payload = { currentPassword };
-    if (newAdminPassword) payload.newAdminPassword = newAdminPassword;
-    if (newCashierPin) payload.newCashierPin = newCashierPin;
+    const payload = { currentPassword, newAdminPassword };
 
     try {
       const res = await fetch('/api/auth/change-credentials', {

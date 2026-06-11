@@ -11,7 +11,7 @@ El sistema expone tres portales web independientes a través del servidor Expres
 | Interfaz | URI de Acceso | Rol / Destinatarios | Método de Acceso | Clave por Defecto |
 | :--- | :--- | :--- | :--- | :--- |
 | **Web de Clientes** | `/` (ej: `http://localhost:3000/`) | Clientes (armado de waffle en 2D y pedidos de WhatsApp) | Público (Acceso libre) | No aplica |
-| **Caja Registradora POS** | `/caja` (ej: `http://localhost:3000/caja`) | Cajeros (registro rápido de comandas en mostrador) | Bloqueo por PIN (4 dígitos) | **`1234`** |
+| **Caja Registradora POS** | `/caja` (ej: `http://localhost:3000/caja`) | Cajeros (registro rápido de comandas en mostrador) | Bloqueo por PIN Individual | Asignado en Admin |
 | **Panel de Administración** | `/admin` (ej: `http://localhost:3000/admin`) | Propietarios y Administradores (inventario, CRUDs, métricas y CSV) | Bloqueo por Contraseña | **`admin`** |
 
 ---
@@ -19,7 +19,7 @@ El sistema expone tres portales web independientes a través del servidor Expres
 ## 🔒 2. Seguridad y Credenciales
 
 El control de accesos se valida en el backend mediante consultas seguras a la base de datos:
-*   **Modificación de claves:** El administrador puede cambiar tanto la contraseña de administración como el PIN de caja desde el **Panel de Administración > Pestaña "Seguridad"**, requiriendo ingresar previamente la contraseña actual de administrador para autorizar el cambio.
+*   **Modificación de claves:** El administrador puede cambiar la contraseña general de administración desde la pestaña **Seguridad**, y gestionar los PINs individuales de acceso para cada cajero/cocinero desde la pestaña **Empleados**.
 *   **Persistencia:** Las credenciales se almacenan de forma segura en la tabla `settings` (o en `settings.json` en modo emulación).
 
 ---
@@ -177,7 +177,7 @@ Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin 
 
 3. **Panel de Administración (`/admin`):**
    - **Acceso:** Ubicado directamente como una pestaña destacada en el menú de navegación del sidebar lateral izquierdo, separado por una línea divisoria elegante y acompañado de un icono de pregunta (`Ayuda / Guía`).
-   - **Guía:** Detalla el uso de métricas e ingresos con filtrado de fechas, el proceso de reembolsos/devoluciones de ventas que restituye el stock automáticamente en base de datos, el reabastecimiento de insumos físicos (restock), la edición de waffles de la carta, las opciones configurables (Logo, Mapa, Fidelización, Alerta en Cocina), la gestión de la contraseña y PIN, y la administración de empleados (cajeros y cocineros).
+   - **Guía:** Detalla el uso de métricas e ingresos con filtrado de fechas, el proceso de reembolsos/devoluciones de ventas que restituye el stock automáticamente en base de datos, el reabastecimiento de insumos físicos (restock), la edición de waffles de la carta, las opciones configurables (Logo, Mapa, Fidelización, Alerta en Cocina), la gestión de la contraseña principal, y la administración de empleados (cajeros y cocineros) junto con sus PINs.
 
 4. **Kitchen Display System - KDS (`/cocina`):**
    - **Acceso:** Integrado en el encabezado superior derecho, junto al control de volumen de notificaciones (`Ayuda / Guía`).

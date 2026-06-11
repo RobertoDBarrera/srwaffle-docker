@@ -19,10 +19,12 @@ El backend se ha desarrollado como un servidor ligero en **Node.js** enfocado en
     *   **Capa de Emulación Local Integrada:** Si no se detecta una conexión activa a PostgreSQL en el puerto configurado (o si falta `DATABASE_URL` en `.env`), el backend inicia de forma automática en modo de **emulación local**, redirigiendo transparentemente las operaciones DDL, CRUD y transaccionales a archivos JSON locales en `/data`. Esto elimina la necesidad de configurar bases de datos para desarrollo y pruebas en local.
     *   Utiliza un Pool de conexiones asíncronas configurado mediante la variable de entorno `DATABASE_URL` y soporte de SSL condicional automático para plataformas de producción (Neon, Supabase, Render, Heroku).
     *   **Tablas de la Base de Datos:**
-        *   `settings`: Almacena la contraseña de administrador y el PIN de la caja POS.
+        *   `settings`: Almacena la contraseña de administrador y las configuraciones de la empresa (UI, mapa, fidelización, tiempos de cocina, etc).
         *   `stock`: Controla el inventario de masas, toppings, salsas, bebidas y helados, con umbrales mínimos de stock.
-        *   `menu`: Registra la carta de waffles definidos, sus ingredientes asociados (usando tipos de arreglos nativos de Postgres `VARCHAR[]`) y la imagen.
-        *   `sales`: Guarda el historial de comandas estructurado usando el tipo `JSONB` de Postgres para mantener la flexibilidad del detalle de los productos vendidos.
+        *   `menu`: Registra la carta de waffles definidos, sus ingredientes asociados y la imagen.
+        *   `sales`: Guarda el historial de comandas estructurado usando `JSONB`.
+        *   `employees`: Gestiona los perfiles de los empleados (Cajeros y Cocineros) junto a sus PINs de acceso individuales.
+        *   `loyalty_customers`: Mantiene el registro de clientes del programa de recompensas (puntos acumulados).
     *   **Control de Concurrencia:** Empleo de transacciones relacionales de base de datos (`BEGIN/COMMIT/ROLLBACK`) y bloqueos exclusivos de filas (`SELECT ... FOR UPDATE`) en checkouts y reembolsos para evitar colisiones de stock o condiciones de carrera concurrentes.
 
 ---

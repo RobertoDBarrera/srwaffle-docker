@@ -17,7 +17,6 @@ El sistema se divide en 3 módulos principales (aplicaciones web):
 |--------------|-------------|----------------|
 | **Ver Menú Digital** | Pantalla principal (Scroll) | El cliente puede ver todos los Waffles pre-armados disponibles, sus fotos y precios actualizados. |
 | **Armado de Bubble Waffle (Paso a Paso)** | Botón "Armá tu Waffle" (Pantalla principal) | Asistente interactivo de 4 pasos (Base, Toppings, Salsas, Helados) para personalizar un waffle. Incluye un visualizador 2D dinámico del producto final. |
-| **Boton "Sorpréndeme"** | Botón con ícono de dado al armar waffle | Elige ingredientes aleatoriamente basándose en los sabores guardados. |
 | **Rastreador de Pedidos** | Botón "Rastrear Pedido" (Header) | El cliente ingresa los últimos 4 dígitos de su código de pedido y el sistema le dice en qué estado está (Pendiente, Preparando, Listo). |
 | **Pedido por WhatsApp** | Al finalizar el armado o elegir un producto del menú | Genera un resumen del pedido y abre automáticamente WhatsApp para enviarlo al número oficial del local (si la opción está habilitada en Admin). |
 
@@ -58,16 +57,16 @@ El sistema se divide en 3 módulos principales (aplicaciones web):
 
 | Funcionalidad | Cómo Llegar | Para qué sirve |
 |--------------|-------------|----------------|
-| **Historial y Métricas de Ventas** | Menú lateral -> "Informes" | Panel analítico con Ingresos Totales, Cantidad de Ventas, Ticket Promedio y Tiempo Promedio en Cocina. |
-| **Filtro de Fechas y Gráficos** | Menú lateral -> "Informes" (Arriba a la derecha) | Permite seleccionar "Fecha Inicio" y "Fecha Fin". Al hacer clic en "Filtrar", los gráficos, las tablas de cajeros y las ganancias se recalculan solo para esos días. |
-| **Ventas por Cajero** | Menú lateral -> "Informes" (Centro) | Muestra cuántas operaciones y cuánto dinero recaudó cada empleado. |
-| **Reembolsos / Devoluciones** | Menú lateral -> "Informes" (Tabla de Últimas Operaciones) | Botón "Devolver". Cancela una venta hecha por error y **devuelve automáticamente los ingredientes descontados al inventario**. |
-| **Exportar CSV** | Menú lateral -> "Informes" (Arriba a la derecha) | Descarga un archivo Excel con todas las ventas del periodo seleccionado. |
-| **Control de Stock y Restock** | Menú lateral -> "Inventario" | Visualiza los niveles físicos de cada ingrediente. Si hay poco, la barra se pone amarilla o roja. Permite reabastecer haciendo clic en el botón `+`. |
+| **Historial y Métricas de Ventas** | Menú lateral -> "Historial y Métricas" | Panel analítico con Ingresos Totales, Cantidad de Ventas, Ticket Promedio y Tiempo Promedio en Cocina. |
+| **Filtro de Fechas y Gráficos** | Menú lateral -> "Historial y Métricas" (Arriba a la derecha) | Permite seleccionar "Fecha Inicio" y "Fecha Fin". Al hacer clic en "Filtrar", los gráficos, las tablas de cajeros y las ganancias se recalculan solo para esos días. |
+| **Ventas por Cajero** | Menú lateral -> "Historial y Métricas" (Centro) | Muestra cuántas operaciones y cuánto dinero recaudó cada empleado. |
+| **Reembolsos / Devoluciones** | Menú lateral -> "Historial y Métricas" (Tabla de Últimas Operaciones) | Botón "Devolver". Cancela una venta hecha por error y **devuelve automáticamente los ingredientes descontados al inventario**. |
+| **Exportar CSV** | Menú lateral -> "Historial y Métricas" (Arriba a la derecha) | Descarga un archivo Excel con todas las ventas del periodo seleccionado. |
+| **Control de Stock y Restock** | Menú lateral -> "Control de Stock" | Visualiza los niveles físicos de cada ingrediente. Si hay poco, la barra se pone amarilla o roja. Permite reabastecer haciendo clic en el botón `+`. |
 | **Gestión de Precios e Ingredientes** | Menú lateral -> "Editar Insumos" | Modificar costos, crear nuevos ingredientes (toppings, salsas), borrarlos y establecer los niveles mínimos de alerta de stock. |
 | **Gestión de Carta (Menú Digital)** | Menú lateral -> "Editar Menú" | Crear, editar o borrar Waffles pre-armados. Permite subir fotos, cambiar el precio y elegir qué ingredientes exactos lo componen por defecto. |
 | **Opciones Configurables (UI / Datos)** | Menú lateral -> "Opciones Configurables" | Cambiar el Logo, las imágenes del Carrusel de Portada, el Mapa de ubicación, activa el Club Waffle (fidelización) y el Tiempo de Alerta en Cocina. |
 | **Datos de Empresa** | Menú lateral -> "Datos Empresa" | Configurar el nombre comercial, la dirección, los horarios y el WhatsApp oficial que recibe los pedidos online. |
 | **Gestión de Cajeros/Cocineros** | Menú lateral -> "Empleados" | Crear perfiles de empleados con nombre, PIN único de 4 dígitos y definir su rol (Cajero o Cocinero) para limitar su acceso a otras áreas. |
-| **Seguridad y Contraseñas** | Menú lateral -> "Seguridad" | Cambiar la contraseña principal del Admin y el PIN Maestro de 4 dígitos de la caja. |
+| **Seguridad y Contraseñas** | Menú lateral -> "Seguridad" | Cambiar la contraseña principal de Administración del sistema. |
 | **Módulo Dev / Testing** | Menú lateral -> "Módulo Dev" | Herramientas exclusivas para el desarrollador: Inyectar ventas de prueba, simular pedidos masivos, resetear el inventario o purgar la base de datos completa. |
