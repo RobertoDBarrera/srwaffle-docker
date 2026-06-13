@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewName === 'analytics') renderAnalytics();
     if (viewName === 'inventory') renderInventory();
     if (viewName === 'crud-stock') renderCrudStock();
+    if (viewName === 'crud-recipes') renderCrudRecipes();
     if (viewName === 'crud-menu') renderCrudMenu();
     if (viewName === 'settings') resetSettingsForm();
     if (viewName === 'docs') loadDocsView();
@@ -197,10 +198,18 @@ document.addEventListener('DOMContentLoaded', () => {
     filteredSales.forEach(sale => {
       if (sale.status !== 'completed') return;
       sale.items.forEach(item => {
-        if (item.details) {
+        let textToSearch = item.details || '';
+        // If it's a menu_waffle, toppings are in item.config.toppings
+        if (item.type === 'menu_waffle' && item.config && Array.isArray(item.config.toppings)) {
+          textToSearch += ' ' + item.config.toppings.join(' ');
+        }
+
+        if (textToSearch) {
           stock.toppings.forEach(top => {
-            if (item.details.includes(top.name)) {
-              toppingCounts[top.name] = (toppingCounts[top.name] || 0) + 1;
+            if (textToSearch.includes(top.name)) {
+              // Add quantity if item.quantity > 1
+              const qty = item.quantity || item.qty || 1;
+              toppingCounts[top.name] = (toppingCounts[top.name] || 0) + qty;
             }
           });
         }
@@ -574,6 +583,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('inventory-search').oninput = () => renderInventory();
 
+  // Botón Nuevo Producto (Stock)
+  const btnAddStock = document.getElementById('btn-add-stock');
+  if (btnAddStock) {
+    btnAddStock.addEventListener('click', () => {
+      document.getElementById('stock-crud-form').reset();
+      document.getElementById('stock-edit-id').value = '';
+      document.getElementById('stock-form-title').textContent = 'Crear Producto';
+      document.getElementById('stock-form-cancel-btn').style.display = 'block';
+      switchAdminView('crud-stock');
+      setTimeout(() => document.getElementById('stock-name').focus(), 100);
+    });
+  }
+
+  // Botón Nuevo Insumo Elaborado
+  const btnAddRecipe = document.getElementById('btn-add-recipe');
+  if (btnAddRecipe) {
+    btnAddRecipe.addEventListener('click', () => {
+      if (typeof resetRecipeForm === 'function') resetRecipeForm();
+      switchAdminView('crud-recipes');
+      setTimeout(() => document.getElementById('recipe-name')?.focus(), 100);
+    });
+  }
+
   // Modal rápido de reabastecimiento
   const showQuickRestockModal = (id) => {
     const item = getStockItem(id);
@@ -705,6 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const cat in stock) {
       flatStock = flatStock.concat(stock[cat]);
     }
+    flatStock = flatStock.filter(item => !item.recipe);
 
     flatStock.forEach(item => {
       const tr = document.createElement('tr');
@@ -733,13 +766,20 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('stock-name').value = item.name;
           document.getElementById('stock-category').value = item.category;
           document.getElementById('stock-price').value = item.price;
-          document.getElementById('stock-cost').value = item.cost || 0;
+          
+          document.getElementById('stock-pack-cost').value = item.price;
+          document.getElementById('stock-pack-units').value = '1';
+
           document.getElementById('stock-qty').value = item.stock;
           document.getElementById('stock-min').value = item.minStock;
           document.getElementById('stock-unit').value = item.unit;
           
           document.getElementById('stock-form-title').textContent = 'Editar Insumo';
           document.getElementById('stock-form-cancel-btn').style.display = 'block';
+
+          // Trigger change on category to show/hide margin calculator
+          document.getElementById('stock-category').dispatchEvent(new Event('change'));
+
           document.getElementById('stock-name').focus();
         }
       };
@@ -781,10 +821,68 @@ document.addEventListener('DOMContentLoaded', () => {
     resetStockForm();
   };
 
+  // Calculadoras automáticas de Stock
+  const setupStockCalculators = () => {
+    const packCost = document.getElementById('stock-pack-cost');
+    const packUnits = document.getElementById('stock-pack-units');
+    const unitPrice = document.getElementById('stock-price');
+    const category = document.getElementById('stock-category');
+    const marginCalc = document.getElementById('stock-margin-calculator');
+    const marginPercent = document.getElementById('stock-margin-percent');
+    const sellingPrice = document.getElementById('stock-selling-price');
+
+    // Cálculo de Pack
+    const calculatePack = () => {
+      const cost = parseFloat(packCost.value) || 0;
+      const units = parseFloat(packUnits.value) || 1;
+      const unitCost = Math.ceil(cost / units);
+      unitPrice.value = unitCost;
+      calculateMargin();
+    };
+
+    // Mostrar/Ocultar Calculadora de Ganancia y calcular margen
+    const calculateMargin = () => {
+      if (category.value === 'drinks') {
+        marginCalc.style.display = 'block';
+        const cost = parseFloat(unitPrice.value) || 0;
+        const margin = parseFloat(marginPercent.value) || 0;
+        const sellPrice = Math.ceil(cost * (1 + (margin / 100)));
+        sellingPrice.value = sellPrice;
+      } else {
+        marginCalc.style.display = 'none';
+        sellingPrice.value = '0';
+        marginPercent.value = '0';
+      }
+    };
+
+    // Calcular margen inverso (si pone el precio de venta manual)
+    const calculateReverseMargin = () => {
+      const cost = parseFloat(unitPrice.value) || 0;
+      const sellPrice = parseFloat(sellingPrice.value) || 0;
+      if (cost > 0) {
+        const margin = ((sellPrice - cost) / cost) * 100;
+        marginPercent.value = margin.toFixed(1);
+      }
+    };
+
+    packCost.addEventListener('input', calculatePack);
+    packUnits.addEventListener('input', calculatePack);
+    unitPrice.addEventListener('input', calculateMargin);
+    category.addEventListener('change', calculateMargin);
+    marginPercent.addEventListener('input', calculateMargin);
+    sellingPrice.addEventListener('input', calculateReverseMargin);
+  };
+
+  setupStockCalculators();
+
   const resetStockForm = () => {
     document.getElementById('stock-crud-form').reset();
     document.getElementById('stock-edit-id').value = '';
-    document.getElementById('stock-cost').value = '0';
+    document.getElementById('stock-pack-cost').value = '0';
+    document.getElementById('stock-pack-units').value = '1';
+    document.getElementById('stock-margin-percent').value = '0';
+    document.getElementById('stock-selling-price').value = '0';
+    document.getElementById('stock-margin-calculator').style.display = 'none';
     document.getElementById('stock-form-title').textContent = 'Crear Insumo';
     document.getElementById('stock-form-cancel-btn').style.display = 'none';
   };
@@ -797,12 +895,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = document.getElementById('stock-name').value;
     const category = document.getElementById('stock-category').value;
     const price = parseInt(document.getElementById('stock-price').value);
-    const cost = parseInt(document.getElementById('stock-cost').value) || 0;
     const qty = parseInt(document.getElementById('stock-qty').value);
     const minStock = parseInt(document.getElementById('stock-min').value);
     const unit = document.getElementById('stock-unit').value;
+    const sellingPrice = (category === 'drinks') ? parseInt(document.getElementById('stock-selling-price').value) || 0 : 0;
 
-    const payload = { name, category, price, cost, stock: qty, minStock, unit };
+    const payload = { name, category, price, cost: price, stock: qty, minStock, unit, isVisible: true, showPrice: true, sellingPrice };
 
     try {
       let res;
@@ -886,39 +984,332 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- COST CALCULATOR ANALYZER ---
   const updateFormFinancialAnalysis = () => {
-    const costSpan = document.getElementById('menu-recipe-cost-calc');
-    const marginSpan = document.getElementById('menu-recipe-margin-calc');
-    if (!costSpan || !marginSpan) return;
+    const costSpan = document.getElementById('menu-recipe-cost-display');
+    const marginPercentInput = document.getElementById('menu-margin-percent');
+    const priceInput = document.getElementById('menu-price');
+    const menuType = document.getElementById('menu-type')?.value;
+
+    if (!costSpan || !marginPercentInput || !priceInput) return;
 
     let totalCost = 0;
     
-    // Base
-    const baseId = document.getElementById('menu-base').value;
-    if (baseId) {
-      totalCost += getStockItem(baseId)?.cost || 0;
+    if (menuType === 'direct') {
+      const stockId = document.getElementById('menu-stock-id').value;
+      if (stockId) {
+        totalCost = getStockItem(stockId)?.cost || 0;
+      }
+    } else {
+      // Base
+      const baseId = document.getElementById('menu-base').value;
+      if (baseId) {
+        totalCost += getStockItem(baseId)?.cost || 0;
+      }
+
+      // Toppings
+      document.querySelectorAll('.menu-topping-checkbox:checked').forEach(chk => {
+        totalCost += getStockItem(chk.value)?.cost || 0;
+      });
+
+      // Syrups
+      document.querySelectorAll('.menu-syrup-checkbox:checked').forEach(chk => {
+        totalCost += getStockItem(chk.value)?.cost || 0;
+      });
+
+      // Ice creams
+      document.querySelectorAll('.menu-icecream-flavor-select').forEach(sel => {
+        totalCost += getStockItem(sel.value)?.cost || 0;
+      });
     }
-
-    // Toppings
-    document.querySelectorAll('.menu-topping-checkbox:checked').forEach(chk => {
-      totalCost += getStockItem(chk.value)?.cost || 0;
-    });
-
-    // Syrups
-    document.querySelectorAll('.menu-syrup-checkbox:checked').forEach(chk => {
-      totalCost += getStockItem(chk.value)?.cost || 0;
-    });
-
-    // Ice creams
-    document.querySelectorAll('.menu-icecream-flavor-select').forEach(sel => {
-      totalCost += getStockItem(sel.value)?.cost || 0;
-    });
 
     costSpan.textContent = formatCurrency(totalCost);
 
-    const price = parseInt(document.getElementById('menu-price').value) || 0;
-    const margin = price > 0 ? Math.round(((price - totalCost) / price) * 100) : 0;
-    marginSpan.textContent = `${margin}%`;
+    // Si el usuario cambia el input de margen, actualizamos el precio
+    const calculatePriceFromMargin = () => {
+      const margin = parseFloat(marginPercentInput.value) || 0;
+      const calculatedPrice = Math.ceil(totalCost * (1 + (margin / 100)));
+      priceInput.value = calculatedPrice;
+    };
+
+    // Si el usuario cambia el precio, actualizamos el margen inverso
+    const calculateMarginFromPrice = () => {
+      const price = parseFloat(priceInput.value) || 0;
+      if (totalCost > 0) {
+        const margin = ((price - totalCost) / totalCost) * 100;
+        marginPercentInput.value = margin.toFixed(1);
+      }
+    };
+
+    // Store cost temporarily to be used by event listeners
+    marginPercentInput.dataset.cost = totalCost;
   };
+
+  const setupMenuCalculators = () => {
+    const marginPercentInput = document.getElementById('menu-margin-percent');
+    const priceInput = document.getElementById('menu-price');
+    
+    if (marginPercentInput) {
+      marginPercentInput.addEventListener('input', () => {
+        const totalCost = parseFloat(marginPercentInput.dataset.cost) || 0;
+        const margin = parseFloat(marginPercentInput.value) || 0;
+        const calculatedPrice = Math.ceil(totalCost * (1 + (margin / 100)));
+        priceInput.value = calculatedPrice;
+      });
+    }
+
+    if (priceInput) {
+      priceInput.addEventListener('input', () => {
+        const totalCost = parseFloat(marginPercentInput.dataset.cost) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        if (totalCost > 0) {
+          const margin = ((price - totalCost) / totalCost) * 100;
+          marginPercentInput.value = margin.toFixed(1);
+        } else {
+          marginPercentInput.value = '0';
+        }
+      });
+    }
+  };
+
+  setupMenuCalculators();
+
+  // --- PANEL RECETAS (INSUMOS ELABORADOS) ---
+  let recipeIngredients = []; // [{ id: 'ing1', stockId: 'raw_1', qty: 1 }]
+
+  const renderCrudRecipes = () => {
+    const listBody = document.getElementById('crud-recipes-list-body');
+    if (!listBody) return;
+    listBody.innerHTML = '';
+
+    const allStock = [...stock.bases, ...stock.toppings, ...stock.syrups, ...stock.drinks, ...stock.icecreams];
+    const recipes = allStock.filter(item => item.recipe);
+
+    if (recipes.length === 0) {
+      listBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1rem; color:var(--text-secondary);">No hay insumos elaborados creados.</td></tr>';
+      return;
+    }
+
+    recipes.forEach(item => {
+      const tr = document.createElement('tr');
+      
+      const yieldQty = item.recipe.yield || 1;
+      
+      tr.innerHTML = `
+        <td style="font-weight: 600;">${item.name}</td>
+        <td>${yieldQty} porciones</td>
+        <td style="color:var(--neon-cyan);">$${item.cost || 0} / porc</td>
+        <td>
+          <button class="btn-primary" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 5px;" onclick="produceRecipe('${item.id}')">Fabricar</button>
+          <button class="btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 5px;" onclick="editRecipe('${item.id}')">Editar</button>
+          <button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="deleteStockItem('${item.id}', true)">Eliminar</button>
+        </td>
+      `;
+      listBody.appendChild(tr);
+    });
+    
+    renderRecipeIngredientsList();
+  };
+
+  const renderRecipeIngredientsList = () => {
+    const container = document.getElementById('recipe-ingredients-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const allStock = [...stock.bases, ...stock.toppings, ...stock.syrups, ...stock.drinks, ...stock.icecreams].filter(item => !item.recipe); // Only raw ingredients
+    
+    let totalCost = 0;
+
+    recipeIngredients.forEach((ing, index) => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '10px';
+      row.style.alignItems = 'center';
+      
+      let options = '<option value="">Seleccionar ingrediente...</option>';
+      allStock.forEach(s => {
+        options += '<option value="' + s.id + '" ' + (ing.stockId === s.id ? 'selected' : '') + '>' + s.name + ' ($' + (s.cost || s.price) + ')</option>';
+      });
+
+      const selectedItem = allStock.find(s => s.id === ing.stockId);
+      const itemCost = selectedItem ? (selectedItem.cost || selectedItem.price) * ing.qty : 0;
+      totalCost += itemCost;
+
+      row.innerHTML = `
+        <select class="form-control" style="flex:2;" onchange="updateRecipeIngredient(${index}, 'stockId', this.value)">
+          ${options}
+        </select>
+        <input type="number" class="form-control" style="flex:1;" value="${ing.qty}" min="0.01" step="0.01" onchange="updateRecipeIngredient(${index}, 'qty', this.value)">
+        <button type="button" class="btn-danger" style="padding: 8px;" onclick="removeRecipeIngredient(${index})">X</button>
+      `;
+      container.appendChild(row);
+    });
+
+    const yieldQty = parseFloat(document.getElementById('recipe-yield')?.value) || 1;
+    const costPerPortion = Math.ceil(totalCost / yieldQty);
+    
+    const costDisplay = document.getElementById('recipe-cost-display');
+    if (costDisplay) costDisplay.value = costPerPortion;
+    if (costDisplay) costDisplay.dataset.totalCost = totalCost; // Store total to update live when yield changes
+  };
+
+  window.updateRecipeIngredient = (index, field, value) => {
+    if (field === 'qty') {
+      recipeIngredients[index].qty = parseFloat(value) || 1;
+    } else {
+      recipeIngredients[index].stockId = value;
+    }
+    renderRecipeIngredientsList();
+  };
+
+  window.removeRecipeIngredient = (index) => {
+    recipeIngredients.splice(index, 1);
+    renderRecipeIngredientsList();
+  };
+
+  const addRecipeIngredientBtn = document.getElementById('recipe-add-ingredient-btn');
+  if (addRecipeIngredientBtn) {
+    addRecipeIngredientBtn.addEventListener('click', () => {
+      recipeIngredients.push({ stockId: '', qty: 1 });
+      renderRecipeIngredientsList();
+    });
+  }
+
+  const recipeYieldInput = document.getElementById('recipe-yield');
+  if (recipeYieldInput) {
+    recipeYieldInput.addEventListener('input', () => {
+      renderRecipeIngredientsList(); // Re-calculate cost per portion
+    });
+  }
+
+  const resetRecipeForm = () => {
+    const form = document.getElementById('recipe-crud-form');
+    if (form) form.reset();
+    document.getElementById('recipe-edit-id').value = '';
+    recipeIngredients = [];
+    renderRecipeIngredientsList();
+    document.getElementById('recipe-form-title').textContent = 'Crear Insumo Elaborado';
+    const cancelBtn = document.getElementById('recipe-form-cancel-btn');
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  };
+
+  window.editRecipe = (id) => {
+    const allStock = [...stock.bases, ...stock.toppings, ...stock.syrups, ...stock.drinks, ...stock.icecreams];
+    const item = allStock.find(i => i.id === id);
+    if (!item) return;
+
+    document.getElementById('recipe-edit-id').value = item.id;
+    document.getElementById('recipe-name').value = item.name;
+    document.getElementById('recipe-category').value = item.category;
+    document.getElementById('recipe-yield').value = item.recipe.yield || 1;
+    
+    recipeIngredients = JSON.parse(JSON.stringify(item.recipe.ingredients || []));
+    
+    document.getElementById('recipe-form-title').textContent = 'Editar Insumo Elaborado';
+    document.getElementById('recipe-form-cancel-btn').style.display = 'block';
+    
+    switchAdminView('crud-recipes');
+    renderRecipeIngredientsList();
+  };
+
+  window.produceRecipe = async (id) => {
+    const allStock = [...stock.bases, ...stock.toppings, ...stock.syrups, ...stock.drinks, ...stock.icecreams];
+    const item = allStock.find(i => i.id === id);
+    if (!item) return;
+
+    const batches = prompt('¿Cuántos lotes de ' + item.name + ' deseas fabricar?\\n\\nCada lote rinde ' + item.recipe.yield + ' porciones y descontará los ingredientes del inventario general.', "1");
+    if (batches === null) return;
+    
+    const numBatches = parseInt(batches);
+    if (isNaN(numBatches) || numBatches <= 0) {
+      alert("Por favor, ingresa un número válido mayor a 0.");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/stock/' + id + '/produce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batches: numBatches })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Se fabricaron ' + data.produced + ' porciones de ' + item.name + ' correctamente.');
+        loadData();
+      } else {
+        alert("Error al fabricar: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión");
+    }
+  };
+
+  const recipeCrudForm = document.getElementById('recipe-crud-form');
+  if (recipeCrudForm) {
+    recipeCrudForm.onsubmit = async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('recipe-edit-id').value;
+      const name = document.getElementById('recipe-name').value;
+      const yieldQty = parseInt(document.getElementById('recipe-yield').value) || 1;
+      const category = document.getElementById('recipe-category').value;
+      const costDisplay = parseInt(document.getElementById('recipe-cost-display').value) || 0;
+      
+      // Clean ingredients
+      const cleanIngs = recipeIngredients.filter(ing => ing.stockId !== '');
+      if (cleanIngs.length === 0) {
+        alert("Debes agregar al menos un ingrediente válido para la receta.");
+        return;
+      }
+
+      const payload = { 
+        name, 
+        category, 
+        stock: id ? undefined : 0, // Keep existing stock if editing
+        minStock: id ? undefined : 10,
+        price: costDisplay, // Internally we don't sell this directly, we just use cost
+        cost: costDisplay, 
+        unit: 'porciones',
+        recipe: {
+          yield: yieldQty,
+          ingredients: cleanIngs
+        }
+      };
+
+      try {
+        let res;
+        if (id) {
+          res = await fetch('/api/stock/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch('/api/stock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        
+        const data = await res.json();
+        if (data.success) {
+          showToast(id ? 'Insumo elaborado actualizado' : 'Insumo elaborado creado');
+          resetRecipeForm();
+          loadData();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error al guardar receta');
+      }
+    };
+  }
+
+  const recipeCancelBtn = document.getElementById('recipe-form-cancel-btn');
+  if (recipeCancelBtn) {
+    recipeCancelBtn.onclick = resetRecipeForm;
+  }
 
   // --- PANEL 4: GESTIÓN DE CARTA / MENÚ (CRUD + CARGA DE IMÁGENES) ---
   const renderCrudMenu = () => {
@@ -926,14 +1317,54 @@ document.addEventListener('DOMContentLoaded', () => {
     renderToppingsChecklist();
     renderSyrupsChecklist();
     renderMenuListGrid();
+    
+    // Rellenar insumos para venta directa
+    const stockIdSelect = document.getElementById('menu-stock-id');
+    if (stockIdSelect && stockIdSelect.options.length <= 1) {
+      let flatStock = [];
+      for (const cat in stock) { flatStock = flatStock.concat(stock[cat]); }
+      flatStock.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = `${item.name} (${item.stock} ${item.unit})`;
+        stockIdSelect.appendChild(opt);
+      });
+    }
+
+    // Toggle sections based on type
+    const menuTypeSelect = document.getElementById('menu-type');
+    const recipeSection = document.getElementById('menu-recipe-section');
+    const stockGroup = document.getElementById('menu-stock-group');
+    
+    if (menuTypeSelect) {
+      menuTypeSelect.onchange = () => {
+        if (menuTypeSelect.value === 'direct') {
+          recipeSection.style.display = 'none';
+          stockGroup.style.display = 'block';
+        } else {
+          recipeSection.style.display = 'block';
+          stockGroup.style.display = 'none';
+        }
+      };
+    }
 
     // Event listeners para actualizar costos en vivo
     const baseSelect = document.getElementById('menu-base');
     const priceInput = document.getElementById('menu-price');
     const iceCountSelect = document.getElementById('menu-icecream-count');
+    const stockIdSelectLive = document.getElementById('menu-stock-id');
+    const menuTypeSelectLive = document.getElementById('menu-type');
 
     if (baseSelect) baseSelect.onchange = updateFormFinancialAnalysis;
     if (priceInput) priceInput.oninput = updateFormFinancialAnalysis;
+    if (stockIdSelectLive) stockIdSelectLive.onchange = updateFormFinancialAnalysis;
+    if (menuTypeSelectLive) {
+      const originalChange = menuTypeSelectLive.onchange;
+      menuTypeSelectLive.onchange = (e) => {
+        if (originalChange) originalChange(e);
+        updateFormFinancialAnalysis();
+      };
+    }
     
     if (iceCountSelect) {
       const originalChange = iceCountSelect.onchange;
@@ -1014,15 +1445,33 @@ document.addEventListener('DOMContentLoaded', () => {
       const imgPath = waffle.image ? `/${waffle.image}` : '';
       const imgHTML = imgPath ? `<img src="${imgPath}" class="menu-item-admin-img" alt="${waffle.name}">` : `<div class="menu-item-admin-img" style="display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;">Sin Imagen</div>`;
       
-      const baseName = getStockItem(waffle.base)?.name || 'Masa no definida';
-      const toppingsText = waffle.toppings.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ');
-      const syrupsText = waffle.syrups.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ');
-      const icecreamsText = waffle.icecreams ? waffle.icecreams.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ') : '';
+      let recipeCost = 0;
+      let tagsHTML = '';
+      
+      if (waffle.type === 'direct') {
+        const linkedStock = getStockItem(waffle.stockId);
+        recipeCost = linkedStock ? (linkedStock.price || 0) : 0;
+        tagsHTML = `<span class="badge-tag" style="border-color:rgba(0, 245, 212, 0.3); color:var(--neon-cyan);">Producto Directo</span>`;
+        if (linkedStock) tagsHTML += `<span class="badge-tag">Vinculado a: ${linkedStock.name}</span>`;
+      } else {
+        const baseName = getStockItem(waffle.base)?.name || 'Masa no definida';
+        const toppingsText = (waffle.toppings || []).map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ');
+        const syrupsText = (waffle.syrups || []).map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ');
+        const icecreamsText = waffle.icecreams ? waffle.icecreams.map(id => getStockItem(id)?.name || '').filter(Boolean).join(', ') : '';
 
-      let recipeCost = getStockItem(waffle.base)?.cost || 0;
-      if (waffle.toppings) waffle.toppings.forEach(tId => { recipeCost += getStockItem(tId)?.cost || 0; });
-      if (waffle.syrups) waffle.syrups.forEach(sId => { recipeCost += getStockItem(sId)?.cost || 0; });
-      if (waffle.icecreams) waffle.icecreams.forEach(iId => { recipeCost += getStockItem(iId)?.cost || 0; });
+        recipeCost = getStockItem(waffle.base)?.price || 0;
+        if (waffle.toppings) waffle.toppings.forEach(tId => { recipeCost += getStockItem(tId)?.price || 0; });
+        if (waffle.syrups) waffle.syrups.forEach(sId => { recipeCost += getStockItem(sId)?.price || 0; });
+        if (waffle.icecreams) waffle.icecreams.forEach(iId => { recipeCost += getStockItem(iId)?.price || 0; });
+        
+        tagsHTML = `
+          <span class="badge-tag" style="border-color:rgba(160,32,240,0.3); color:#b39ddb;">Base: ${baseName}</span>
+          ${toppingsText ? `<span class="badge-tag">Tops: ${toppingsText}</span>` : ''}
+          ${syrupsText ? `<span class="badge-tag">Salsas: ${syrupsText}</span>` : ''}
+          ${icecreamsText ? `<span class="badge-tag" style="border-color:rgba(0, 245, 212, 0.3); color:var(--neon-cyan);">Helado: ${icecreamsText}</span>` : ''}
+        `;
+      }
+      
       const marginPercent = waffle.price > 0 ? Math.round(((waffle.price - recipeCost) / waffle.price) * 100) : 0;
 
       card.innerHTML = `
@@ -1035,10 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom: 8px; line-height:1.2; max-height:40px; overflow:hidden;">${waffle.description}</p>
           
           <div style="margin-bottom: 10px;">
-            <span class="badge-tag" style="border-color:rgba(160,32,240,0.3); color:#b39ddb;">Base: ${baseName}</span>
-            ${toppingsText ? `<span class="badge-tag">Tops: ${toppingsText}</span>` : ''}
-            ${syrupsText ? `<span class="badge-tag">Salsas: ${syrupsText}</span>` : ''}
-            ${icecreamsText ? `<span class="badge-tag" style="border-color:rgba(0, 245, 212, 0.3); color:var(--neon-cyan);">Helado: ${icecreamsText}</span>` : ''}
+            ${tagsHTML}
           </div>
 
           <div style="margin-bottom: 10px; display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
@@ -1068,12 +1514,26 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('menu-price').value = waffle.price;
           document.getElementById('menu-base').value = waffle.base;
           
+          document.getElementById('menu-is-visible').checked = waffle.isVisible !== false;
+          document.getElementById('menu-show-price').checked = waffle.showPrice !== false;
+          
+          document.getElementById('menu-type').value = waffle.type || 'waffle';
+          document.getElementById('menu-stock-id').value = waffle.stockId || '';
+          
+          if (waffle.type === 'direct') {
+            document.getElementById('menu-recipe-section').style.display = 'none';
+            document.getElementById('menu-stock-group').style.display = 'block';
+          } else {
+            document.getElementById('menu-recipe-section').style.display = 'block';
+            document.getElementById('menu-stock-group').style.display = 'none';
+          }
+
           // Pre-marcar checkboxes
           document.querySelectorAll('.menu-topping-checkbox').forEach(chk => {
-            chk.checked = waffle.toppings.includes(chk.value);
+            chk.checked = (waffle.toppings || []).includes(chk.value);
           });
           document.querySelectorAll('.menu-syrup-checkbox').forEach(chk => {
-            chk.checked = waffle.syrups.includes(chk.value);
+            chk.checked = (waffle.syrups || []).includes(chk.value);
           });
 
           // Pre-seleccionar helados por defecto
@@ -1211,7 +1671,16 @@ document.addEventListener('DOMContentLoaded', () => {
     imagePathInput.value = '';
     previewContainer.style.backgroundImage = 'none';
     previewContainer.textContent = 'Sin vista previa de imagen';
-    document.getElementById('menu-form-title').textContent = 'Crear Waffle de Carta';
+    document.getElementById('menu-type').value = 'waffle';
+    document.getElementById('menu-stock-id').value = '';
+    const recipeSection = document.getElementById('menu-recipe-section');
+    if (recipeSection) recipeSection.style.display = 'block';
+    const stockGroup = document.getElementById('menu-stock-group');
+    if (stockGroup) stockGroup.style.display = 'none';
+
+    document.getElementById('menu-is-visible').checked = true;
+    document.getElementById('menu-show-price').checked = true;
+    document.getElementById('menu-form-title').textContent = 'Crear Producto de Carta';
     document.getElementById('menu-form-cancel-btn').style.display = 'none';
 
     // Limpiar helados
@@ -1232,6 +1701,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const base = document.getElementById('menu-base').value;
     const image = imagePathInput.value;
 
+    const type = document.getElementById('menu-type').value;
+    const stockId = document.getElementById('menu-stock-id').value;
+
     const toppings = [];
     document.querySelectorAll('.menu-topping-checkbox:checked').forEach(chk => {
       toppings.push(chk.value);
@@ -1249,7 +1721,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    const payload = { name, description, price, base, toppings, syrups, icecreams, image };
+    const isVisible = document.getElementById('menu-is-visible').checked;
+    const showPrice = document.getElementById('menu-show-price').checked;
+
+    const payload = { name, description, price, base, toppings, syrups, icecreams, image, isVisible, showPrice, type, stockId };
 
     try {
       let res;
@@ -1268,7 +1743,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (res.ok) {
-        showToast(id ? 'Waffle de menú actualizado' : 'Nuevo waffle creado');
+        showToast(id ? 'Producto actualizado' : 'Nuevo producto creado');
         resetMenuForm();
         await loadState();
         renderCrudMenu();

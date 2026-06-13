@@ -1,5 +1,21 @@
 [
   {
+    "id": "sale_1781285330388",
+    "date": "2026-06-12T17:28:50.388Z",
+    "items": [
+      {
+        "name": "Bosque Patagónico",
+        "details": "Waffle de Carta",
+        "price": 900
+      }
+    ],
+    "total": 900,
+    "paymentMethod": "Efectivo",
+    "status": "completed",
+    "cashierName": "pruebacajero",
+    "kdsStatus": "pending"
+  },
+  {
     "id": "sale_1781010774611",
     "date": "2026-06-09T13:12:54.611Z",
     "items": [

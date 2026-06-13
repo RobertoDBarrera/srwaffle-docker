@@ -305,7 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuGrid = document.getElementById('pos-menu-grid');
     if (menuGrid) {
       menuGrid.innerHTML = '';
-      menu.forEach(waffle => {
+      const waffles = menu.filter(m => m.type === 'waffle' || !m.type);
+      waffles.forEach(waffle => {
         let canSell = true;
         const baseItem = getStockItem(waffle.base);
         if (!baseItem || baseItem.stock <= 0) canSell = false;
@@ -348,34 +349,47 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 2. Bebidas
+    // 2. Bebidas / Productos Directos
     const drinksGrid = document.getElementById('pos-drinks-grid');
     if (drinksGrid) {
       drinksGrid.innerHTML = '';
-      stock.drinks.forEach(drink => {
+      const directItems = menu.filter(m => m.type === 'direct');
+      directItems.forEach(item => {
+        let stockItem = null;
+        if (item.stockId) {
+          stockItem = getStockItem(item.stockId);
+        }
+        
         const card = document.createElement('div');
         card.className = 'pos-item-card';
-        const isOutOfStock = drink.stock <= 0;
-        const isLowStock = drink.stock <= drink.minStock;
+        
+        const stockCount = stockItem ? stockItem.stock : 999;
+        const isOutOfStock = stockItem && stockItem.stock <= 0;
+        const isLowStock = stockItem && stockItem.stock <= stockItem.minStock;
 
         if (isOutOfStock) card.classList.add('out-of-stock');
         else if (isLowStock) card.classList.add('low-stock');
 
+        // Buscar si existe imagen local para renderizar (reutilizamos la lógica del waffle)
+        const imgPath = item.image ? `/${item.image}` : '';
+        const imgHTML = imgPath ? `<img src="${imgPath}" class="pos-item-img-thumbnail" alt="${item.name}">` : '';
+
         card.innerHTML = `
+          ${imgHTML}
           <div class="pos-item-card-content">
-            <div class="pos-item-name">${drink.name}</div>
-            <div class="pos-item-price">${formatCurrency(drink.price)}</div>
-            <div class="pos-item-stock">Stock: ${drink.stock} un</div>
+            <div class="pos-item-name">${item.name}</div>
+            <div class="pos-item-price">${formatCurrency(item.price)}</div>
+            <div class="pos-item-stock">${stockItem ? `Stock: ${stockCount} un` : 'Sin control stock'}</div>
           </div>
         `;
 
         if (!isOutOfStock) {
           card.addEventListener('click', () => {
             addToCart({
-              id: drink.id,
-              name: drink.name,
-              details: 'Bebida',
-              price: drink.price,
+              id: item.stockId || item.id,
+              name: item.name,
+              details: 'Bebida / Otros',
+              price: item.price,
               type: 'drink'
             });
           });
@@ -819,7 +833,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (customerInfoDiv) customerInfoDiv.style.display = 'none';
       currentLoyaltyCustomer = null;
 
-      showToast('¡Venta registrada con éxito!');
+      if (data && data.sale && data.sale.id) {
+        const shortCode = data.sale.id.split('_')[1].slice(-4);
+        document.getElementById('checkout-tracking-code').textContent = shortCode;
+        document.getElementById('checkout-success-modal').style.display = 'flex';
+      } else {
+        showToast('¡Venta registrada con éxito!');
+      }
+
       cart = [];
       await loadState();
       renderPOS();
@@ -934,6 +955,60 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error al cargar logo', e);
     }
   };
+
+  // Checkout success modal
+  const checkoutSuccessModal = document.getElementById('checkout-success-modal');
+  const checkoutSuccessClose = document.getElementById('checkout-success-close');
+  if (checkoutSuccessClose) {
+    checkoutSuccessClose.onclick = () => {
+      checkoutSuccessModal.style.display = 'none';
+    };
+  }
+
+  // Recent Sales Modal
+  const recentSalesBtn = document.getElementById('recent-sales-btn');
+  const recentSalesModal = document.getElementById('recent-sales-modal');
+  const recentSalesClose = document.getElementById('recent-sales-close');
+  const recentSalesTbody = document.getElementById('recent-sales-table-body');
+
+  if (recentSalesBtn && recentSalesModal) {
+    recentSalesBtn.onclick = async () => {
+      try {
+        const res = await fetch('/api/sales');
+        if (res.ok) {
+          const sales = await res.json();
+          // Filter today's sales
+          const today = new Date().toISOString().split('T')[0];
+          const todaysSales = sales.filter(s => s.date.startsWith(today)).reverse();
+          
+          recentSalesTbody.innerHTML = '';
+          if (todaysSales.length === 0) {
+            recentSalesTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay ventas hoy</td></tr>';
+          } else {
+            todaysSales.slice(0, 15).forEach(sale => {
+              const shortCode = sale.id.split('_')[1].slice(-4);
+              const time = new Date(sale.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>#${shortCode}</td>
+                <td>${time}</td>
+                <td>${formatCurrency(sale.total)}</td>
+                <td style="font-family: monospace; font-weight: bold; color: var(--neon-cyan); font-size: 1.1rem;">${shortCode}</td>
+              `;
+              recentSalesTbody.appendChild(tr);
+            });
+          }
+          recentSalesModal.style.display = 'flex';
+        }
+      } catch (e) {
+        showToast('Error cargando ventas recientes', true);
+      }
+    };
+    recentSalesClose.onclick = () => recentSalesModal.style.display = 'none';
+    recentSalesModal.onclick = (e) => {
+      if (e.target === recentSalesModal) recentSalesModal.style.display = 'none';
+    };
+  }
 
   initApp();
 

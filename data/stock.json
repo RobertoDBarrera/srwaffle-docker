@@ -4,7 +4,7 @@
       "id": "base_tradicional",
       "name": "Masa Tradicional",
       "category": "bases",
-      "stock": 113,
+      "stock": 112,
       "minStock": 20,
       "price": 450,
       "unit": "porciones"
@@ -51,7 +51,7 @@
       "id": "top_frutilla",
       "name": "Frutillas Frescas",
       "category": "toppings",
-      "stock": 8,
+      "stock": 7,
       "minStock": 10,
       "price": 180,
       "unit": "porciones"
@@ -116,7 +116,7 @@
       "id": "syr_dulce_leche",
       "name": "Dulce de Leche",
       "category": "syrups",
-      "stock": 180,
+      "stock": 179,
       "minStock": 40,
       "price": 90,
       "unit": "porciones"
@@ -163,7 +163,7 @@
       "id": "drink_cola",
       "name": "Gaseosa Cola (Lata)",
       "category": "drinks",
-      "stock": 50,
+      "stock": 51,
       "minStock": 12,
       "price": 300,
       "unit": "unidades"

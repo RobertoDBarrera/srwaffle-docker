@@ -285,7 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuGrid = document.getElementById('pos-menu-grid');
     if (menuGrid) {
       menuGrid.innerHTML = '';
-      menu.forEach(waffle => {
+      const waffles = menu.filter(m => m.type === 'waffle' || !m.type);
+      waffles.forEach(waffle => {
         let canSell = true;
         const baseItem = getStockItem(waffle.base);
         if (!baseItem || baseItem.stock <= 0) canSell = false;
@@ -321,32 +322,40 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 2. Bebidas
+    // 2. Bebidas / Productos Directos
     const drinksGrid = document.getElementById('pos-drinks-grid');
     if (drinksGrid) {
       drinksGrid.innerHTML = '';
-      stock.drinks.forEach(drink => {
+      const directItems = menu.filter(m => m.type === 'direct');
+      directItems.forEach(item => {
+        let stockItem = null;
+        if (item.stockId) {
+          stockItem = getStockItem(item.stockId);
+        }
+        
         const card = document.createElement('div');
         card.className = 'pos-item-card';
-        const isOutOfStock = drink.stock <= 0;
-        const isLowStock = drink.stock <= drink.minStock;
+        
+        const stockCount = stockItem ? stockItem.stock : 999;
+        const isOutOfStock = stockItem && stockItem.stock <= 0;
+        const isLowStock = stockItem && stockItem.stock <= stockItem.minStock;
 
         if (isOutOfStock) card.classList.add('out-of-stock');
         else if (isLowStock) card.classList.add('low-stock');
 
         card.innerHTML = `
-          <div class="pos-item-name">${drink.name}</div>
-          <div class="pos-item-price">${formatCurrency(drink.price)}</div>
-          <div class="pos-item-stock">Stock: ${drink.stock} un</div>
+          <div class="pos-item-name">${item.name}</div>
+          <div class="pos-item-price">${formatCurrency(item.price)}</div>
+          <div class="pos-item-stock">${stockItem ? `Stock: ${stockCount} un` : 'Sin control stock'}</div>
         `;
 
         if (!isOutOfStock) {
           card.addEventListener('click', () => {
             addToCart({
-              id: drink.id,
-              name: drink.name,
-              details: 'Bebida',
-              price: drink.price,
+              id: item.stockId || item.id,
+              name: item.name,
+              details: 'Bebida / Otros',
+              price: item.price,
               type: 'drink'
             });
           });

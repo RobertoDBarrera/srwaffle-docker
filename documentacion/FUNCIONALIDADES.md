@@ -32,7 +32,8 @@ El sistema se divide en 3 módulos principales (aplicaciones web):
 | **Armar Waffle Personalizado** | Botón "Armar Bubble Waffle" (Menú) | Permite al cajero construir el waffle paso a paso a pedido del cliente en el mostrador. |
 | **Vender Bebidas y Extras** | Pestaña "Bebidas / Otros" (Centro) | Agrega productos sueltos al ticket de compra. |
 | **Carrito de Compras** | Panel lateral derecho | Muestra la lista de ítems a cobrar, el total en ARS y permite eliminar ítems individualmente. |
-| **Cobro y Medios de Pago** | Panel lateral derecho (Botones verdes) | Permite registrar la venta indicando si el cliente pagó en Efectivo, Débito o MercadoPago. Envía automáticamente el pedido al KDS de cocina. |
+| **Cobro y Medios de Pago** | Panel lateral derecho (Botones verdes) | Permite registrar la venta indicando si el cliente pagó en Efectivo, Débito o MercadoPago. Envía automáticamente el pedido al KDS de cocina y muestra un cartel con el **Código de Rastreo**. |
+| **Últimas Ventas** | Botón "Últimas Ventas" (Arriba a la derecha) | Muestra una lista con las ventas cobradas durante el día actual y sus respectivos códigos de rastreo por si el cliente lo olvida. |
 | **Club Waffle (Fidelización)** | Panel lateral derecho (Al cobrar) | El cajero puede ingresar el celular del cliente. Si el cliente está registrado, se le suman puntos según la compra. Si acumula suficientes, se le informa para canjear recompensas. |
 | **Bloqueo Rápido** | Botón "Bloquear" (Arriba a la derecha) | Cierra la sesión del cajero temporalmente por seguridad cuando se aleja de la caja. |
 

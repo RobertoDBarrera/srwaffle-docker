@@ -1,79 +1,55 @@
-# Manual del Sistema Integral "Sr. Waffle"
-
-¡Bienvenido al sistema integral de gestión y ventas **Sr. Waffle**! 
-Este documento detalla todas las características, módulos y funcionalidades implementadas en la plataforma, diseñada específicamente para optimizar la operación de tu negocio, desde la experiencia interactiva del cliente hasta la sincronización en tiempo real de la cocina.
+# Sr. Waffle: Ecosistema Digital Gastronómico
+*Documento de Presentación Comercial y Características del Sistema*
 
 ---
 
-## 🌟 1. Módulo de Clientes (Catálogo Interactivo)
-La cara visible de la marca, diseñada para atraer y brindar una experiencia única de compra ("Wow Factor").
-*   **Waffle Builder 2D:** Permite a los clientes armar su propio *Bubble Waffle* paso a paso (Base, Toppings, Salsas, Helado) viendo en tiempo real una previsualización visual del producto.
-*   **Catálogo de Especialidades:** Una sección dedicada a mostrar los waffles pre-armados del menú (las recetas de la casa) con imágenes dinámicas, descripciones y precios.
-*   **Carrito de Compras y Pedidos de WhatsApp:** Los clientes pueden añadir múltiples waffles al carrito. Al finalizar, el sistema estructura automáticamente el pedido en un mensaje claro y lo envía al WhatsApp del local.
-*   **Rastreo de Pedidos (Order Tracking):** Los clientes pueden consultar el estado de su orden ingresando el número de ticket de 4 dígitos. El sistema le dice en qué estado está (Pendiente, Preparando, Listo).
-*   **Programa de Fidelización (Loyalty):** Los clientes frecuentes acumulan puntos por cada compra (asociados a su número de teléfono) y pueden consultar su estado y progreso hacia su próximo Waffle gratis. (Opcional - Se puede activar y desactivar desde el panel de administración)
-*   **Diseño Personalizable:** El cliente verá el logo de la marca, imágenes de portada (Hero) y mapa de ubicación cargados desde el panel de administración.
+## 🎯 ¿Qué es Sr. Waffle?
+**Sr. Waffle** no es una simple caja registradora ni un simple menú digital. Es un **ecosistema tecnológico integral** diseñado para revolucionar la forma en que operas tu negocio gastronómico. Desde el momento en que el cliente mira el menú en su celular, hasta que el cocinero entrega el producto y el administrador revisa sus ganancias desde su casa, todo fluye de manera automática y sincronizada.
+
+El objetivo principal del sistema es triple:
+1. **Vender más:** Atrayendo al cliente con una experiencia interactiva y visual única.
+2. **Operar más rápido:** Eliminando los papeles en la cocina y digitalizando la comunicación.
+3. **Controlar mejor:** Brindándole al dueño métricas en tiempo real y seguridad absoluta sobre su inventario.
 
 ---
 
-## 💳 2. Módulo de Caja Registradora (POS)
-Un punto de venta (POS) de alta velocidad diseñado para el registro ágil de comandas en el mostrador físico.
-*   **Acceso por PIN:** Sistema de bloqueo de pantalla integrado. Los cajeros seleccionan su nombre e ingresan su PIN personal para abrir la caja.
-*   **Gestión Multi-cajero:** Permite registrar qué empleado realizó cada venta para futuras auditorías o cálculos de comisiones.
-*   **Ingreso Rápido de Pedidos:** Interfaz optimizada para añadir bebidas, waffles especiales y armar waffles personalizados en segundos.
-*   **Registro de Métodos de Pago:** Posibilidad de registrar ventas con Múltiples medios (Efectivo, Mercado Pago, Tarjeta de Débito/Crédito, los movimientos no son registrados fiscalmente, solo se registra el método de pago para conciliación de caja) y también se pueden registrar ventas con puntos de fidelidad (Opcional - Se puede activar y desactivar desde el panel de administración).
-*   **Integración en Tiempo Real con Cocina (KDS):** Al confirmar el cobro en la caja, el pedido "vuela" instantáneamente a la pantalla de la cocina.
+## 🌟 1. Aumento de Ventas y Retención de Clientes
+El sistema incluye herramientas enfocadas puramente en el marketing y la facturación, asegurando que los clientes compren más y regresen.
+
+*   **Catálogo Interactivo con "Wow Factor":** Un menú web moderno que luce como una aplicación nativa. Los clientes pueden deslizar fotos de alta calidad de los productos estrella de la casa.
+*   **Catálogo Unificado (Waffles y Productos Directos):** No solo muestras tus waffles especiales, sino que ahora puedes cargar tus "Bebidas" o productos adicionales. Todos conviven en la misma interfaz de compra, brindando una experiencia "todo en uno" al consumidor.
+*   **Waffle Builder 2D (Armado Dinámico):** En lugar de leer un aburrido texto, los clientes "juegan" armando su propio waffle. Ven gráficamente en su pantalla cómo se añade el helado, los toppings y las salsas, lo que incrementa drásticamente el deseo de compra impulsiva.
+*   **Pedidos Directos por WhatsApp:** Al terminar de armar su carrito (o al elegir un producto del catálogo), el sistema genera un mensaje perfectamente estructurado al WhatsApp del negocio, con un botón de "Pedir esto" en cada tarjeta.
+*   **Order Tracking (Rastreador de Comandas):** Los clientes reciben un código de rastreo en caja y pueden ver desde su teléfono cuándo su orden pasa a "Preparación" y a "Listo", reduciendo la ansiedad y mejorando la percepción del servicio.
+*   **Club Waffle (Loyalty Program):** Un programa de fidelización automático. El cajero solo pide el número de teléfono, y el sistema se encarga de acumular puntos e incentivar al cliente a volver para cobrar su recompensa.
 
 ---
 
-## 🍳 3. Kitchen Display System (KDS)
-El corazón de la operación. Una pantalla digital para la cocina que reemplaza las comandas de papel y organiza la producción.
-*   **Acceso para Cocineros:** Autenticación por PIN exclusivo para el personal de cocina.
-*   **Tablero Kanban Dinámico:** Organiza el flujo de trabajo en 3 columnas:
-    *   *Nuevos Pedidos:* Tickets recién ingresados.
-    *   *En Preparación:* Tickets en los que el cocinero está trabajando activamente.
-    *   *Listos (Esperando Entrega):* Waffles terminados, listos para que el personal de mostrador los entregue al cliente.
-*   **Alertas Inteligentes:** 
-    *   *Auditivas:* Sonido de notificación personalizable cuando ingresa un nuevo pedido.
-    *   *Visuales (Urgencias):* Los pedidos que superan el tiempo de espera configurado (por defecto 10 minutos) se marcan en rojo intermitente. Este tiempo límite se puede personalizar desde el Panel de Administración.
-*   **Sincronización Inmediata:** Los cajeros pueden ver desde su pantalla cuando un pedido cambia de estado a "Listo".
+## 🚀 2. Velocidad Operativa (Chau Papeles)
+Olvídate de gritar comandas, de los papeles perdidos o manchados de grasa y de la lentitud en la caja.
+
+*   **Punto de Venta (POS) de Alta Velocidad:** Una caja registradora táctil (`/caja`) pensada para vender en 3 clics. Suma productos al carrito al instante, con soporte para métodos de pago variados.
+*   **Kitchen Display System (KDS):** Las impresoras de tickets son cosa del pasado. Los cocineros miran una pantalla táctil o tablet (`/cocina`) donde los pedidos caen solos de manera inalámbrica.
+*   **Flujo Kanban Intuitivo:** Con solo tocar la pantalla, el cocinero mueve las comandas de "Nuevos" a "En Preparación" y luego a "Listos".
+*   **Alertas de Embotellamiento (Urgencias):** Si la cocina se atrasa y un ticket pasa el límite de tiempo aceptable, el sistema hará parpadear la pantalla en rojo brillante. Es imposible olvidar un pedido.
 
 ---
 
-## 📊 4. Panel de Administración y Control de Stock
-El centro de mando para propietarios y gerentes, protegido por contraseña maestra.
+## 📈 3. Control Gerencial y Seguridad Antirrobo
+El dueño tiene acceso a un Panel de Administración (`/admin`) protegido criptográficamente, donde tiene el control absoluto del negocio sin tener que estar físicamente presente.
 
-### Inteligencia de Negocios (Business Intelligence)
-*   **Métricas en Vivo:** Visualización de ingresos totales, cantidad de ventas, ticket promedio de venta y **Tiempo Promedio en Cocina**.
-*   **Filtros de Fechas:** Selector dinámico que recalcula todas las métricas, gráficos de barras y tablas según un rango de fechas personalizado.
-*   **Reportes de Productos Estrella y Cajeros:** Rankings automáticos de los insumos más vendidos y rendimiento de ingresos por empleado.
-*   **Exportación de Auditoría:** Posibilidad de descargar el historial de ventas en formato CSV (Excel) respetando los filtros de fecha aplicados.
-*   **Gestión de Reembolsos:** Botón de "Devolver" para cancelar ventas erróneas. Al hacer un reembolso, el inventario descontado se restituye automáticamente.
-
-### Control de Inventario
-*   **Alertas de Insumos:** Las barras de stock cambian de color (Cian: Saludable, Amarillo: Bajo, Rojo: Crítico) según los límites mínimos configurados para cada ingrediente.
-*   **Gestión de Recetas (Menú):** Permite crear waffles pre-armados, definir qué toppings y salsas incluyen por defecto, establecer el precio y subir imágenes. Al vender estos waffles, el sistema sabe exactamente qué ingredientes descontar de la base de datos.
-*   **Restock Ágil:** Carga rápida de stock cuando ingresa mercadería, con un par de clics.
-
-### Fidelización (Loyalty Program)
-*   **Configuración Flexible:** El administrador define cuántos "puntos" (o monto en dinero) equivalen a la recompensa, ajustando la dificultad para que los clientes ganen premios.
-*   **Activación Global:** Permite encender o apagar el programa de puntos de fidelidad en toda la tienda (sin que los clientes pierdan su progreso guardado en la base de datos).
-
-### Opciones Configurables
-*   **Identidad Visual:** Permite cambiar el Logo del sistema, que se refleja automáticamente en la vista del cliente.
-*   **Contenido Dinámico:** Subida de imágenes para la portada principal (Hero) y actualización del Mapa de ubicación de Google Maps.
-*   **Ajustes Operativos:** Configuración del umbral de tiempo (en minutos) para disparar las "Alertas Inteligentes" en la pantalla de la cocina.
-
-### Gestión de Personal (Recursos Humanos)
-*   **CRUD de Empleados:** Creación, edición, activación y baja de personal.
-*   **Roles del Sistema:** Asignación de permisos específicos (`Cajero` o `Cocinero`) para restringir qué partes de la plataforma puede ver y utilizar cada empleado.
+*   **Business Intelligence (Métricas en Tiempo Real):** Un tablero de control que muestra, segundo a segundo, cuánto dinero entró en el día, el ticket promedio y cuánto están tardando los cocineros en sacar los platos.
+*   **Control de Empleados:** Se terminó el anonimato. Cada cajero y cocinero tiene un PIN de 4 dígitos. El dueño sabe exactamente cuánto facturó "Juan" y cuánto facturó "María" gracias a la tabla de Rendimiento.
+*   **Inventario Infalible (Stock Autogestionado):** Cuando vendes un waffle, el sistema no descuenta "1 waffle". El sistema sabe exactamente su receta y descuenta *1 masa, 1 porción de Nutella y 1 de Oreo* del depósito. Si un insumo se está agotando, aparecerá una alerta roja automática.
+*   **Reembolsos Seguros:** Si un cajero se equivoca, el administrador puede anular la venta. El sistema se encarga solo de restarle esa plata a la facturación del día y devolver milimétricamente la masa y la Nutella al stock virtual.
+*   **Filtros Fiscales:** Descarga hojas de cálculo (CSV/Excel) de tus ventas filtradas por fechas exactas para facilitarle la liquidación a tu contador.
 
 ---
 
-## 📱 5. Diseño y Experiencia de Usuario (UI/UX)
-*   **Aesthetic Cyberpunk:** Interfaz moderna en Modo Oscuro (Dark Mode), con efectos de neón, acentos brillantes (cian, púrpura, magenta) y *glassmorphism* (fondos translúcidos).
-*   **Responsivo (Mobile-First):** El catálogo de clientes está optimizado para funcionar perfectamente en pantallas de celulares de cualquier tamaño.
-*   **Módulo de Ayuda (Onboarding):** Todos los módulos (Caja, Cocina, Admin, Cliente) cuentan con botones de "Ayuda" que despliegan guías rápidas e interactivas para enseñar a los usuarios a utilizar las funciones de la pantalla en la que se encuentran.
+## 📱 4. Personalización sin necesidad de programadores
+El dueño es dueño del sistema. No necesita llamar a un técnico para adaptar el local.
+*   **Cambio de Precios Instantáneo:** ¿Aumentó la harina? Con un clic, actualizas el precio de tu Masa y el cambio se refleja en la Caja y en el Catálogo web al instante.
+*   **Tu propia App:** Sube el logo de tu negocio, cambia las fotos promocionales y actualiza tu número de WhatsApp directamente desde el panel de control. El ecosistema tomará tu marca al 100%.
+*   **Nube Persistente de Imágenes:** Cuando subes fotos de tus deliciosos waffles o bebidas, el sistema las guarda de manera permanente. Aunque haya actualizaciones del servidor, nunca perderás tu valiosa galería visual.
 
----
-**Sr. Waffle** no es solo un menú, es un ecosistema tecnológico diseñado para vender más, operar más rápido y fidelizar mejor. 🚀
+> En resumen, **Sr. Waffle** elimina el estrés operativo. El cajero se concentra en sonreír, el cocinero en preparar, el cliente en disfrutar la experiencia interactiva, y el dueño en ver crecer sus métricas.

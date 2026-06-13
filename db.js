@@ -310,6 +310,8 @@ const initPostgresTables = async () => {
         unit VARCHAR(50) NOT NULL DEFAULT 'porciones'
       )
     `);
+    await client.query('ALTER TABLE stock ADD COLUMN IF NOT EXISTS is_visible BOOLEAN DEFAULT TRUE;');
+    await client.query('ALTER TABLE stock ADD COLUMN IF NOT EXISTS show_price BOOLEAN DEFAULT TRUE;');
 
     // menu
     await client.query(`
@@ -325,6 +327,10 @@ const initPostgresTables = async () => {
         image VARCHAR(255)
       )
     `);
+    await client.query('ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_visible BOOLEAN DEFAULT TRUE;');
+    await client.query('ALTER TABLE menu ADD COLUMN IF NOT EXISTS show_price BOOLEAN DEFAULT TRUE;');
+    await client.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'waffle';`);
+    await client.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS stock_id VARCHAR(100) REFERENCES stock(id) ON DELETE SET NULL;`);
 
     // sales
     await client.query(`
@@ -741,7 +747,9 @@ const getStock = async () => {
           minStock: row.min_stock,
           price: row.price,
           cost: row.cost || 0,
-          unit: row.unit
+          unit: row.unit,
+          isVisible: row.is_visible !== false,
+          showPrice: row.show_price !== false
         });
       }
     });
@@ -753,10 +761,10 @@ const getStock = async () => {
 
 const createStockItem = async (item) => {
   if (usePostgres) {
-    const { id, name, category, stock, minStock, price, cost, unit } = item;
+    const { id, name, category, stock, minStock, price, cost, unit, isVisible, showPrice } = item;
     await pool.query(
-      'INSERT INTO stock (id, name, category, stock, min_stock, price, cost, unit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [id, name, category, stock, minStock, price, cost || 0, unit]
+      'INSERT INTO stock (id, name, category, stock, min_stock, price, cost, unit, is_visible, show_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      [id, name, category, stock, minStock, price, cost || 0, unit, isVisible !== false, showPrice !== false]
     );
   } else {
     const stock = readJSON(STOCK_FILE);
@@ -769,10 +777,10 @@ const createStockItem = async (item) => {
 
 const updateStockItem = async (id, item) => {
   if (usePostgres) {
-    const { name, category, stock, minStock, price, cost, unit } = item;
+    const { name, category, stock, minStock, price, cost, unit, isVisible, showPrice } = item;
     await pool.query(
-      'UPDATE stock SET name = $1, category = $2, stock = $3, min_stock = $4, price = $5, cost = $6, unit = $7 WHERE id = $8',
-      [name, category, stock, minStock, price, cost || 0, unit, id]
+      'UPDATE stock SET name = $1, category = $2, stock = $3, min_stock = $4, price = $5, cost = $6, unit = $7, is_visible = $8, show_price = $9 WHERE id = $10',
+      [name, category, stock, minStock, price, cost || 0, unit, isVisible !== false, showPrice !== false, id]
     );
   } else {
     const stock = readJSON(STOCK_FILE);
@@ -836,7 +844,9 @@ const updateStockItemFields = async (id, fields) => {
       minStock: row.min_stock,
       price: row.price,
       cost: row.cost || 0,
-      unit: row.unit
+      unit: row.unit,
+      isVisible: row.is_visible !== false,
+      showPrice: row.show_price !== false
     };
   } else {
     const stock = readJSON(STOCK_FILE);
@@ -871,7 +881,11 @@ const getMenu = async () => {
       toppings: row.toppings || [],
       syrups: row.syrups || [],
       icecreams: row.icecreams || [],
-      image: row.image
+      image: row.image,
+      isVisible: row.is_visible !== false,
+      showPrice: row.show_price !== false,
+      type: row.type || 'waffle',
+      stockId: row.stock_id
     }));
   } else {
     return readJSON(MENU_FILE);
@@ -880,10 +894,10 @@ const getMenu = async () => {
 
 const createMenuItem = async (item) => {
   if (usePostgres) {
-    const { id, name, description, price, base, toppings, syrups, icecreams, image } = item;
+    const { id, name, description, price, base, toppings, syrups, icecreams, image, isVisible, showPrice, type, stockId } = item;
     await pool.query(
-      'INSERT INTO menu (id, name, description, price, base, toppings, syrups, icecreams, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [id, name, description, price, base, toppings || [], syrups || [], icecreams || [], image || '']
+      'INSERT INTO menu (id, name, description, price, base, toppings, syrups, icecreams, image, is_visible, show_price, type, stock_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+      [id, name, description, price, base, toppings || [], syrups || [], icecreams || [], image || '', isVisible !== false, showPrice !== false, type || 'waffle', stockId || null]
     );
   } else {
     const menu = readJSON(MENU_FILE);
@@ -895,10 +909,10 @@ const createMenuItem = async (item) => {
 
 const updateMenuItem = async (id, item) => {
   if (usePostgres) {
-    const { name, description, price, base, toppings, syrups, icecreams, image } = item;
+    const { name, description, price, base, toppings, syrups, icecreams, image, isVisible, showPrice, type, stockId } = item;
     await pool.query(
-      'UPDATE menu SET name = $1, description = $2, price = $3, base = $4, toppings = $5, syrups = $6, icecreams = $7, image = $8 WHERE id = $9',
-      [name, description, price, base, toppings || [], syrups || [], icecreams || [], image || '', id]
+      'UPDATE menu SET name = $1, description = $2, price = $3, base = $4, toppings = $5, syrups = $6, icecreams = $7, image = $8, is_visible = $9, show_price = $10, type = $11, stock_id = $12 WHERE id = $13',
+      [name, description, price, base, toppings || [], syrups || [], icecreams || [], image || '', isVisible !== false, showPrice !== false, type || 'waffle', stockId || null, id]
     );
   } else {
     const menu = readJSON(MENU_FILE);

@@ -173,7 +173,7 @@ Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin 
    
 2. **Caja Registradora POS (`/caja`):**
    - **Acceso:** Integrado en el encabezado de acciones rápidas, justo al lado del botón de bloqueo (`Ayuda ❓`).
-   - **Guía:** Explica la adición de productos del menú/bebidas a la comanda, el armado personalizado para el cliente, la eliminación de ítems en el carrito, la selección del método de pago (Efectivo, Débito o Mercado Pago) y el registro transaccional de ventas.
+   - **Guía:** Explica la adición de productos del menú/bebidas a la comanda, el armado personalizado para el cliente, la eliminación de ítems en el carrito, la selección del método de pago, la entrega del **código de rastreo**, y la consulta del historial de **Últimas Ventas**.
 
 3. **Panel de Administración (`/admin`):**
    - **Acceso:** Ubicado directamente como una pestaña destacada en el menú de navegación del sidebar lateral izquierdo, separado por una línea divisoria elegante y acompañado de un icono de pregunta (`Ayuda / Guía`).
@@ -181,7 +181,7 @@ Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin 
 
 4. **Kitchen Display System - KDS (`/cocina`):**
    - **Acceso:** Integrado en el encabezado superior derecho, junto al control de volumen de notificaciones (`Ayuda / Guía`).
-   - **Guía:** Explica el inicio de sesión por PIN de 4 dígitos para cocineros, el flujo de tickets por estados (Nuevos Pedidos -> En Preparación -> Listos -> Entregados), el funcionamiento de las notificaciones sonoras, y las alertas visuales para pedidos demorados (más de 10 minutos).
+   - **Guía:** Explica el inicio de sesión por PIN de 4 dígitos para cocineros, el flujo de tickets por estados (Nuevos Pedidos -> En Preparación -> Listos -> Entregados), el funcionamiento de las notificaciones sonoras breves para pedidos nuevos, y las **alertas visuales pulsantes en rojo** para pedidos demorados según el tiempo configurado dinámicamente en el panel de administración.
 
 Cada una de estas opciones abre un modal translúcido con efecto glassmorphism (`backdrop-filter: blur`) que se integra de manera armónica al estilo cyberpunk de la aplicación.
 

@@ -421,7 +421,7 @@ app.get('/api/loyalty/customers', async (req, res) => {
 // POST: Crear un nuevo waffle en el menú
 app.post('/api/menu', async (req, res) => {
   try {
-    const { name, description, price, base, toppings, syrups, icecreams, image } = req.body;
+    const { name, description, price, base, toppings, syrups, icecreams, image, isVisible, showPrice, type, stockId } = req.body;
     const newId = `menu_${Date.now()}`;
     const newItem = {
       id: newId,
@@ -432,7 +432,11 @@ app.post('/api/menu', async (req, res) => {
       toppings: toppings || [],
       syrups: syrups || [],
       icecreams: icecreams || [],
-      image: image || ''
+      image: image || '',
+      isVisible: isVisible !== false,
+      showPrice: showPrice !== false,
+      type: type || 'waffle',
+      stockId: stockId || null
     };
     await db.createMenuItem(newItem);
     res.json({ success: true, item: newItem });
@@ -446,7 +450,7 @@ app.post('/api/menu', async (req, res) => {
 app.put('/api/menu/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, base, toppings, syrups, icecreams, image } = req.body;
+    const { name, description, price, base, toppings, syrups, icecreams, image, isVisible, showPrice, type, stockId } = req.body;
     
     const menu = await db.getMenu();
     const existing = menu.find(m => m.id === id);
@@ -462,7 +466,11 @@ app.put('/api/menu/:id', async (req, res) => {
       toppings: toppings || [],
       syrups: syrups || [],
       icecreams: icecreams || [],
-      image: image || existing.image
+      image: image || existing.image,
+      isVisible: isVisible !== false,
+      showPrice: showPrice !== false,
+      type: type || 'waffle',
+      stockId: stockId || null
     };
     await db.updateMenuItem(id, updated);
     res.json({ success: true, item: { id, ...updated } });
@@ -544,7 +552,7 @@ app.delete('/api/employees/:id', async (req, res) => {
 // POST: Crear un nuevo ingrediente/insumo
 app.post('/api/stock', async (req, res) => {
   try {
-    const { name, category, stock, minStock, price, unit } = req.body;
+    const { name, category, stock, minStock, price, cost, unit, sellingPrice, recipe } = req.body;
     const shortCat = category === 'bases' ? 'base' : (category === 'toppings' ? 'top' : (category === 'syrups' ? 'syr' : (category === 'icecreams' ? 'ice' : 'drink')));
     const newId = `${shortCat}_${Date.now()}`;
     const newItem = {
@@ -554,9 +562,35 @@ app.post('/api/stock', async (req, res) => {
       stock: parseInt(stock) || 0,
       minStock: parseInt(minStock) || 0,
       price: parseInt(price) || 0,
+      cost: cost !== undefined ? parseInt(cost) : parseInt(price) || 0,
       unit: unit || 'porciones'
     };
+    if (recipe) {
+      newItem.recipe = recipe;
+    }
     await db.createStockItem(newItem);
+
+    // Si es una bebida y tiene precio de venta, lo publicamos en el menú
+    if (category === 'drinks' && sellingPrice > 0) {
+      const newMenuId = `menu_${Date.now()}`;
+      const newMenuItem = {
+        id: newMenuId,
+        name,
+        description: 'Venta Directa',
+        price: parseInt(sellingPrice),
+        base: null,
+        toppings: [],
+        syrups: [],
+        icecreams: [],
+        image: null,
+        isVisible: true,
+        showPrice: true,
+        type: 'direct',
+        stockId: newId
+      };
+      await db.createMenuItem(newMenuItem);
+    }
+
     res.json({ success: true, item: newItem });
   } catch (error) {
     console.error(error);
@@ -568,7 +602,7 @@ app.post('/api/stock', async (req, res) => {
 app.put('/api/stock/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, stock, minStock, price, unit } = req.body;
+    const { name, category, stock, minStock, price, cost, unit, sellingPrice, recipe } = req.body;
     
     const currentStock = await db.getStock();
     let existingItem = null;
@@ -589,14 +623,103 @@ app.put('/api/stock/:id', async (req, res) => {
       stock: stock !== undefined ? parseInt(stock) : existingItem.stock,
       minStock: minStock !== undefined ? parseInt(minStock) : existingItem.minStock,
       price: price !== undefined ? parseInt(price) : existingItem.price,
+      cost: cost !== undefined ? parseInt(cost) : (price !== undefined ? parseInt(price) : existingItem.cost),
       unit: unit || existingItem.unit
     };
+    if (recipe) {
+      updatedItem.recipe = recipe;
+    } else if (existingItem.recipe) {
+      // Keep existing recipe if none provided in update, or maybe it should be explicitly cleared?
+      // Usually PUT replaces the whole object, but to be safe we'll overwrite it if provided, or keep if not.
+      // Actually, if they pass recipe: null, we should delete it.
+      if (req.body.hasOwnProperty('recipe') && recipe === null) {
+        // Do nothing, it will not have the recipe field.
+      } else {
+        updatedItem.recipe = existingItem.recipe;
+      }
+    }
     
     await db.updateStockItem(id, updatedItem);
+
+    if (updatedItem.category === 'drinks' && sellingPrice > 0) {
+      const menu = await db.getMenu();
+      const existingMenu = menu.find(m => m.stockId === id);
+      if (existingMenu) {
+        existingMenu.price = parseInt(sellingPrice);
+        existingMenu.name = updatedItem.name;
+        await db.updateMenuItem(existingMenu.id, existingMenu);
+      } else {
+        const newMenuId = `menu_${Date.now()}`;
+        const newMenuItem = {
+          id: newMenuId,
+          name: updatedItem.name,
+          description: 'Venta Directa',
+          price: parseInt(sellingPrice),
+          base: null,
+          toppings: [],
+          syrups: [],
+          icecreams: [],
+          image: null,
+          isVisible: true,
+          showPrice: true,
+          type: 'direct',
+          stockId: id
+        };
+        await db.createMenuItem(newMenuItem);
+      }
+    }
+
     res.json({ success: true, item: { id, ...updatedItem } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar ingrediente' });
+  }
+});
+
+// POST: Fabricar Lote de Insumo Elaborado
+app.post('/api/stock/:id/produce', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { batches } = req.body; // How many recipes to run
+    
+    // Fetch current stock to find the item and its recipe
+    const allStockRaw = await db.getStock();
+    const allStock = Array.isArray(allStockRaw) ? allStockRaw : 
+      [...allStockRaw.bases, ...allStockRaw.toppings, ...allStockRaw.syrups, ...allStockRaw.drinks, ...allStockRaw.icecreams];
+    
+    const targetItem = allStock.find(item => item.id === id);
+    if (!targetItem || !targetItem.recipe || !targetItem.recipe.ingredients) {
+      return res.status(400).json({ error: 'El insumo no tiene una receta válida para fabricar' });
+    }
+
+    const multiplier = parseInt(batches) || 1;
+    const yieldAmount = parseInt(targetItem.recipe.yield) || 1;
+    const totalToProduce = yieldAmount * multiplier;
+
+    // Deduct ingredients and add yield
+    const deductions = {};
+    for (const ing of targetItem.recipe.ingredients) {
+      deductions[ing.id] = (ing.qty * multiplier);
+    }
+
+    // Since db.executeSale handles deductions gracefully, we can just use a similar custom transaction.
+    // However, db.executeSale is for sales. Let's do it manually using updateStockItem.
+    
+    // 1. Deduct
+    for (const [ingId, deductQty] of Object.entries(deductions)) {
+      const ingItem = allStock.find(item => item.id === ingId);
+      if (ingItem) {
+        await db.updateStockItem(ingId, { stock: Math.max(0, ingItem.stock - deductQty) });
+      }
+    }
+    
+    // 2. Add
+    await db.updateStockItem(id, { stock: targetItem.stock + totalToProduce });
+
+    res.json({ success: true, produced: totalToProduce });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al fabricar lote' });
   }
 });
 
@@ -627,10 +750,16 @@ app.post('/api/menu/upload-image', (req, res) => {
     const base64Regex = /^data:image\/\w+;base64,/;
     const cleanData = data.replace(base64Regex, '');
     
-    const filePath = path.join(__dirname, uniqueFileName);
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir);
+    }
+    
+    const filePath = path.join(uploadsDir, uniqueFileName);
     fs.writeFileSync(filePath, Buffer.from(cleanData, 'base64'));
     
-    res.json({ success: true, fileName: uniqueFileName });
+    res.json({ success: true, fileName: `uploads/${uniqueFileName}` });
   } catch (error) {
     res.status(500).json({ error: 'Error al guardar la imagen en el servidor' });
   }

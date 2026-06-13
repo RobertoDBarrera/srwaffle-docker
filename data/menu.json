@@ -59,5 +59,20 @@
       "syr_dulce_leche"
     ],
     "image": "prueba_1779993513462.png"
+  },
+  {
+    "id": "menu_1781278848693",
+    "name": "Jugo Naranja",
+    "description": "Jugo Naranja 100%",
+    "price": 150,
+    "base": "base_tradicional",
+    "toppings": [],
+    "syrups": [],
+    "icecreams": [],
+    "image": "",
+    "isVisible": true,
+    "showPrice": true,
+    "type": "direct",
+    "stockId": "drink_jugo"
   }
 ]

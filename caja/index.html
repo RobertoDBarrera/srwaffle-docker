@@ -118,6 +118,9 @@
         <span class="logo-text" style="font-size: 1.4rem; font-family: var(--font-cursive); font-weight: normal; margin-bottom: -4px;">Sr. Waffle POS</span>
       </div>
       <div class="caja-actions">
+        <button class="admin-lock-btn" id="recent-sales-btn" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-color: var(--neon-cyan); color: var(--neon-cyan); background: rgba(0, 245, 212, 0.05); margin-right: 5px;">
+          Últimas Ventas
+        </button>
         <button class="admin-lock-btn" id="help-btn" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-color: var(--neon-purple); color: var(--neon-purple); background: rgba(157, 78, 221, 0.05); margin-right: 5px;">
           Ayuda ❓
         </button>
@@ -232,12 +235,13 @@
             </ul>
           </li>
           <li><strong>Editar Comanda:</strong> Podés eliminar cualquier ítem haciendo clic en el icono del cesto de basura en la lista.</li>
-          <li><strong>Registrar Venta:</strong>
+          <li><strong>Registrar Venta y Código de Rastreo:</strong>
             <ul style="margin-left: 15px; margin-top: 5px; list-style-type: circle;">
-              <li>Selecciona el método de pago del cliente (Efectivo, Débito o Mercado Pago).</li>
-              <li>Hace clic en <em>"Registrar Venta"</em>. Esto descontará los insumos de stock y guardará la transacción de inmediato.</li>
+              <li>Selecciona el método de pago del cliente (Efectivo, Débito o Mercado Pago) y haz clic en <em>"Registrar Venta"</em>.</li>
+              <li>Aparecerá un cartel con un <strong>Código de Rastreo de 4 dígitos</strong>. ¡Díctaselo al cliente! Le servirá para seguir el estado de su pedido desde el celular o las pantallas locales.</li>
             </ul>
           </li>
+          <li><strong>Revisar Últimas Ventas:</strong> En la parte superior derecha, haz clic en el botón <em>"Últimas Ventas"</em> para ver una lista de todos los pedidos del día actual y recuperar los códigos de rastreo si los olvidaste.</li>
           <li><strong>Bloquear Caja:</strong> Al apartarse del puesto de trabajo, hacer clic en <em>"Bloquear Caja"</em> en el encabezado para requerir PIN de acceso nuevamente.</li>
         </ol>
       </div>
@@ -248,8 +252,45 @@
     </div>
   </div>
 
+  <!-- MODAL DE VENTA EXITOSA Y CÓDIGO DE SEGUIMIENTO -->
+  <div class="pos-modal-overlay" id="checkout-success-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 400px; width: 90%; text-align: center; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan-glow);">
+      <h2 style="font-size: 1.8rem; color: var(--neon-cyan); margin-bottom: 10px;">¡Venta Registrada!</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Dile al cliente que su código de rastreo es:</p>
+      <div id="checkout-tracking-code" style="font-size: 3rem; font-family: monospace; font-weight: bold; letter-spacing: 5px; color: #fff; background: rgba(0,245,212,0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(0,245,212,0.3); margin-bottom: 25px;">
+        1234
+      </div>
+      <button class="btn-primary" id="checkout-success-close" style="width: 100%; font-size: 1.1rem;">Aceptar y Continuar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE ÚLTIMAS VENTAS -->
+  <div class="pos-modal-overlay" id="recent-sales-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 600px; width: 90%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--border-color);">
+      <h2 style="font-size: 1.5rem; color: #fff; margin-bottom: 15px;">Últimas Ventas (Turno Actual)</h2>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>ID Pedido</th>
+              <th>Hora</th>
+              <th>Monto</th>
+              <th>Código Rastreo</th>
+            </tr>
+          </thead>
+          <tbody id="recent-sales-table-body">
+            <!-- Dinámico -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-actions" style="margin-top: 20px; justify-content: flex-end;">
+        <button class="btn-secondary" id="recent-sales-close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CONTROLADORES JAVASCRIPT -->
-  <script src="/theme-manager.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="/theme-manager.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

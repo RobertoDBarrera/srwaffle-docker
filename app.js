@@ -348,39 +348,102 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- CLIENT SIDE: MOSTRAR MENÚ DIGITAL ---
   const renderClientMenu = () => {
     const menuGrid = document.getElementById('client-menu-grid');
+    const drinksGrid = document.getElementById('client-drinks-grid');
     if (!menuGrid) return;
 
     menuGrid.innerHTML = '';
+    if (drinksGrid) drinksGrid.innerHTML = '';
+
+    const phone = companyInfo.phone || '';
+    const canOrder = companyInfo.whatsappOrdersEnabled !== false && phone !== '';
 
     menu.forEach(item => {
+      if (item.isVisible === false) return; // Skip hidden items
+
       const card = document.createElement('div');
       card.className = 'menu-card';
       
-      const baseObj = getStockItem(item.base);
-      const toppingsText = item.toppings.map(t => getStockItem(t)?.name || '').filter(t => t !== '').join(', ');
-      const syrupsText = item.syrups.map(s => getStockItem(s)?.name || '').filter(s => s !== '').join(', ');
+      let tagsHtml = '';
+      let descHtml = `<p class="menu-card-desc">${item.description || ''}</p>`;
+      let categoryForWa = '';
       
-      const tags = [];
-      if (baseObj) tags.push(baseObj.name);
-      if (syrupsText) tags.push(`Salsa: ${syrupsText}`);
+      if (item.type === 'direct') {
+        const linkedStock = getStockItem(item.stockId);
+        categoryForWa = 'Bebida / Adicional';
+        // tagsHtml = `<span class="menu-tag" style="border-color: rgba(0, 245, 212, 0.3); color: var(--neon-cyan);">Bebida</span>`;
+      } else {
+        const baseObj = getStockItem(item.base);
+        const toppingsText = (item.toppings || []).map(t => getStockItem(t)?.name || '').filter(t => t !== '').join(', ');
+        const syrupsText = (item.syrups || []).map(s => getStockItem(s)?.name || '').filter(s => s !== '').join(', ');
+        
+        const tags = [];
+        if (baseObj) tags.push(baseObj.name);
+        if (syrupsText) tags.push(`Salsa: ${syrupsText}`);
+
+        tagsHtml = tags.map(t => `<span class="menu-tag">${t}</span>`).join('') +
+                   (item.toppings || []).map(t => `<span class="menu-tag" style="border-color: rgba(255, 0, 127, 0.2); color: var(--neon-pink);">${getStockItem(t)?.name}</span>`).join('');
+        categoryForWa = 'Waffle de Carta';
+      }
+
+      const priceHtml = item.showPrice !== false ? `<span class="menu-card-price">${formatCurrency(item.price)}</span>` : '';
+      
+      // Botón de WhatsApp individual
+      let waButtonHtml = '';
+      if (canOrder) {
+        waButtonHtml = `
+          <button class="menu-wa-btn" data-id="${item.id}" style="width:100%; margin-top:1rem; background: rgba(37, 211, 102, 0.1); color: #25D366; border: 1px solid #25D366; border-radius: 8px; padding: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Pedir esto
+          </button>
+        `;
+      }
 
       card.innerHTML = `
-        <img src="${item.image}" alt="${item.name}" class="menu-card-img">
-        <div class="menu-card-body">
+        ${item.image ? `<img src="${item.image}" alt="${item.name}" class="menu-card-img">` : `<div class="menu-card-img" style="display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#555;">Sin Imagen</div>`}
+        <div class="menu-card-body" style="display:flex; flex-direction:column; flex:1;">
           <div class="menu-card-title">
             <span>${item.name}</span>
-            <span class="menu-card-price">${formatCurrency(item.price)}</span>
+            ${priceHtml}
           </div>
-          <p class="menu-card-desc">${item.description}</p>
-          <div class="menu-card-tags">
-            ${tags.map(t => `<span class="menu-tag">${t}</span>`).join('')}
-            ${item.toppings.map(t => `<span class="menu-tag" style="border-color: rgba(255, 0, 127, 0.2); color: var(--neon-pink);">${getStockItem(t)?.name}</span>`).join('')}
-          </div>
+          ${descHtml}
+          ${tagsHtml ? `<div class="menu-card-tags">${tagsHtml}</div>` : ''}
+          <div style="margin-top:auto;">${waButtonHtml}</div>
         </div>
       `;
 
-      menuGrid.appendChild(card);
+      if (item.type === 'direct' && drinksGrid) {
+        drinksGrid.appendChild(card);
+      } else {
+        menuGrid.appendChild(card);
+      }
     });
+
+    // Añadir eventos a los botones de WhatsApp
+    if (canOrder) {
+      document.querySelectorAll('.menu-wa-btn').forEach(btn => {
+        // Efecto hover
+        btn.addEventListener('mouseenter', () => {
+          btn.style.background = '#25D366';
+          btn.style.color = '#fff';
+        });
+        btn.addEventListener('mouseleave', () => {
+          btn.style.background = 'rgba(37, 211, 102, 0.1)';
+          btn.style.color = '#25D366';
+        });
+
+        // Click para pedir
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          const item = menu.find(m => m.id === id);
+          if (item) {
+            const priceText = item.showPrice !== false ? ` ($${item.price})` : '';
+            const msg = `¡Hola! 👋 Quisiera encargar del menú:\n\n*${item.name}*${priceText}\n\n¿Me confirmás si tienen stock y la demora?`;
+            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+            window.open(waUrl, '_blank');
+          }
+        });
+      });
+    }
   };
 
   // --- CLIENT SIDE: ARMADOR INTERACTIVO (CUSTOM BUILDER) ---
@@ -771,12 +834,12 @@ document.addEventListener('DOMContentLoaded', () => {
             setActive(stepPending);
           } else if (data.kdsStatus === 'preparing') {
             trackerMessage.innerText = '¡Tus waffles están en el horno! Huele delicioso...';
-            lineFill.style.width = '50%';
+            lineFill.style.width = '40%';
             setActive(stepPending);
             setActive(stepPreparing);
           } else if (data.kdsStatus === 'ready') {
             trackerMessage.innerText = '¡Listos! Acercate al mostrador para retirarlos.';
-            lineFill.style.width = '100%';
+            lineFill.style.width = '80%';
             setActive(stepPending);
             setActive(stepPreparing);
             setActive(stepReady);

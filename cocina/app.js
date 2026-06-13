@@ -290,13 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
       
       countData[status]++;
       
-      const ticketEl = document.createElement('div');
-      ticketEl.className = 'kds-ticket';
-      
-      const orderDate = new Date(ticket.createdAt || ticket.created_at || Date.now());
+      const orderDate = new Date(ticket.createdAt || ticket.created_at || ticket.date || Date.now());
       const now = new Date();
       const diffMins = Math.floor((now - orderDate) / 60000);
       const isUrgent = diffMins >= kdsAlertTime && status !== 'ready';
+
+      const ticketEl = document.createElement('div');
+      ticketEl.className = `kds-ticket ${isUrgent ? 'urgent' : ''}`;
       const timeStr = `${orderDate.getHours().toString().padStart(2, '0')}:${orderDate.getMinutes().toString().padStart(2, '0')}`;
 
       let itemsHtml = '';
