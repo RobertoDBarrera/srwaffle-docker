@@ -1,484 +1,215 @@
-// Lógica del Módulo de Caja POS - Sr. Waffle
+// Lógica del Módulo de Caja POS - Sr. Waffle (Versión 2 - Modelo Relacional Estricto)
 document.addEventListener('DOMContentLoaded', () => {
-  // --- INICIALIZACIÓN DE ESTADO ---
-  let stock = {};
+  let stock = [];
+  let masas = [];
+  let waffles = [];
   let menu = [];
+  
   let cart = [];
   let selectedPaymentMethod = 'Efectivo';
   let loyaltyEnabled = false;
   let loyaltyPointsThreshold = 100;
   let currentLoyaltyCustomer = null;
-  let employees = [];
   
   let pinInput = '';
-
-  // Configuración del Waffle Personalizado en la Caja
   let posWaffle = {
-    base: 'base_tradicional',
-    spread: 'none',
-    toppings: [],
-    whippedCream: false,
+    base: '', // masa_id
+    toppings: [], // ids de stock
     syrups: [],
     icecreams: []
   };
 
-  // --- ELEMENTOS DEL DOM ---
   const toast = document.getElementById('toast');
   const loginOverlay = document.getElementById('caja-login-overlay');
   const cartItemsContainer = document.getElementById('pos-cart-items');
   const checkoutBtn = document.getElementById('pos-checkout-btn');
 
-  // --- MÉTODOS DE UTILIDAD GENERAL ---
-  const showToast = (message, isError = false) => {
-    toast.textContent = message;
-    toast.className = 'toast-notification';
-    if (isError) toast.classList.add('error');
+  const showToast = (msg, isError = false) => {
+    toast.textContent = msg;
+    toast.className = 'toast-notification' + (isError ? ' error' : '');
     toast.classList.add('active');
-    setTimeout(() => {
-      toast.classList.remove('active');
-    }, 3000);
+    setTimeout(() => toast.classList.remove('active'), 3000);
   };
+  const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-  };
+  const getStockItem = (id) => stock.find(i => i.id === id);
+  const getMasa = (id) => masas.find(m => m.id === id);
 
-  const getStockItem = (id) => {
-    for (const category in stock) {
-      const item = stock[category].find(i => i.id === id);
-      if (item) return item;
-    }
-    return null;
-  };
-
-  const calculateWafflePrice = (waffleConfig) => {
-    let price = getStockItem(waffleConfig.base)?.price || 0;
-    if (waffleConfig.spread && waffleConfig.spread !== 'none') {
-      price += getStockItem(waffleConfig.spread)?.price || 0;
-    }
-    if (waffleConfig.whippedCream) {
-      price += getStockItem('top_crema_batida')?.price || 0;
-    }
-    waffleConfig.toppings.forEach(id => {
-      price += getStockItem(id)?.price || 0;
+  const calculateWafflePrice = (config) => {
+    // Las masas no tienen precio de venta, el precio lo define el POS o el waffle
+    // Pero en Waffles Personalizados, cobramos $1500 de base (Masa)
+    let price = 1500; 
+    config.toppings.forEach(id => {
+      const s = getStockItem(id);
+      if (s) price += s.price_per_portion || 0;
     });
-    waffleConfig.syrups.forEach(id => {
-      price += getStockItem(id)?.price || 0;
+    config.syrups.forEach(id => {
+      const s = getStockItem(id);
+      if (s) price += s.price_per_portion || 0;
     });
-    if (waffleConfig.icecreams) {
-      waffleConfig.icecreams.forEach(id => {
-        price += getStockItem(id)?.price || 0;
-      });
-    }
+    config.icecreams.forEach(id => {
+      if (!id || id === 'none') return;
+      const s = getStockItem(id);
+      if (s) price += s.price_per_portion || 0;
+    });
     return price;
   };
 
-  // Carga el estado inicial de inventario y menú desde la API REST local
   const loadState = async () => {
     try {
-      const stockRes = await fetch('/api/stock');
-      stock = await stockRes.json();
-
-      const menuRes = await fetch('/api/menu');
+      const [stkRes, masRes, wafRes, menuRes] = await Promise.all([
+        fetch('/api/stock'), fetch('/api/masas'), fetch('/api/waffles'), fetch('/api/menu')
+      ]);
+      stock = await stkRes.json();
+      masas = await masRes.json();
+      waffles = await wafRes.json();
       menu = await menuRes.json();
-
-      try {
-        const settingsRes = await fetch('/api/loyalty/settings');
-        if (settingsRes.ok) {
-          const settingsData = await settingsRes.json();
-          loyaltyEnabled = !!settingsData.loyaltyEnabled;
-          loyaltyPointsThreshold = settingsData.loyaltyPointsThreshold || 100;
-        }
-      } catch (err) {
-        console.warn('Error al obtener configuracion de fidelizacion:', err);
-      }
-    } catch (error) {
-      console.error('Error al cargar datos del servidor:', error);
-      showToast('Error al conectar con el servidor', true);
+    } catch (e) {
+      console.error(e);
+      showToast('Error al cargar datos', true);
     }
   };
 
-  // --- DIBUJAR EL WAFFLE EN EL MODAL POS (VISUAL ENGINE) ---
-  const renderWaffleVisual = (canvasContainerId, config) => {
-    const wrapper = document.getElementById(canvasContainerId);
-    if (!wrapper) return;
-
-    const backElement = wrapper.querySelector('.waffle-back');
-    const frontElement = wrapper.querySelector('.waffle-front');
-    const toppingsContainer = wrapper.querySelector('.visual-toppings-container');
-    const chocolateOverlay = wrapper.querySelector('.syrup-chocolate');
-    const dulceOverlay = wrapper.querySelector('.syrup-dulce-leche');
-    const caramelOverlay = wrapper.querySelector('.syrup-caramelo');
-    const spreadOverlay = wrapper.querySelector('.spread-overlay');
-    const whippedCreamOverlay = wrapper.querySelector('.visual-whipped-cream');
-
-    const baseClass = `base-${config.base.replace('base_', '').replace('_', '-')}`;
-    if (backElement) {
-      backElement.className = 'waffle-back';
-      backElement.classList.add(baseClass);
-    }
-    if (frontElement) {
-      frontElement.className = 'waffle-front';
-      frontElement.classList.add(baseClass);
-    }
-
-    if (spreadOverlay) {
-      spreadOverlay.className = 'spread-overlay';
-      if (config.spread === 'syr_nutella') {
-        spreadOverlay.classList.add('active-nutella');
-      } else if (config.spread === 'syr_dulce_leche_spread') {
-        spreadOverlay.classList.add('active-dulce');
-      }
-    }
-
-    if (chocolateOverlay) {
-      if (config.syrups.includes('syr_chocolate')) chocolateOverlay.classList.add('active');
-      else chocolateOverlay.classList.remove('active');
-    }
-    if (dulceOverlay) {
-      if (config.syrups.includes('syr_dulce_leche')) dulceOverlay.classList.add('active');
-      else dulceOverlay.classList.remove('active');
-    }
-    if (caramelOverlay) {
-      if (config.syrups.includes('syr_caramelo')) caramelOverlay.classList.add('active');
-      else caramelOverlay.classList.remove('active');
-    }
-
-    if (whippedCreamOverlay) {
-      if (config.whippedCream) whippedCreamOverlay.classList.add('active');
-      else whippedCreamOverlay.classList.remove('active');
-    }
-
-    if (toppingsContainer) {
-      toppingsContainer.innerHTML = '';
-      
-      config.toppings.forEach(toppingId => {
-        const itemStock = getStockItem(toppingId);
-        if (!itemStock) return;
-
-        for (let k = 0; k < 8; k++) {
-          const toppingElement = document.createElement('div');
-          toppingElement.className = `visual-topping-item vt-${toppingId}`;
-          
-          // Toppings sit on top of the ice cream/cream at the mouth of the cone
-          const x = 75 + Math.random() * 170 - 12;
-          const y = 45 + Math.random() * 110 - 12;
-
-          const randomRotation = Math.floor(Math.random() * 360);
-          
-          toppingElement.style.left = `${x}px`;
-          toppingElement.style.top = `${y}px`;
-          toppingElement.style.setProperty('--rot', `${randomRotation}deg`);
-          
-          if (toppingId === 'top_rocklets') {
-            const rockletColors = ['#e63946', '#fee440', '#00f5d4', '#ff007f', '#a020f0', '#0077b6'];
-            toppingElement.style.backgroundColor = rockletColors[Math.floor(Math.random() * rockletColors.length)];
-          }
-
-          toppingsContainer.appendChild(toppingElement);
-        }
-      });
-    }
-
-    const icecreamsContainer = wrapper.querySelector('.visual-icecreams-container');
-    if (icecreamsContainer) {
-      icecreamsContainer.innerHTML = '';
-      if (config.icecreams) {
-        config.icecreams.forEach((iceId, index) => {
-          if (!iceId) return;
-          const scoop = document.createElement('div');
-          scoop.className = `visual-icecream-scoop scoop-${index} scoop-${iceId}`;
-          if (iceId !== 'ice_vainilla' && iceId !== 'ice_chocolate' && iceId !== 'ice_dulce_leche') {
-            scoop.classList.add('scoop-generic-ice');
-          }
-          icecreamsContainer.appendChild(scoop);
-        });
-      }
-    }
-  };
-
-  // --- AUTENTICACIÓN POR PIN (SERVIDOR) ---
+  // Auth Logic
   const updatePinDots = () => {
     for (let i = 0; i < 4; i++) {
       const dot = document.getElementById(`dot-${i}`);
-      if (i < pinInput.length) {
-        dot.classList.add('filled');
-      } else {
-        dot.classList.remove('filled');
-      }
+      if (i < pinInput.length) dot.classList.add('filled');
+      else dot.classList.remove('filled');
     }
   };
 
   const handlePinKey = async (num) => {
-    if (pinInput.length < 4) {
-      pinInput += num;
-      updatePinDots();
-    }
-
+    if (pinInput.length < 4) { pinInput += num; updatePinDots(); }
     if (pinInput.length === 4) {
       setTimeout(async () => {
         try {
-          const empSelect = document.getElementById('caja-employee-select');
-          const employeeId = empSelect ? empSelect.value : null;
-
-          if (!employeeId) {
-            showToast('Seleccioná un cajero primero', true);
-            pinInput = '';
-            updatePinDots();
-            return;
-          }
-
           const res = await fetch('/api/auth/verify-cashier', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: pinInput, employeeId })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pinInput })
           });
           const data = await res.json();
-
           if (data.success) {
             sessionStorage.setItem('caja_authenticated', 'true');
-            sessionStorage.setItem('caja_cashier_name', data.cashierName || 'Cajero');
+            sessionStorage.setItem('caja_cashier_name', data.cashierName || 'Caja');
             loginOverlay.style.display = 'none';
-            showToast('Caja abierta con éxito');
-            pinInput = '';
-            updatePinDots();
+            showToast('Caja abierta');
+            pinInput = ''; updatePinDots();
             await startCaja();
           } else {
-            showToast('PIN de Caja Incorrecto', true);
-            pinInput = '';
-            updatePinDots();
+            showToast('PIN Incorrecto', true);
+            pinInput = ''; updatePinDots();
           }
-        } catch (err) {
-          console.error(err);
-          showToast('Error de conexión con el servidor', true);
-          pinInput = '';
-          updatePinDots();
-        }
+        } catch (e) { showToast('Error', true); pinInput = ''; updatePinDots(); }
       }, 200);
     }
   };
 
-  // Asignar eventos a la botonera del PIN
   document.querySelectorAll('.pin-btn[data-num]').forEach(btn => {
     btn.addEventListener('click', () => handlePinKey(btn.getAttribute('data-num')));
   });
+  document.querySelector('.pin-clear').addEventListener('click', () => { if (pinInput.length>0) { pinInput=pinInput.slice(0,-1); updatePinDots(); }});
+  document.querySelector('.pin-clear-all').addEventListener('click', () => { pinInput=''; updatePinDots(); });
+  document.getElementById('caja-logout').addEventListener('click', () => { sessionStorage.removeItem('caja_authenticated'); loginOverlay.style.display='flex'; });
 
-  document.querySelector('.pin-clear').addEventListener('click', () => {
-    if (pinInput.length > 0) {
-      pinInput = pinInput.slice(0, -1);
-      updatePinDots();
-    }
-  });
+  const startCaja = async () => { await loadState(); renderPOS(); };
 
-  document.querySelector('.pin-clear-all').addEventListener('click', () => {
-    pinInput = '';
-    updatePinDots();
-  });
-
-  // Cerrar Sesión / Bloquear Caja
-  document.getElementById('caja-logout').addEventListener('click', () => {
-    sessionStorage.removeItem('caja_authenticated');
-    loginOverlay.style.display = 'flex';
-    pinInput = '';
-    updatePinDots();
-  });
-
-  // --- INICIAR MÓDULO DE CAJA ---
-  const startCaja = async () => {
-    await loadState();
-    renderPOS();
-  };
-
-  // --- RENDERIZAR INTERFAZ POS ---
   const renderPOS = () => {
     renderPOSCatalog();
     renderCart();
-    
-    const loyaltySec = document.getElementById('loyalty-pos-section');
-    if (loyaltySec) {
-      loyaltySec.style.display = loyaltyEnabled ? 'block' : 'none';
-    }
   };
 
   const renderPOSCatalog = () => {
-    // 1. Waffles de la Carta
     const menuGrid = document.getElementById('pos-menu-grid');
     if (menuGrid) {
       menuGrid.innerHTML = '';
-      const waffles = menu.filter(m => m.type === 'waffle' || !m.type);
-      waffles.forEach(waffle => {
-        let canSell = true;
-        const baseItem = getStockItem(waffle.base);
-        if (!baseItem || baseItem.stock <= 0) canSell = false;
+      menu.filter(m => m.type === 'waffle').forEach(m => {
+        if (!m.is_visible) return;
+        const w = waffles.find(x => x.id === m.reference_id);
+        if (!w) return;
         
-        waffle.toppings.forEach(topId => {
-          const topItem = getStockItem(topId);
-          if (!topItem || topItem.stock <= 0) canSell = false;
-        });
+        // Check stock availability based on strict recipe
+        let canSell = true;
+        for (const ing of w.ingredients) {
+          if (ing.type === 'masa') {
+            const mas = getMasa(ing.id);
+            if (!mas || mas.stock < ing.qty) canSell = false;
+          } else if (ing.type === 'stock') {
+            const s = getStockItem(ing.id);
+            if (!s || s.stock < ing.qty) canSell = false; // assumes ing.qty is in standard unit (g/ml)
+          }
+        }
 
         const card = document.createElement('div');
-        card.className = 'pos-item-card';
-        if (!canSell) card.classList.add('out-of-stock');
-
-        // Buscar si existe imagen local para renderizar
-        const imgPath = waffle.image ? `/${waffle.image}` : '';
-        const imgHTML = imgPath ? `<img src="${imgPath}" class="pos-item-img-thumbnail" alt="${waffle.name}">` : '';
-
+        card.className = 'pos-item-card' + (!canSell ? ' out-of-stock' : '');
         card.innerHTML = `
-          ${imgHTML}
+          ${w.image ? `<img src="/${w.image}" class="pos-item-img-thumbnail">` : ''}
           <div class="pos-item-card-content">
-            <div class="pos-item-name">${waffle.name}</div>
-            <div class="pos-item-price">${formatCurrency(waffle.price)}</div>
+            <div class="pos-item-name">${m.name}</div>
+            <div class="pos-item-price">${formatCurrency(m.price)}</div>
             <div class="pos-item-stock">${canSell ? 'Disponible' : 'Sin Insumos'}</div>
           </div>
         `;
-
         if (canSell) {
-          card.addEventListener('click', () => {
-            addToCart({
-              id: waffle.id,
-              name: waffle.name,
-              details: 'Waffle de Carta',
-              price: waffle.price,
-              type: 'menu_waffle',
-              config: waffle
-            });
-          });
+          card.onclick = () => addToCart({ id: m.id, name: m.name, details: w.description, price: m.price, type: 'menu_waffle', config: w });
         }
         menuGrid.appendChild(card);
       });
     }
 
-    // 2. Bebidas / Productos Directos
     const drinksGrid = document.getElementById('pos-drinks-grid');
     if (drinksGrid) {
       drinksGrid.innerHTML = '';
-      const directItems = menu.filter(m => m.type === 'direct');
-      directItems.forEach(item => {
-        let stockItem = null;
-        if (item.stockId) {
-          stockItem = getStockItem(item.stockId);
-        }
-        
+      menu.filter(m => m.type === 'direct').forEach(md => {
+        if (!md.is_visible) return;
+        const stk = getStockItem(md.reference_id);
         const card = document.createElement('div');
-        card.className = 'pos-item-card';
-        
-        const stockCount = stockItem ? stockItem.stock : 999;
-        const isOutOfStock = stockItem && stockItem.stock <= 0;
-        const isLowStock = stockItem && stockItem.stock <= stockItem.minStock;
-
-        if (isOutOfStock) card.classList.add('out-of-stock');
-        else if (isLowStock) card.classList.add('low-stock');
-
-        // Buscar si existe imagen local para renderizar (reutilizamos la lógica del waffle)
-        const imgPath = item.image ? `/${item.image}` : '';
-        const imgHTML = imgPath ? `<img src="${imgPath}" class="pos-item-img-thumbnail" alt="${item.name}">` : '';
-
+        card.className = 'pos-item-card' + (!stk || stk.stock <= 0 ? ' out-of-stock' : '');
         card.innerHTML = `
-          ${imgHTML}
+          ${md.image ? `<img src="/${md.image}" class="pos-item-img-thumbnail">` : ''}
           <div class="pos-item-card-content">
-            <div class="pos-item-name">${item.name}</div>
-            <div class="pos-item-price">${formatCurrency(item.price)}</div>
-            <div class="pos-item-stock">${stockItem ? `Stock: ${stockCount} un` : 'Sin control stock'}</div>
+            <div class="pos-item-name">${md.name}</div>
+            <div class="pos-item-price">${formatCurrency(md.price)}</div>
+            <div class="pos-item-stock">${stk ? `Stock: ${Math.floor(stk.stock / (stk.portion_size||1))} un` : 'N/A'}</div>
           </div>
         `;
-
-        if (!isOutOfStock) {
-          card.addEventListener('click', () => {
-            addToCart({
-              id: item.stockId || item.id,
-              name: item.name,
-              details: 'Bebida / Otros',
-              price: item.price,
-              type: 'drink'
-            });
-          });
+        if (stk && stk.stock > 0) {
+          card.onclick = () => addToCart({ id: md.reference_id, name: md.name, details: 'Venta Directa', price: md.price, type: 'direct' });
         }
         drinksGrid.appendChild(card);
       });
     }
 
-    const customWaffleBtn = document.getElementById('pos-custom-waffle-btn');
-    if (customWaffleBtn) {
-      customWaffleBtn.onclick = () => showPOSWaffleBuilderModal();
-    }
+    const customBtn = document.getElementById('pos-custom-waffle-btn');
+    if (customBtn) customBtn.onclick = showPOSWaffleBuilderModal;
   };
 
-  // --- MODAL PERSONALIZADOR DE WAFFLE ---
   const showPOSWaffleBuilderModal = () => {
-    posWaffle = {
-      base: 'base_tradicional',
-      spread: 'none',
-      toppings: [],
-      whippedCream: false,
-      syrups: [],
-      icecreams: []
-    };
-
+    posWaffle = { base: masas.length ? masas[0].id : '', toppings: [], syrups: [], icecreams: [] };
     const modal = document.createElement('div');
     modal.className = 'pos-modal-overlay';
     modal.innerHTML = `
       <div class="pos-waffle-modal">
-        <div class="pos-waffle-modal-left" id="pos-waffle-canvas-wrapper">
-          <div class="builder-neon-glow"></div>
-          <div class="waffle-assembly-box" style="position: relative; width: 320px; height: 320px; z-index: 2;">
-            <!-- Back Waffle (Peak pointing up) -->
-            <div class="waffle-back">
-              <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-              <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-            </div>
-            <div class="spread-overlay"></div>
-            <div class="syrup-overlay syrup-chocolate"></div>
-            <div class="syrup-overlay syrup-dulce-leche"></div>
-            <div class="syrup-overlay syrup-caramelo"></div>
-            
-            <div class="visual-whipped-cream"></div>
-            <div class="visual-icecreams-container"></div>
-            
-            <!-- Front Waffle (Pocket pointing down) -->
-            <div class="waffle-front">
-              <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-              <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-              <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
-            </div>
-            
-            <div class="visual-toppings-container"></div>
-          </div>
+        <div class="pos-waffle-modal-left" style="background:#111; display:flex; align-items:center; justify-content:center;">
+           <h3 style="color:var(--neon-cyan)">Personalizador Visual (BETA)</h3>
         </div>
         <div class="pos-waffle-modal-right" style="overflow-y: auto; max-height: 90vh; padding-right: 10px;">
           <h2 style="font-family: var(--font-cursive); font-size: 2rem;">Armador POS</h2>
           
           <div class="builder-step">
-            <h3>Paso 1: Masa</h3>
+            <h3>Paso 1: Masa ($1500 base)</h3>
             <div class="builder-options-grid" id="pos-bases-grid"></div>
           </div>
           <div class="builder-step">
-            <h3>Paso 2: Relleno</h3>
-            <div class="builder-options-grid" id="pos-spreads-grid"></div>
-          </div>
-          <div class="builder-step">
-            <h3>Paso 3: Helado (Máx 3 bochas)</h3>
-            <div style="margin-bottom: 0.5rem;">
-              <select id="pos-icecream-count" style="background:#181818; border: 1px solid rgba(255,255,255,0.1); color:#fff; width:100%; border-radius:6px; padding:0.6rem; font-size:0.9rem; font-weight:600; font-family:var(--font-sans);">
-                <option value="0">Sin helado</option>
-                <option value="1">1 bocha</option>
-                <option value="2">2 bochas</option>
-                <option value="3">3 bochas</option>
-              </select>
-            </div>
-            <div id="pos-icecreams-flavor-selectors" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;"></div>
-          </div>
-          <div class="builder-step">
-            <h3>Paso 4: Toppings (Máx 4)</h3>
+            <h3>Paso 2: Toppings Extras</h3>
             <div class="builder-options-grid" id="pos-toppings-grid"></div>
           </div>
           <div class="builder-step">
-            <h3>Paso 5: Crema Batida</h3>
-            <div class="builder-options-grid" id="pos-whipped-cream-grid"></div>
+            <h3>Paso 3: Salsas</h3>
+            <div class="builder-options-grid" id="pos-syrups-grid"></div>
           </div>
           <div class="builder-step">
-            <h3>Paso 6: Salsas (Máx 2)</h3>
-            <div class="builder-options-grid" id="pos-syrups-grid"></div>
+            <h3>Paso 4: Helado (Opcional)</h3>
+            <div class="builder-options-grid" id="pos-icecreams-grid"></div>
           </div>
           
           <div class="price-summary-box" style="margin-top:auto; margin-bottom: 15px;">
@@ -487,233 +218,79 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           
           <div class="modal-actions">
-            <button class="btn-secondary" id="pos-modal-cancel" style="padding: 0.6rem 1.2rem;">Cancelar</button>
-            <button class="btn-primary" id="pos-modal-add" style="padding: 0.6rem 1.2rem;">Agregar al Pedido</button>
+            <button class="btn-secondary" id="pos-modal-cancel">Cancelar</button>
+            <button class="btn-primary" id="pos-modal-add">Agregar al Pedido</button>
           </div>
         </div>
       </div>
     `;
-
     document.body.appendChild(modal);
 
-    const updatePOSModalUI = () => {
-      renderWaffleVisual('pos-waffle-canvas-wrapper', posWaffle);
-      const subtotal = calculateWafflePrice(posWaffle);
-      document.getElementById('pos-modal-price-value').textContent = formatCurrency(subtotal);
+    const updateUI = () => {
+      document.getElementById('pos-modal-price-value').textContent = formatCurrency(calculateWafflePrice(posWaffle));
     };
 
-    const renderModalGrid = (containerId, category, isRadio) => {
-      const grid = document.getElementById(containerId);
+    const renderGrid = (id, items, type, multi) => {
+      const grid = document.getElementById(id);
       if (!grid) return;
       grid.innerHTML = '';
-      
-      let items = stock[category] ? [...stock[category]] : [];
-
-      if (category === 'syrups') {
-        if (containerId === 'pos-spreads-grid') {
-          items = items.filter(item => item.id === 'syr_nutella' || item.id === 'syr_dulce_leche_spread');
-          items.unshift({
-            id: 'none',
-            name: 'Sin Relleno',
-            price: 0,
-            stock: 9999
-          });
-        } else if (containerId === 'pos-syrups-grid') {
-          items = items.filter(item => item.id !== 'syr_nutella' && item.id !== 'syr_dulce_leche_spread');
-        }
-      } else if (category === 'toppings') {
-        if (containerId === 'pos-toppings-grid') {
-          items = items.filter(item => item.id !== 'top_crema_batida');
-        } else if (containerId === 'pos-whipped-cream-grid') {
-          items = items.filter(item => item.id === 'top_crema_batida');
-          items.unshift({
-            id: 'none',
-            name: 'Sin Crema',
-            price: 0,
-            stock: 9999
-          });
-        }
-      }
-
-      items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'option-card';
-        if (item.stock <= 0) card.classList.add('out-of-stock');
-
-        card.innerHTML = `
-          <div class="option-name">${item.name}</div>
-          <div class="option-price">${item.price > 0 ? '+ ' + formatCurrency(item.price) : 'Gratis'}</div>
-          <div class="option-stock-warn">Sin Insumo</div>
+      items.forEach(i => {
+        const c = document.createElement('div');
+        c.className = 'option-card' + (i.stock <= 0 ? ' out-of-stock' : '');
+        c.innerHTML = `
+          <div class="option-name">${i.name}</div>
+          <div class="option-price">${i.price_per_portion > 0 ? '+ ' + formatCurrency(i.price_per_portion) : (type==='masa' ? 'Incluido' : 'Gratis')}</div>
         `;
+        let sel = false;
+        if (!multi) sel = posWaffle.base === i.id;
+        else sel = posWaffle[type].includes(i.id);
+        if (sel) c.classList.add('selected');
 
-        let isSelected = false;
-        if (isRadio) {
-          if (containerId === 'pos-bases-grid' && item.id === posWaffle.base) isSelected = true;
-          if (containerId === 'pos-spreads-grid' && item.id === posWaffle.spread) isSelected = true;
-          if (containerId === 'pos-whipped-cream-grid') {
-            if (posWaffle.whippedCream && item.id === 'top_crema_batida') isSelected = true;
-            if (!posWaffle.whippedCream && item.id === 'none') isSelected = true;
-          }
-        } else {
-          if (category === 'toppings' && posWaffle.toppings.includes(item.id)) isSelected = true;
-          if (category === 'syrups' && posWaffle.syrups.includes(item.id)) isSelected = true;
-        }
-
-        if (isSelected) {
-          card.classList.add('selected');
-        }
-
-        if (item.stock > 0) {
-          card.onclick = () => {
-            if (isRadio) {
-              grid.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-              card.classList.add('selected');
-              if (containerId === 'pos-bases-grid') {
-                posWaffle.base = item.id;
-              } else if (containerId === 'pos-spreads-grid') {
-                posWaffle.spread = item.id;
-              } else if (containerId === 'pos-whipped-cream-grid') {
-                posWaffle.whippedCream = (item.id === 'top_crema_batida');
-              }
-            } else {
-              const selected = card.classList.contains('selected');
-              if (selected) {
-                card.classList.remove('selected');
-                posWaffle[category] = posWaffle[category].filter(id => id !== item.id);
-              } else {
-                if (category === 'toppings' && posWaffle.toppings.length >= 4) {
-                  showToast('Máximo 4 toppings', true);
-                  return;
-                }
-                if (category === 'syrups' && posWaffle.syrups.length >= 2) {
-                  showToast('Máximo 2 salsas', true);
-                  return;
-                }
-                card.classList.add('selected');
-                posWaffle[category].push(item.id);
-              }
+        if (i.stock > 0) {
+          c.onclick = () => {
+            if (!multi) posWaffle.base = i.id;
+            else {
+              if (sel) posWaffle[type] = posWaffle[type].filter(x => x !== i.id);
+              else posWaffle[type].push(i.id);
             }
-            updatePOSModalUI();
+            renderGrid(id, items, type, multi);
+            updateUI();
           };
         }
-
-        grid.appendChild(card);
+        grid.appendChild(c);
       });
     };
 
-    // Control de Helados en el modal POS
-    const posIcecreamCountSelect = document.getElementById('pos-icecream-count');
-    const posFlavorSelectorsContainer = document.getElementById('pos-icecreams-flavor-selectors');
-
-    const updatePOSFlavorSelectors = () => {
-      const count = parseInt(posIcecreamCountSelect.value) || 0;
-      posFlavorSelectorsContainer.innerHTML = '';
-      
-      while (posWaffle.icecreams.length < count) {
-        const firstAvailable = stock.icecreams.find(i => i.stock > 0);
-        posWaffle.icecreams.push(firstAvailable ? firstAvailable.id : '');
-      }
-      while (posWaffle.icecreams.length > count) {
-        posWaffle.icecreams.pop();
-      }
-
-      for (let i = 0; i < count; i++) {
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.flexDirection = 'column';
-        div.style.gap = '4px';
-        div.innerHTML = `
-          <label style="font-size:0.75rem; color:var(--text-secondary);">Sabor Bocha ${i + 1}</label>
-          <select class="pos-icecream-flavor-select form-control" data-index="${i}" style="background:#181818; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.5rem; border-radius:6px; font-size:0.85rem; width:100%; font-family:var(--font-sans);">
-            ${stock.icecreams.map(ice => {
-              const isOutOfStock = ice.stock <= 0;
-              return `<option value="${ice.id}" ${posWaffle.icecreams[i] === ice.id ? 'selected' : ''} ${isOutOfStock ? 'disabled style="color:gray;"' : ''}>
-                ${ice.name} (${formatCurrency(ice.price)})${isOutOfStock ? ' [SIN STOCK]' : ''}
-              </option>`;
-            }).join('')}
-          </select>
-        `;
-        posFlavorSelectorsContainer.appendChild(div);
-      }
-
-      posFlavorSelectorsContainer.querySelectorAll('.pos-icecream-flavor-select').forEach(select => {
-        select.onchange = () => {
-          const index = parseInt(select.getAttribute('data-index'));
-          posWaffle.icecreams[index] = select.value;
-          updatePOSModalUI();
-        };
-      });
-    };
-
-    if (posIcecreamCountSelect) {
-      posIcecreamCountSelect.value = "0";
-      posIcecreamCountSelect.onchange = () => {
-        updatePOSFlavorSelectors();
-        updatePOSModalUI();
-      };
-      updatePOSFlavorSelectors();
-    }
-
-    renderModalGrid('pos-bases-grid', 'bases', true);
-    renderModalGrid('pos-spreads-grid', 'syrups', true);
-    renderModalGrid('pos-toppings-grid', 'toppings', false);
-    renderModalGrid('pos-whipped-cream-grid', 'toppings', true);
-    renderModalGrid('pos-syrups-grid', 'syrups', false);
+    renderGrid('pos-bases-grid', masas, 'masa', false);
+    renderGrid('pos-toppings-grid', stock.filter(s => s.category === 'topping'), 'toppings', true);
+    renderGrid('pos-syrups-grid', stock.filter(s => s.category === 'syrup'), 'syrups', true);
+    renderGrid('pos-icecreams-grid', stock.filter(s => s.category === 'icecream'), 'icecreams', true);
     
-    updatePOSModalUI();
+    updateUI();
 
     document.getElementById('pos-modal-cancel').onclick = () => modal.remove();
     document.getElementById('pos-modal-add').onclick = () => {
       const price = calculateWafflePrice(posWaffle);
-      
-      const baseName = getStockItem(posWaffle.base)?.name || '';
-      const spreadName = posWaffle.spread && posWaffle.spread !== 'none' ? getStockItem(posWaffle.spread)?.name : '';
-      const whippedCreamText = posWaffle.whippedCream ? 'Crema Batida' : '';
-      const toppingsText = posWaffle.toppings.map(id => getStockItem(id)?.name).join(', ');
-      const syrupsText = posWaffle.syrups.map(id => getStockItem(id)?.name).join(', ');
-      const icecreamsText = posWaffle.icecreams.map(id => getStockItem(id)?.name).join(', ');
-      
-      let details = `Masa: ${baseName}`;
-      if (spreadName) details += ` + Relleno: ${spreadName}`;
-      if (icecreamsText) details += ` + Helado: ${icecreamsText}`;
-      if (toppingsText) details += ` + Toppings: ${toppingsText}`;
-      if (whippedCreamText) details += ` + ${whippedCreamText}`;
-      if (syrupsText) details += ` + Salsas: ${syrupsText}`;
-
-      // Compile config back into server-deductible format
-      const compiledConfig = JSON.parse(JSON.stringify(posWaffle));
-      if (compiledConfig.spread && compiledConfig.spread !== 'none') {
-        compiledConfig.syrups.push(compiledConfig.spread);
-      }
-      if (compiledConfig.whippedCream) {
-        compiledConfig.toppings.push('top_crema_batida');
-      }
-
+      const m = getMasa(posWaffle.base);
+      let details = `Masa: ${m ? m.name : 'N/A'}`;
+      if (posWaffle.toppings.length) details += ` + Toppings: ${posWaffle.toppings.map(id=>getStockItem(id)?.name).join(',')}`;
+      if (posWaffle.syrups.length) details += ` + Salsas: ${posWaffle.syrups.map(id=>getStockItem(id)?.name).join(',')}`;
       addToCart({
-        id: `custom_${Date.now()}`,
-        name: 'Waffle Customizado',
-        details: details,
-        price: price,
-        type: 'custom_waffle',
-        config: compiledConfig
+        id: `custom_${Date.now()}`, name: 'Waffle Customizado', details, price, type: 'custom_waffle', config: posWaffle
       });
       modal.remove();
     };
   };
 
   const addToCart = (item) => {
-    cart.push(item);
-    showToast(`${item.name} agregado al pedido`);
-    renderCart();
+    cart.push(item); showToast(`${item.name} agregado`); renderCart();
   };
 
   const renderCart = () => {
     if (!cartItemsContainer) return;
-
     cartItemsContainer.innerHTML = '';
-
     if (cart.length === 0) {
-      cartItemsContainer.innerHTML = '<div class="cart-empty-msg">El pedido está vacío</div>';
+      cartItemsContainer.innerHTML = '<div class="cart-empty-msg">Pedido vacío</div>';
       checkoutBtn.disabled = true;
     } else {
       checkoutBtn.disabled = false;
@@ -727,301 +304,46 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="cart-item-actions">
             <span class="cart-item-price">${formatCurrency(item.price)}</span>
-            <button class="cart-remove-btn" data-index="${index}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-            </button>
+            <button class="cart-remove-btn" data-index="${index}">X</button>
           </div>
         `;
         cartItemsContainer.appendChild(row);
       });
-
       cartItemsContainer.querySelectorAll('.cart-remove-btn').forEach(btn => {
-        btn.onclick = () => {
-          const index = parseInt(btn.getAttribute('data-index'));
-          cart.splice(index, 1);
-          renderCart();
-        };
+        btn.onclick = () => { cart.splice(btn.getAttribute('data-index'), 1); renderCart(); };
       });
     }
-
-    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    const total = cart.reduce((s, i) => s + i.price, 0);
     document.getElementById('pos-total').textContent = formatCurrency(total);
-
-    if (loyaltyEnabled) {
-      const pointsToAddSpan = document.getElementById('loyalty-points-to-add');
-      if (pointsToAddSpan) {
-        pointsToAddSpan.textContent = Math.floor(total / loyaltyPointsThreshold);
-      }
-    }
-
-    const paymentButtons = document.querySelectorAll('.payment-btn');
-    paymentButtons.forEach(btn => {
-      const method = btn.getAttribute('data-method');
-      if (method === selectedPaymentMethod) {
-        btn.classList.add('selected');
-      } else {
-        btn.classList.remove('selected');
-      }
-
-      btn.onclick = () => {
-        selectedPaymentMethod = method;
-        paymentButtons.forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-      };
+    
+    document.querySelectorAll('.payment-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.getAttribute('data-method') === selectedPaymentMethod);
+      btn.onclick = () => { selectedPaymentMethod = btn.getAttribute('data-method'); renderCart(); };
     });
   };
 
-  // Registrar venta
   checkoutBtn.onclick = async () => {
     if (cart.length === 0) return;
-
     try {
-      const total = cart.reduce((sum, item) => sum + item.price, 0);
-      const cashierName = sessionStorage.getItem('caja_cashier_name') || 'Administrador';
+      const total = cart.reduce((s, i) => s + i.price, 0);
       const res = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart,
-          total: total,
-          paymentMethod: selectedPaymentMethod,
-          cashierName: cashierName
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart, total, paymentMethod: selectedPaymentMethod, cashierName: sessionStorage.getItem('caja_cashier_name') })
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.error || 'Error al procesar la venta', true);
-        return;
-      }
-
-      // Si el programa está activo y hay un cliente identificado, registrar/acumular puntos
-      if (loyaltyEnabled && currentLoyaltyCustomer) {
-        const phoneInput = document.getElementById('loyalty-phone');
-        const customerNameInput = document.getElementById('loyalty-name');
-        const phone = phoneInput ? phoneInput.value.trim() : '';
-        const name = customerNameInput ? (customerNameInput.value.trim() || 'Cliente Waffle Club') : 'Cliente Waffle Club';
-        const pointsToSum = Math.floor(total / loyaltyPointsThreshold);
-
-        if (phone && pointsToSum > 0) {
-          try {
-            await fetch('/api/loyalty/customer', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                phone,
-                name,
-                pointsToAdd: pointsToSum
-              })
-            });
-          } catch (err) {
-            console.error('Error al registrar puntos de fidelización:', err);
-          }
-        }
-      }
-
-      // Limpiar inputs de fidelización
-      const phoneInput = document.getElementById('loyalty-phone');
-      const customerNameInput = document.getElementById('loyalty-name');
-      const searchStatus = document.getElementById('loyalty-search-status');
-      const customerInfoDiv = document.getElementById('loyalty-customer-info');
-      
-      if (phoneInput) phoneInput.value = '';
-      if (customerNameInput) customerNameInput.value = '';
-      if (searchStatus) searchStatus.textContent = '';
-      if (customerInfoDiv) customerInfoDiv.style.display = 'none';
-      currentLoyaltyCustomer = null;
-
-      if (data && data.sale && data.sale.id) {
-        const shortCode = data.sale.id.split('_')[1].slice(-4);
-        document.getElementById('checkout-tracking-code').textContent = shortCode;
-        document.getElementById('checkout-success-modal').style.display = 'flex';
+      if (res.ok) {
+        showToast('Venta Registrada Exitosamente!');
+        cart = []; renderCart(); loadState(); // reload stock
       } else {
-        showToast('¡Venta registrada con éxito!');
-      }
-
-      cart = [];
-      await loadState();
-      renderPOS();
-    } catch (error) {
-      console.error(error);
-      showToast('Error al conectar con el servidor', true);
-    }
-  };
-
-  // --- LOGICA DE EVENTOS DE FIDELIZACIÓN EN CAJA ---
-  const initLoyaltyEventListeners = () => {
-    const findBtn = document.getElementById('loyalty-find-btn');
-    const phoneInput = document.getElementById('loyalty-phone');
-    const searchStatus = document.getElementById('loyalty-search-status');
-    const customerInfoDiv = document.getElementById('loyalty-customer-info');
-    const customerNameInput = document.getElementById('loyalty-name');
-    const currentPointsSpan = document.getElementById('loyalty-points-current');
-    const pointsToAddSpan = document.getElementById('loyalty-points-to-add');
-
-    if (findBtn && phoneInput) {
-      findBtn.onclick = async (e) => {
-        if (e) e.preventDefault();
-        const phone = phoneInput.value.trim();
-        if (!phone) {
-          showToast('Ingrese un número de teléfono', true);
-          return;
-        }
-        searchStatus.textContent = 'Buscando...';
-        customerInfoDiv.style.display = 'none';
-        currentLoyaltyCustomer = null;
-
-        try {
-          const res = await fetch(`/api/loyalty/customer/${phone}`);
-          if (res.ok) {
-            const customer = await res.json();
-            currentLoyaltyCustomer = customer;
-            searchStatus.textContent = 'Club Waffle ⭐';
-            if (customerNameInput) customerNameInput.value = customer.name;
-            if (currentPointsSpan) currentPointsSpan.textContent = customer.points;
-            if (pointsToAddSpan) {
-              const total = cart.reduce((sum, item) => sum + item.price, 0);
-              pointsToAddSpan.textContent = Math.floor(total / 100);
-            }
-            customerInfoDiv.style.display = 'flex';
-          } else if (res.status === 404) {
-            searchStatus.textContent = 'Cliente Nuevo';
-            if (customerNameInput) customerNameInput.value = '';
-            if (currentPointsSpan) currentPointsSpan.textContent = '0';
-            if (pointsToAddSpan) {
-              const total = cart.reduce((sum, item) => sum + item.price, 0);
-              pointsToAddSpan.textContent = Math.floor(total / 100);
-            }
-            customerInfoDiv.style.display = 'flex';
-            currentLoyaltyCustomer = { phone, name: '', points: 0, isNew: true };
-          } else {
-            searchStatus.textContent = 'No Encontrado';
-          }
-        } catch (e) {
-          console.error(e);
-          searchStatus.textContent = 'Error';
-        }
-      };
-    }
-  };
-
-  initLoyaltyEventListeners();
-
-  // --- VERIFICAR ESTADO DE AUTENTICACIÓN INICIAL ---
-  const initApp = async () => {
-    try {
-      const empRes = await fetch('/api/employees');
-      if (empRes.ok) {
-        employees = await empRes.json();
-        const empSelect = document.getElementById('caja-employee-select');
-        if (empSelect) {
-          empSelect.innerHTML = '<option value="">Selecciona tu usuario...</option>';
-          const activeEmployees = employees.filter(e => e.active && e.role !== 'kitchen');
-          activeEmployees.forEach(e => {
-            empSelect.innerHTML += `<option value="${e.id}">${e.name}</option>`;
-          });
-        }
+        const err = await res.json();
+        showToast(err.error || 'Error en la venta', true);
       }
     } catch (e) {
-      console.error('Error al cargar empleados', e);
-    }
-
-    if (sessionStorage.getItem('caja_authenticated') === 'true') {
-      loginOverlay.style.display = 'none';
-      startCaja();
-    } else {
-      loginOverlay.style.display = 'flex';
-    }
-
-    // Cargar logo de empresa
-    try {
-      const compRes = await fetch('/api/company/info');
-      if (compRes.ok) {
-        const compData = await compRes.json();
-        const sidebarText = document.querySelector('.caja-brand .logo-text');
-        if (sidebarText && compData.companyLogo) {
-          let logoImg = document.getElementById('dynamic-caja-logo');
-          if (!logoImg) {
-            logoImg = document.createElement('img');
-            logoImg.id = 'dynamic-caja-logo';
-            logoImg.style.cssText = 'width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:10px;';
-            sidebarText.parentNode.insertBefore(logoImg, sidebarText);
-          }
-          logoImg.src = compData.companyLogo;
-        }
-      }
-    } catch (e) {
-      console.error('Error al cargar logo', e);
+      showToast('Error de conexión', true);
     }
   };
 
-  // Checkout success modal
-  const checkoutSuccessModal = document.getElementById('checkout-success-modal');
-  const checkoutSuccessClose = document.getElementById('checkout-success-close');
-  if (checkoutSuccessClose) {
-    checkoutSuccessClose.onclick = () => {
-      checkoutSuccessModal.style.display = 'none';
-    };
-  }
-
-  // Recent Sales Modal
-  const recentSalesBtn = document.getElementById('recent-sales-btn');
-  const recentSalesModal = document.getElementById('recent-sales-modal');
-  const recentSalesClose = document.getElementById('recent-sales-close');
-  const recentSalesTbody = document.getElementById('recent-sales-table-body');
-
-  if (recentSalesBtn && recentSalesModal) {
-    recentSalesBtn.onclick = async () => {
-      try {
-        const res = await fetch('/api/sales');
-        if (res.ok) {
-          const sales = await res.json();
-          // Filter today's sales
-          const today = new Date().toISOString().split('T')[0];
-          const todaysSales = sales.filter(s => s.date.startsWith(today)).reverse();
-          
-          recentSalesTbody.innerHTML = '';
-          if (todaysSales.length === 0) {
-            recentSalesTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay ventas hoy</td></tr>';
-          } else {
-            todaysSales.slice(0, 15).forEach(sale => {
-              const shortCode = sale.id.split('_')[1].slice(-4);
-              const time = new Date(sale.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td>#${shortCode}</td>
-                <td>${time}</td>
-                <td>${formatCurrency(sale.total)}</td>
-                <td style="font-family: monospace; font-weight: bold; color: var(--neon-cyan); font-size: 1.1rem;">${shortCode}</td>
-              `;
-              recentSalesTbody.appendChild(tr);
-            });
-          }
-          recentSalesModal.style.display = 'flex';
-        }
-      } catch (e) {
-        showToast('Error cargando ventas recientes', true);
-      }
-    };
-    recentSalesClose.onclick = () => recentSalesModal.style.display = 'none';
-    recentSalesModal.onclick = (e) => {
-      if (e.target === recentSalesModal) recentSalesModal.style.display = 'none';
-    };
-  }
-
-  initApp();
-
-  // --- CONTROL DEL MODAL DE AYUDA POS ---
-  const helpBtn = document.getElementById('help-btn');
-  const helpModal = document.getElementById('help-modal');
-  const helpClose = document.getElementById('help-modal-close');
-
-  if (helpBtn && helpModal && helpClose) {
-    helpBtn.onclick = () => helpModal.style.display = 'flex';
-    helpClose.onclick = () => helpModal.style.display = 'none';
-    helpModal.onclick = (e) => {
-      if (e.target === helpModal) helpModal.style.display = 'none';
-    };
+  if (sessionStorage.getItem('caja_authenticated')) {
+    loginOverlay.style.display = 'none';
+    startCaja();
   }
 });

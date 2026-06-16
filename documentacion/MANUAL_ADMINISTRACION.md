@@ -101,17 +101,24 @@ CREATE TABLE stock (
     unit VARCHAR(50) NOT NULL DEFAULT 'porciones'
 );
 
--- Tabla: menu (Carta de Waffles del Negocio)
-CREATE TABLE menu (
+-- Tabla: waffles (Fichas Técnicas / Recetario)
+CREATE TABLE waffles (
     id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    price INTEGER NOT NULL,
-    base VARCHAR(100) REFERENCES stock(id) ON DELETE SET NULL,
-    toppings VARCHAR(100)[] DEFAULT '{}',    -- Array de IDs de stock
-    syrups VARCHAR(100)[] DEFAULT '{}',      -- Array de IDs de stock
-    icecreams VARCHAR(100)[] DEFAULT '{}',    -- Array de IDs de stock
+    cost INTEGER NOT NULL,
+    ingredients JSONB NOT NULL DEFAULT '[]',
     image VARCHAR(255)
+);
+
+-- Tabla: menu (Catálogo de Ventas Público)
+CREATE TABLE menu (
+    id VARCHAR(100) PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,            -- 'waffle', 'direct'
+    reference_id VARCHAR(100) NOT NULL,   -- ID de la receta en waffles o del insumo en stock
+    name VARCHAR(255) NOT NULL,
+    price INTEGER NOT NULL,
+    is_visible BOOLEAN DEFAULT true
 );
 
 -- Tabla: sales (Historial transaccional de ventas)

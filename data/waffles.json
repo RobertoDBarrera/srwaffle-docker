@@ -1,0 +1,28 @@
+[
+  {
+    "id": "waf_tentacion_oreo",
+    "name": "Tentación Oreo",
+    "description": "Waffle tradicional con Oreo y salsa chocolate",
+    "price": 880,
+    "cost": 500,
+    "is_visible": true,
+    "image": "ima_loc534.jpeg",
+    "ingredients": [
+      {
+        "type": "masa",
+        "id": "masa_tradicional",
+        "qty": 1
+      },
+      {
+        "type": "stock",
+        "id": "stk_oreo",
+        "qty": 30
+      },
+      {
+        "type": "stock",
+        "id": "stk_syr_chocolate",
+        "qty": 20
+      }
+    ]
+  }
+]

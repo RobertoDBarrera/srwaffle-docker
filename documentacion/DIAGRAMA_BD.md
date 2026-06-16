@@ -1,88 +1,108 @@
-# Diagrama de Entidad-Relación (BD Sr. Waffle)
+# Diagrama Entidad-Relación (Base de Datos) - Sr. Waffle V2
 
-Aquí tienes el diagrama de la base de datos para comprender la relación entre Stock, Recetas, Menú y Ventas. 
+A continuación se detalla la estructura y el modelo relacional de la base de datos de "Sr. Waffle", ahora rediseñada bajo un esquema estricto de control de inventario y recetas.
 
-```mermaid
-erDiagram
-    STOCK {
-        string id PK "Ej: base_123, drink_456"
-        string name "Nombre del producto/insumo"
-        string category "bases, toppings, syrups, drinks"
-        float stock "Cantidad actual disponible"
-        float minStock "Alerta de stock mínimo"
-        float price "Precio (si se vende directo)"
-        float cost "Costo de compra o producción"
-        string unit "Ej: kg, litros, porciones"
-        json recipe "Nulo si es Materia Prima. Lleno si es Insumo Elaborado"
-    }
+El sistema funciona con soporte local (JSON) y soporte PostgreSQL (para la versión Dockerizada).
 
-    MENU {
-        string id PK "Ej: menu_waffle_1"
-        string name "Nombre Público"
-        string description "Descripción para el cliente"
-        float price "Precio de Venta"
-        boolean isVisible "Mostrar en caja/vitrina"
-        boolean showPrice "Mostrar precio"
-        string type "waffle o direct"
-        string base FK "Apunta a STOCK (La Masa del Waffle)"
-        string stockId FK "Apunta a STOCK (Si es venta directa ej: Coca Cola)"
-    }
+## Esquema Relacional Estricto
 
-    MENU_TOPPINGS {
-        string menu_id FK
-        string stock_id FK "Apunta a STOCK (Topping)"
-    }
-
-    MENU_SYRUPS {
-        string menu_id FK
-        string stock_id FK "Apunta a STOCK (Salsa)"
-    }
-
-    SALES {
-        string id PK "Ej: sale_16843..."
-        datetime date "Fecha y hora"
-        json items "Lista de items vendidos"
-        float total "Total facturado"
-        string paymentMethod "efectivo, tarjeta, etc."
-        string status "pending, completed, kitchen_ready"
-        string cashierName "Nombre del empleado"
-        string cliente_id FK "Opcional (Puntos de Fidelidad)"
-    }
-
-    LOYALTY_CUSTOMERS {
-        string id PK
-        string phone "Teléfono (Identificador único)"
-        string name "Nombre del cliente"
-        int points "Puntos actuales"
-        float total_spent "Total gastado histórico"
-    }
-
-    EMPLOYEES {
-        string id PK
-        string name
-        string role "admin o cashier"
-        string pin "PIN de acceso"
-    }
-
-    %% Relaciones
-    STOCK ||--o{ STOCK : "recipe.ingredients (Fabricación)"
-    STOCK ||--o{ MENU : "Es usado como Base (Masa)"
-    STOCK ||--o{ MENU : "Es usado como Venta Directa (Bebida)"
-    
-    MENU ||--o{ MENU_TOPPINGS : "Tiene"
-    STOCK ||--o{ MENU_TOPPINGS : "Es"
-    
-    MENU ||--o{ MENU_SYRUPS : "Tiene"
-    STOCK ||--o{ MENU_SYRUPS : "Es"
-
-    LOYALTY_CUSTOMERS ||--o{ SALES : "Realiza"
+### 1. `STOCK` (Inventario y Materias Primas)
+Almacena todos los productos comprados a proveedores. Representa el nivel más bajo del inventario físico.
+```json
+{
+  "id": "raw_material_1718100000",
+  "name": "Harina 0000",
+  "category": "raw_material", // Enum: raw_material, topping, syrup, drink, icecream
+  "stock": 15000,             // Cantidad total (Ej: 15000 gramos)
+  "minStock": 2000,           // Alerta de stock mínimo
+  "unit": "g",                // Unidad de medida (g, ml, unidades)
+  "cost": 1500,               // Costo Interno (Total / Unidades de Pack)
+  "portion_size": 0,          // Gramos/ML utilizados cuando se vende como "Porción Extra"
+  "price_per_portion": 0      // Precio de venta cuando se vende como "Porción Extra"
+}
 ```
 
-### Explicación del Flujo de Inventario (Opción B)
-1. **La Tabla Central es `STOCK`:** Aquí viven todos los elementos físicos que tienes en tu negocio. 
-   - Una "Lata de Coca Cola" es un item en `STOCK`.
-   - "Un Kilo de Harina" es un item en `STOCK`.
-   - "Una Porción de Masa" también es un item en `STOCK`.
-2. **El Sistema de Recetas (Insumos Elaborados):** Si un item de `STOCK` tiene el campo interno `recipe` lleno (ej. "Masa Tradicional" rinde 20 porciones y gasta 1kg harina + 5 huevos), el sistema sabe que es un Insumo Elaborado. Cuando le das al botón de "Fabricar", lee esa receta y altera la misma tabla de `STOCK` (Suma 20 Masas, Resta Harina y Huevos).
-3. **El Menú Público (`MENU`):** Un Waffle en tu menú no es un elemento físico en tu stock, es un "Ensamblaje virtual". El registro del Waffle en la base de datos simplemente apunta a IDs de la tabla `STOCK` (Apunta a un ID de Masa, un ID de Topping, etc). Cuando se vende el Waffle, el sistema descuenta 1 unidad de cada uno de los items a los que apunta.
-4. **Venta Directa:** Si agregas una Bebida y le pones Precio de Venta, el sistema automáticamente crea un registro en `MENU` que apunta 1 a 1 a ese ID de `STOCK`, para que aparezca en la caja registradora.
+### 2. `MASAS` (Insumos Elaborados)
+Almacena productos que la cocina fabrica internamente consumiendo materias primas de la tabla `STOCK`.
+```json
+{
+  "id": "masa_1718200000",
+  "name": "Masa Tradicional Dulce",
+  "yield_qty": 20,            // Cuántas porciones de masa rinde 1 lote fabricado
+  "cost": 120,                // Costo calculado (Suma Costo Ingredientes / yield_qty)
+  "stock": 40,                // Stock de masas disponibles
+  "ingredients": [
+    {
+      "type": "stock",
+      "id": "raw_material_1718100000",
+      "qty": 1000             // Requiere 1000g de harina por lote
+    }
+  ]
+}
+```
+
+### 3. `WAFFLES` (Recetas Finales)
+Almacena el catálogo de recetas de Waffles (Fichas Técnicas). No tienen precio ni visibilidad pública.
+```json
+{
+  "id": "waffle_1718300000",
+  "name": "Delicia Frutal",
+  "description": "Waffle dulce con frutillas",
+  "cost": 620,                // Costo calculado (Masa + Ingredientes)
+  "ingredients": [
+    {
+      "type": "masa",
+      "id": "masa_1718200000", // Consume 1 masa base
+      "qty": 1
+    },
+    {
+      "type": "stock",
+      "id": "topping_1718400000", // Consume N gramos de frutilla (según portion_size del stock)
+      "qty": 30
+    }
+  ]
+}
+```
+
+### 4. `MENU` (Vitrina Pública)
+Almacena los productos que el cliente final puede comprar en la caja. Pueden ser Waffles (referenciando a la tabla `WAFFLES`) o Venta Directa (referenciando a la tabla `STOCK`).
+```json
+{
+  "id": "menu_1718500000",
+  "type": "waffle",           // "waffle" o "direct"
+  "reference_id": "waffle_1718300000", // ID de la receta o stock asociado
+  "name": "Waffle Delicia Frutal",
+  "price": 5500,              // Precio final al público
+  "is_visible": true          // Visible en el catálogo POS
+}
+```
+
+### 5. `SALES` (Historial de Ventas)
+Registra cada transacción completada en el POS.
+```json
+{
+  "id": "sale_1718700000",
+  "date": "2026-06-16T15:30:00Z",
+  "total": 7300,
+  "paymentMethod": "Efectivo",
+  "cashierName": "Juan Perez",
+  "status": "completed",
+  "items": [
+    {
+      "id": "waffle_1718300000",
+      "type": "menu_waffle",
+      "name": "Delicia Frutal",
+      "price": 5500,
+      "config": {} // Detalles de personalización si existieron
+    }
+  ]
+}
+```
+
+## Relación de Flujo de Datos
+1. **Compras:** Proveedor -> `STOCK` (Almacena Gramos, Mililitros, Unidades).
+2. **Producción:** Cocina hace un Lote -> Descuenta Gramos de `STOCK` -> Suma Unidades a `MASAS`.
+3. **Ventas (Menú Público):** Caja vende Producto del Menú -> 
+   - Si es "waffle": Descuenta 1 Unidad de `MASAS` + Descuenta X gramos exactos de `STOCK` (según receta de `WAFFLES`).
+   - Si es "direct": Descuenta 1 Unidad directa de `STOCK`.
+   - Si el cliente añade "Extras": Descuenta *Tamaño de Porción* del `STOCK`.

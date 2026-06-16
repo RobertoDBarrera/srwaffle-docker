@@ -1,0 +1,24 @@
+[
+  {
+    "id": "masa_tradicional",
+    "name": "Masa Tradicional",
+    "stock": 120,
+    "minStock": 20,
+    "yield_qty": 20,
+    "cost_per_portion": 450,
+    "ingredients": [
+      {
+        "stock_id": "stk_harina",
+        "qty": 1000
+      },
+      {
+        "stock_id": "stk_huevo",
+        "qty": 5
+      },
+      {
+        "stock_id": "stk_leche",
+        "qty": 500
+      }
+    ]
+  }
+]

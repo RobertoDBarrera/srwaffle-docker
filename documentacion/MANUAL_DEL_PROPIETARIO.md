@@ -88,39 +88,43 @@ Aquí configuras las partes de los waffles (Toppings, Salsas, Bebidas, etc).
 - **Modificar precios por inflación:** Busca el producto en la lista y presiona el ícono del **Lápiz azul**. Podrás cambiar su precio al instante en todas las cajas.
 - **Borrar:** Presiona el **Tacho de basura rojo** para eliminar un producto que ya no vendes.
 
-### 3.4 Catálogo del Menú Público (Gestión de Carta)
-Aquí armas y publicas los Waffles pre-diseñados y Bebidas que aparecen en tu Menú Digital y que los cajeros pueden vender con un solo clic.
-- **Diferencia entre Insumos y Menú Público:** En la pestaña "Insumos" solo cargas materia prima (ej. Kilos de Harina, Litros de Leche, Botellas de Coca Cola para stock). En "Catálogo del Menú Público" decides **qué** vas a vender y **cómo** se mostrará al cliente final.
-- **Tipos de Producto:** Al crear un producto, ahora debes elegir su tipo:
-  1. **Receta de Waffle (Compuesto):** Son los Waffles especiales. Seleccionas qué base, toppings y salsas lleva de tu lista de insumos. Al venderse, el sistema descontará automáticamente las porciones de esos ingredientes.
-  2. **Producto de Venta Directa:** Ideal para Bebidas o extras. Simplemente seleccionas con qué "Insumo" de tu almacén se vincula. Si vendes una "Coca Cola 500ml", le dices al sistema que descuente 1 unidad del insumo "Botella Coca 500ml".
-- **Pasos para publicar un producto:**
-  1. Elige el **Tipo de Producto**.
-  2. Escribe Nombre, Descripción (para enamorar al cliente) y Precio total.
-  3. Puedes elegir **"Ocultar precio en menú"** si quieres que un producto sea solo "informativo" pero no quieres que el cliente vea el costo. (En caja mantendrá el valor real).
-  4. Sube una foto atractiva. *(Nota: Las imágenes ahora se guardan en un almacenamiento persistente, lo que significa que aunque el servidor se reinicie o actualice, jamás perderás tus fotos).*
-  5. Selecciona los insumos que componen o vinculan a este producto.
-  6. Haz clic en **Guardar Producto**.
+### 3.4 Fichas Técnicas (Recetas de Waffles)
+Aquí construyes cómo se preparan exactamente tus waffles.
+- **Armado del Recetario:** Seleccionas un tipo de Masa elaborada y le agregas las cantidades exactas (ej. porciones o gramos) de materia prima (toppings, salsas) que el cocinero debe utilizar.
+- **Cálculo de Costo:** A medida que añades ingredientes, el sistema calcula el costo base exacto de producir ese waffle.
+- **Nota Importante:** En esta pestaña NO se define el precio de venta ni si aparece o no en la caja. Aquí solo se define la estructura interna del producto.
 
-### 3.5 Opciones Configurables (Apariencia y Reglas)
+### 3.5 Vitrina y Menú Público
+Aquí decides qué productos vas a poner a la venta para que tus cajeros los puedan facturar y para que el cliente final los vea.
+- **Tipos de Producto que puedes publicar:**
+  1. **Receta de Waffle (Compuesto):** Vinculas una de las recetas que armaste en el paso 3.4. Al venderse en la caja, el sistema descontará exactamente los ingredientes indicados en su ficha técnica.
+  2. **Producto de Venta Directa:** Vinculas un insumo físico que vendes sin preparación extra (Ej: Una gaseosa o agua). Al venderse, descuenta 1 unidad del stock de forma directa.
+- **Pasos para publicar un producto:**
+  1. Elige qué vas a publicar (Waffle o Venta Directa).
+  2. Selecciona la Referencia (qué waffle de tu recetario o qué insumo de tu stock).
+  3. Escribe el **Nombre Comercial** (cómo quieres que lo lea el cliente).
+  4. Fija el **Precio Final**.
+  5. Asegúrate de marcar "Visible en Caja" y guárdalo.
+
+### 3.6 Opciones Configurables (Apariencia y Reglas)
 - **Identidad del local:** Sube tu Logo, sube fotos para el carrusel principal, e ingresa la URL o el HTML de tu Google Maps.
 - **Tiempo de Alarma en Cocina:** Ingresa un número en minutos (ej: `10`). Si un pedido tarda más de esos minutos en la cocina, empezará a parpadear en rojo (como vimos en la Parte 2).
 - **Programa de Fidelización:** Aquí puedes prender o apagar el programa "Club Waffle". Si lo enciendes, puedes configurar a cuántos pesos equivale 1 Punto.
 
-### 3.6 Datos de Empresa
+### 3.7 Datos de Empresa
 - Configura el Nombre del Local y la Dirección.
 - **Número de WhatsApp:** Ingresa el número oficial de tu negocio (incluyendo código de país, ej. `54911...`). Cuando los clientes pidan desde el catálogo web de sus casas, el mensaje te llegará a este número.
 
-### 3.7 Empleados (Gestión de Personal)
+### 3.8 Empleados (Gestión de Personal)
 - Usa el formulario de la izquierda para dar de alta a tus empleados.
 - Ponles su Nombre, asígnales un **PIN numérico de 4 dígitos** (para que nadie más pueda usar su usuario) y elige su **Rol** (Cajero o Cocinero).
 - Si un empleado se va de la empresa, búscalo en la lista y presiona el ícono de **Tacho de basura** para revocarle el acceso.
 
-### 3.8 Seguridad
+### 3.9 Seguridad
 - Es el lugar más sensible. Aquí cambias la **Contraseña Maestra** que utilizas para entrar a este panel `/admin`. 
 - Ingresa tu contraseña actual y escribe una nueva. ¡No la olvides!
 
-### 3.9 Módulo Dev (Herramientas Técnicas)
+### 3.10 Módulo Dev (Herramientas Técnicas)
 *Sección para casos extremos o soporte técnico.*
 - Te permite resetear toda la base de datos para empezar de cero (cuidado, esto borra todas tus ventas).
 - Te permite inyectar ventas falsas de prueba si estás haciendo simulacros de entrenamiento con tu personal.

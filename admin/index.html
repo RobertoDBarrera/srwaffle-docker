@@ -259,9 +259,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flask-conical"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
           Insumos (Masas)
         </div>
-        <div class="admin-menu-item" data-admin-view="crud-menu">
+        <div class="admin-menu-item" data-admin-view="crud-waffles">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-          Menú (Waffles)
+          Recetas (Waffles)
+        </div>
+        <div class="admin-menu-item" data-admin-view="crud-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-grid"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          Menú (Público)
         </div>
         <div class="admin-menu-item" data-admin-view="settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -452,11 +456,11 @@
               <div class="form-group">
                 <label for="stock-category">Categoría</label>
                 <select id="stock-category" class="form-control" required style="background:#222;">
-                  <option value="bases">Masas (Bases)</option>
-                  <option value="toppings">Toppings</option>
-                  <option value="syrups">Salsas (Syrups)</option>
-                  <option value="drinks">Bebidas y Adicionales</option>
-                  <option value="icecreams">Helados (Bochas)</option>
+                  <option value="raw_material">Materia Prima Básica (Harina, Huevos)</option>
+                  <option value="topping">Topping / Decoración</option>
+                  <option value="syrup">Salsa (Syrup)</option>
+                  <option value="drink">Bebida / Envasado</option>
+                  <option value="icecream">Helado</option>
                 </select>
               </div>
 
@@ -476,9 +480,28 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0; margin-top: 5px;">
-                  <label for="stock-price" style="font-size:0.8rem;">Costo Unitario Calculado ($) <span style="color:var(--text-secondary);">(Interno)</span></label>
-                  <input type="number" id="stock-price" class="form-control" value="0" min="0" required style="border-color:var(--neon-cyan); color:var(--neon-cyan); font-weight:bold;">
+                  <label for="stock-cost" style="font-size:0.8rem;">Costo Unitario Calculado ($) <span style="color:var(--text-secondary);">(Interno)</span></label>
+                  <input type="number" id="stock-cost" class="form-control" value="0" min="0" required style="border-color:var(--neon-cyan); color:var(--neon-cyan); font-weight:bold;">
                 </div>
+              </div>
+
+              <!-- CONFIGURACIÓN DE PORCIÓN Y VENTA EXTRA -->
+              <div style="background:rgba(255, 105, 180, 0.05); border:1px solid rgba(255, 105, 180, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.9rem; color:var(--neon-pink); margin-bottom: 10px;">Configuración de Porción</h4>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <div class="form-group">
+                    <label for="stock-portion-size" style="font-size:0.8rem;">Gramos/ML por Porción</label>
+                    <input type="number" id="stock-portion-size" class="form-control" value="0" min="0" placeholder="Ej: 30">
+                  </div>
+                  <div class="form-group">
+                    <label for="stock-price-per-portion" style="font-size:0.8rem;">Precio de Venta Extra ($)</label>
+                    <input type="number" id="stock-price-per-portion" class="form-control" value="0" min="0">
+                  </div>
+                </div>
+                <p style="font-size: 0.75rem; color:var(--text-secondary); margin-top:5px; line-height:1.3;">
+                  Si este producto se puede vender como extra (ej. Extra Frutilla), el POS descontará esta cantidad exacta y lo cobrará al precio definido.
+                </p>
               </div>
 
               <!-- CALCULADORA DE GANANCIA (SOLO BEBIDAS/DIRECTOS) -->
@@ -512,7 +535,7 @@
 
               <div class="form-group">
                 <label for="stock-unit">Unidad de Medida</label>
-                <input type="text" id="stock-unit" class="form-control" value="porciones" placeholder="Ej: porciones, unidades" required>
+                <input type="text" id="stock-unit" class="form-control" value="g" placeholder="Ej: g, ml, unidades" required>
               </div>
 
               <div style="display:flex; gap:10px; margin-top: 1.5rem;">
@@ -569,12 +592,10 @@
                 <input type="number" id="recipe-yield" class="form-control" value="1" min="1" required>
               </div>
               
-              <div class="form-group">
-                <label for="recipe-category">Categoría Destino en Stock</label>
-                <select id="recipe-category" class="form-control" required>
-                  <option value="bases">Bases (Masas)</option>
-                  <option value="toppings">Toppings</option>
-                  <option value="syrups">Salsas (Syrups)</option>
+              <div class="form-group" style="display:none;">
+                <label for="recipe-category">Categoría Destino</label>
+                <select id="recipe-category" class="form-control">
+                  <option value="bases">Bases</option>
                 </select>
               </div>
 
@@ -623,141 +644,135 @@
         </div>
       </div>
 
-      <!-- ================= VISTA 4: CRUD MENU ================= -->
-      <div id="admin-view-crud-menu" class="admin-view-panel">
+      <!-- ================= VISTA 4: CRUD WAFFLES (RECETAS) ================= -->
+      <div id="admin-view-crud-waffles" class="admin-view-panel">
         <div class="inventory-controls" style="margin-bottom: 1.5rem;">
-          <h2 style="font-size: 1.8rem; font-weight: 700;">Waffles y Vitrina Pública</h2>
+          <h2 style="font-size: 1.8rem; font-weight: 700;">Fichas Técnicas: Waffles</h2>
           <p style="color: var(--text-secondary);">Crea tus Waffles combinando Masas Elaboradas con Materias Primas. Controla qué productos (Waffles y Bebidas) son visibles para el cliente.</p>
         </div>
 
         <div class="crud-grid">
           <!-- Formulario de Waffle -->
           <div class="form-panel">
-            <h3 id="menu-form-title" style="margin-bottom: 1rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple);">Crear Waffle</h3>
-            <form id="menu-crud-form">
-              <input type="hidden" id="menu-edit-id">
+            <h3 id="waffle-form-title" style="margin-bottom: 1rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple);">Crear Waffle</h3>
+            <form id="waffle-crud-form">
+              <input type="hidden" id="waffle-edit-id">
 
               <div class="form-group">
-                <label for="menu-type">Tipo de Producto</label>
-                <select id="menu-type" class="form-control" required style="background:#222;">
-                  <option value="waffle">Waffle Elaborado (Receta)</option>
-                  <option value="direct">Producto de Venta Directa (Ej: Bebida)</option>
-                </select>
-              </div>
-
-              <div class="form-group" id="menu-stock-group" style="display:none;">
-                <label for="menu-stock-id">Insumo a Descontar (Opcional)</label>
-                <select id="menu-stock-id" class="form-control" style="background:#222;">
-                  <option value="">-- No descontar stock automáticamente --</option>
-                </select>
+                <label for="waffle-name">Nombre de la Receta</label>
+                <input type="text" id="waffle-name" class="form-control" placeholder="Ej: Receta Delicia Patagónica" required>
               </div>
 
               <div class="form-group">
-                <label for="menu-name">Nombre del Producto</label>
-                <input type="text" id="menu-name" class="form-control" placeholder="Ej: Delicia Patagónica" required>
+                <label for="waffle-desc">Descripción (Uso interno o para el cliente final)</label>
+                <textarea id="waffle-desc" class="form-control" placeholder="Describí los ingredientes..." rows="2" required style="resize:vertical;"></textarea>
               </div>
 
-              <div class="form-group">
-                <label for="menu-desc">Descripción</label>
-                <textarea id="menu-desc" class="form-control" placeholder="Describí los ingredientes para el cliente..." rows="2" required style="resize:vertical;"></textarea>
-              </div>
-
-              <!-- CALCULADORA DE GANANCIA (MENU) -->
+              <!-- CALCULADORA DE COSTO -->
               <div style="background:rgba(255, 0, 102, 0.05); border:1px solid rgba(255, 0, 102, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                <h4 style="font-size: 0.9rem; color:var(--neon-pink); margin-bottom: 10px;">Fijación de Precio y Ganancia</h4>
+                <h4 style="font-size: 0.9rem; color:var(--neon-pink); margin-bottom: 10px;">Costo de Producción</h4>
                 
-                <div id="menu-recipe-cost-container" style="display:flex; justify-content:space-between; margin-bottom: 10px; font-size:0.85rem; padding-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.1);">
-                  <span style="color:var(--text-secondary);">Costo Base de Receta:</span>
-                  <span id="menu-recipe-cost-display" style="color:var(--text-primary); font-weight:bold;">$0</span>
+                <div style="display:flex; justify-content:space-between; margin-bottom: 5px; font-size:0.85rem; padding-bottom:5px;">
+                  <span style="color:var(--text-secondary);">Costo Base Estimado:</span>
+                  <span id="waffle-recipe-cost-display" style="color:var(--neon-pink); font-weight:bold; font-size:1.1rem;">$0</span>
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label for="menu-margin-percent" style="font-size:0.8rem;">Margen Deseado (%)</label>
-                    <input type="number" id="menu-margin-percent" class="form-control" value="0" min="0" placeholder="Ej: 100">
-                  </div>
-                  <div class="form-group" style="margin-bottom:0;">
-                    <label for="menu-price" style="font-size:0.8rem;">Precio al Público ($)</label>
-                    <input type="number" id="menu-price" class="form-control" value="0" min="0" required style="border-color:var(--neon-pink); color:var(--neon-pink); font-weight:bold;">
-                  </div>
-                </div>
+                <p style="color:var(--text-muted); font-size:0.75rem; margin:0;">El precio de venta público se configurará desde la pestaña "Menú".</p>
               </div>
 
-              <!-- CONTENEDOR DE RECETA (OCULTO SI ES PRODUCTO DIRECTO) -->
-              <div id="menu-recipe-section">
+              <!-- CONTENEDOR DE RECETA -->
+              <div id="waffle-recipe-section" style="background:rgba(0, 245, 212, 0.05); border:1px solid rgba(0, 245, 212, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.9rem; color:var(--neon-cyan); margin-bottom: 10px;">Armado Exacto</h4>
+                
                 <div class="form-group">
-                  <label>Masa Base por Defecto</label>
-                  <select id="menu-base" class="form-control" style="background:#222;"></select>
+                  <label>Masa (Obligatorio)</label>
+                  <select id="waffle-base" class="form-control" style="background:#222;"></select>
                 </div>
 
-              <div class="form-group">
-                <label>Toppings por Defecto (Selecciona los que apliquen)</label>
-                <div class="checklist-container" id="menu-toppings-checklist">
-                  <!-- Llenado dinámicamente -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <label style="margin:0;">Toppings / Salsas / Extras</label>
+                  <button type="button" class="btn-secondary" id="waffle-add-ingredient-btn" style="padding: 4px 8px; font-size:0.75rem;">+ Añadir</button>
+                </div>
+                
+                <div id="waffle-ingredients-list" style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- Filas de ingredientes dinamicas -->
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Salsas por Defecto (Selecciona los que apliquen)</label>
-                <div class="checklist-container" id="menu-syrups-checklist">
-                  <!-- Llenado dinámicamente -->
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Helado por Defecto (Hasta 3 bochas)</label>
-                <div style="margin-bottom: 0.5rem;">
-                  <select id="menu-icecream-count" class="form-control" style="background:#222; border: 1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:0.6rem; font-size:0.9rem;">
-                    <option value="0">Sin helado por defecto</option>
-                    <option value="1">1 bocha</option>
-                    <option value="2">2 bochas</option>
-                    <option value="3">3 bochas</option>
-                  </select>
-                </div>
-                <div id="menu-icecreams-flavor-selectors" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-                  <!-- Selectores de sabor rellenados dinámicamente -->
-                </div>
-              </div>
-              </div>
-              <!-- FIN CONTENEDOR DE RECETA -->
-
-              <div class="form-group">
-                <label>Imagen del Producto</label>
-                <input type="file" id="menu-image-file" class="form-control" accept="image/*" style="display:none;">
-                <button type="button" class="btn-secondary" id="menu-upload-btn" style="width: 100%; border-color:var(--neon-cyan); color:#fff; display:flex; align-items:center; justify-content:center; gap:8px;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <label>Imagen Referencial</label>
+                <button type="button" class="btn-secondary" id="waffle-upload-btn" style="width: 100%; border-color:var(--neon-cyan); color:#fff; display:flex; align-items:center; justify-content:center; gap:8px;">
                   Cargar Imagen
                 </button>
-                <input type="hidden" id="menu-image-path">
-                <div class="image-preview" id="menu-image-preview">
-                  Sin vista previa de imagen
-                </div>
               </div>
-
-              <div class="form-group" style="display:flex; align-items:center; gap: 8px;">
-                <input type="checkbox" id="menu-is-visible" checked>
-                <label for="menu-is-visible" style="margin-bottom:0;">Visible en Menú Cliente</label>
-              </div>
-
-              <div class="form-group" style="display:flex; align-items:center; gap: 8px;">
-                <input type="checkbox" id="menu-show-price" checked>
-                <label for="menu-show-price" style="margin-bottom:0;">Mostrar Precio al Cliente</label>
-              </div>
-
-              <!-- Análisis de Costo de Receta movido arriba -->
 
               <div style="display:flex; gap:10px; margin-top: 1.5rem;">
-                <button type="button" id="menu-form-cancel-btn" class="btn-secondary" style="flex:1; display:none;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="flex:2;">Guardar Producto</button>
+                <button type="button" id="waffle-form-cancel-btn" class="btn-secondary" style="flex:1; display:none;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="flex:2;">Guardar Receta</button>
               </div>
             </form>
           </div>
 
-          <!-- Listado de Waffles existentes en la Carta -->
+          <!-- Listado de Waffles -->
           <div class="list-panel">
-            <h3 style="margin-bottom: 1.2rem; font-size: 1.2rem; font-weight: 700;">Waffles en Menú</h3>
-            <div id="admin-menu-list-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; max-height: 700px; overflow-y:auto; padding-right:5px;">
+            <h3 style="margin-bottom: 1.2rem; font-size: 1.2rem; font-weight: 700;">Recetas Guardadas</h3>
+            <div id="admin-waffles-list-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; max-height: 700px; overflow-y:auto; padding-right:5px;">
               <!-- Tarjetas de Waffles -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= VISTA 5: CRUD MENU PUBLICO ================= -->
+      <div id="admin-view-crud-menu" class="admin-view-panel">
+        <div class="inventory-controls" style="margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.8rem; font-weight: 700;">Vitrina y Menú Público</h2>
+          <p style="color: var(--text-secondary);">Publica tus Waffles o Bebidas para que aparezcan en la Caja y fija su precio de venta.</p>
+        </div>
+
+        <div class="crud-grid">
+          <div class="form-panel">
+            <h3 style="margin-bottom: 1rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple);">Publicar Producto</h3>
+            <form id="menu-crud-form">
+              <input type="hidden" id="menu-edit-id">
+
+              <div class="form-group">
+                <label for="menu-type">¿Qué deseas publicar?</label>
+                <select id="menu-type" class="form-control" required style="background:#222;">
+                  <option value="waffle">Waffle Elaborado (Desde Recetas)</option>
+                  <option value="direct">Venta Directa (Desde Stock)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="menu-reference">Producto a vincular</label>
+                <select id="menu-reference" class="form-control" required style="background:#222;"></select>
+              </div>
+
+              <div class="form-group">
+                <label for="menu-name">Nombre Comercial (Para el cliente)</label>
+                <input type="text" id="menu-name" class="form-control" placeholder="Ej: Waffle Delicia" required>
+              </div>
+
+              <div class="form-group">
+                <label for="menu-price">Precio al Público ($)</label>
+                <input type="number" id="menu-price" class="form-control" value="0" min="0" required style="border-color:var(--neon-pink); color:var(--neon-pink); font-weight:bold;">
+              </div>
+
+              <div class="form-group" style="display:flex; align-items:center; gap: 8px;">
+                <input type="checkbox" id="menu-is-visible" checked>
+                <label for="menu-is-visible" style="margin-bottom:0;">Visible en Caja</label>
+              </div>
+
+              <div style="display:flex; gap:10px; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="flex:2;">Añadir al Menú</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="list-panel">
+            <h3 style="margin-bottom: 1.2rem; font-size: 1.2rem; font-weight: 700;">Catálogo Público</h3>
+            <div id="admin-menu-list-grid" style="display:flex; flex-direction:column; gap: 10px; max-height: 700px; overflow-y:auto; padding-right:5px;">
+              <!-- Tarjetas de Menu -->
             </div>
           </div>
         </div>
