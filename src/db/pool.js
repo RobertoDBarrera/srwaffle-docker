@@ -6,7 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const pool = new pg.Pool({
   connectionString: connectionString,
-  ssl: connectionString && (connectionString.includes('neon.tech') || connectionString.includes('supabase') || isProduction)
+  ssl: connectionString && (connectionString.includes('neon.tech') || connectionString.includes('supabase') || connectionString.includes('render.com'))
     ? { rejectUnauthorized: false }
     : false
 });

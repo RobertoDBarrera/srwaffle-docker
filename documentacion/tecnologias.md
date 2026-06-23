@@ -21,7 +21,8 @@ El backend se ha desarrollado como un servidor ligero en **Node.js** enfocado en
     *   **Tablas de la Base de Datos:**
         *   `settings`: Almacena la contraseña de administrador y las configuraciones de la empresa (UI, mapa, fidelización, tiempos de cocina, etc).
         *   `stock`: Controla el inventario de masas, toppings, salsas, bebidas y helados, con umbrales mínimos de stock.
-        *   `menu`: Registra la carta de waffles definidos, sus ingredientes asociados y la imagen.
+        *   `waffles`: Fichas técnicas de elaboración de waffles (recetario base), indicando insumos exactos requeridos y costo base calculado.
+        *   `menu`: Catálogo comercial de venta pública (vitrina). Vincula recetas de `waffles` o insumos de venta directa de `stock` fijando su nombre final, visibilidad y precio al cliente.
         *   `sales`: Guarda el historial de comandas estructurado usando `JSONB`.
         *   `employees`: Gestiona los perfiles de los empleados (Cajeros y Cocineros) junto a sus PINs de acceso individuales.
         *   `loyalty_customers`: Mantiene el registro de clientes del programa de recompensas (puntos acumulados).
@@ -57,6 +58,7 @@ El frontend se divide en tres portales independientes de diseño responsivo y es
     *   **Carga de Imágenes Integrada:** Implementa la API `FileReader` de JS para codificar imágenes del menú seleccionadas localmente a formato Base64, subiéndolas a través del servidor a la carpeta física del proyecto y refrescando la vista previa al instante.
     *   **Seguridad Interna:** Interfaz dedicada para el cambio de credenciales de caja y administración.
     *   **Exportación de Informes:** Generación nativa de reportes de transacciones en formato CSV descargable con codificación UTF-8 BOM.
+    *   **Visor de Documentación Integrado:** Sistema interno que lee y renderiza dinámicamente manuales escritos en Markdown (`.md`) utilizando las librerías `marked.js` (para formateo de texto) y `mermaid.js` (para la generación y trazado en vivo de diagramas visuales Entidad-Relación y flujos de arquitectura desde código).
 
 ---
 

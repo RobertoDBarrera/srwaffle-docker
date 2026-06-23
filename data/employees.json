@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "emp_1782238229952",
+    "name": "Test",
+    "pin": "1234",
+    "role": "cashier",
+    "active": true
+  }
+]

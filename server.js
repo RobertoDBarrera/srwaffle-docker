@@ -199,10 +199,110 @@ app.post('/api/menu/upload-image', (req, res) => {
   res.json({ success: true, imagePath: 'ima_mock.jpeg' });
 });
 
+// --- EMPLEADOS ---
+app.get('/api/employees', async (req, res) => {
+  try {
+    const list = await db.getEmployees();
+    res.json(list);
+  } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+app.post('/api/employees', async (req, res) => {
+  try {
+    const { name, pin, role, active } = req.body;
+    const newEmp = { id: 'emp_' + Date.now(), name, pin, role, active };
+    await db.createEmployee(newEmp);
+    res.json({ success: true, employee: newEmp });
+  } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+app.put('/api/employees/:id', async (req, res) => {
+  try {
+    await db.updateEmployee(req.params.id, req.body);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+app.delete('/api/employees/:id', async (req, res) => {
+  try {
+    await db.deleteEmployee(req.params.id);
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+// --- INFO COMPAÑIA ---
+app.get('/api/company/info', async (req, res) => {
+  try { res.json(await db.getCompanyInfo()); } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+app.post('/api/company/info', async (req, res) => {
+  try { await db.updateCompanyInfo(req.body); res.json({ success: true }); } catch (error) { res.status(500).json({ error: 'Error' }); }
+});
+
+// --- API CONFIGURACION DESARROLLADOR ---
+app.get('/api/developer/settings', async (req, res) => {
+  try {
+    const settings = await db.getSettings();
+    res.json(settings);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/developer/settings', async (req, res) => {
+  try {
+    const { developerMode } = req.body;
+    if (developerMode === undefined) {
+      return res.status(400).json({ error: 'Falta el campo developerMode' });
+    }
+    const current = await db.getSettings();
+    await db.updateSettings({ ...current, developerMode });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/developer/theme', async (req, res) => {
+  try {
+    const { themeColors } = req.body;
+    const current = await db.getSettings();
+    await db.updateSettings({ ...current, themeColors });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/developer/theme/reset', async (req, res) => {
+  try {
+    const current = await db.getSettings();
+    await db.updateSettings({ ...current, themeColors: {} });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/developer/preset', async (req, res) => {
+  try {
+    const { name, colors } = req.body;
+    const current = await db.getSettings();
+    const presets = current.customPresets || [];
+    const newPreset = { id: `preset_${Date.now()}`, name, colors };
+    presets.push(newPreset);
+    await db.updateSettings({ ...current, customPresets: presets });
+    res.json({ success: true, preset: newPreset });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/developer/preset/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const current = await db.getSettings();
+    const presets = (current.customPresets || []).filter(p => p.id !== id);
+    await db.updateSettings({ ...current, customPresets: presets });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.use(express.static(path.join(__dirname)));
 app.use('/caja', express.static(path.join(__dirname, 'caja')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use('/cocina', express.static(path.join(__dirname, 'cocina')));
+app.use('/docs', express.static(path.join(__dirname, 'documentacion')));
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Sr. Waffle V2 corriendo en el puerto ${PORT}`);

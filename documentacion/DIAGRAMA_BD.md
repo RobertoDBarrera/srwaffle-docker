@@ -4,6 +4,60 @@ A continuación se detalla la estructura y el modelo relacional de la base de da
 
 El sistema funciona con soporte local (JSON) y soporte PostgreSQL (para la versión Dockerizada).
 
+## Diagrama Visual (ERD)
+
+```mermaid
+erDiagram
+    STOCK ||--o{ MASAS : "Se usan para fabricar"
+    STOCK ||--o{ WAFFLES : "Toppings extras"
+    STOCK ||--o{ MENU : "Venta directa (Bebidas)"
+    
+    MASAS ||--o{ WAFFLES : "Masa base"
+    
+    WAFFLES ||--o{ MENU : "Se publica en"
+    
+    MENU ||--o{ SALES : "Se vende en"
+
+    STOCK {
+        string id PK
+        string name
+        string category "raw_material, topping, syrup, drink"
+        int stock "Cantidad (g, ml, un)"
+        int cost
+    }
+    
+    MASAS {
+        string id PK
+        string name
+        int yield_qty "Porciones por lote"
+        int stock "Porciones disponibles"
+        jsonb ingredients "IDs de Stock"
+    }
+    
+    WAFFLES {
+        string id PK
+        string name
+        int cost
+        jsonb ingredients "ID de Masa + IDs de Stock"
+    }
+    
+    MENU {
+        string id PK
+        string type "waffle | direct"
+        string reference_id FK "Waffles.id o Stock.id"
+        string name
+        int price
+        boolean is_visible
+    }
+    
+    SALES {
+        string id PK
+        datetime date
+        int total
+        jsonb items "Items del Menu"
+    }
+```
+
 ## Esquema Relacional Estricto
 
 ### 1. `STOCK` (Inventario y Materias Primas)
