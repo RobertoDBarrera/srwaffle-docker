@@ -275,7 +275,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           Opciones Configurables
         </div>
-        <div class="admin-menu-item" data-admin-view="developer">
+        
+      <div class="admin-menu-item" data-admin-view="themes">
+        <span class="icon">🎨</span>
+        <span>Temas</span>
+      </div>
+      <div class="admin-menu-item" data-admin-view="developer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
           Módulo Dev
         </div>
@@ -837,7 +842,30 @@
         </div>
       </div>
 
-      <!-- ================= VISTA 7: COMPANY DETAILS ================= -->
+      
+    <!-- ================= VISTA: TEMAS (GALERIA) ================= -->
+    <div class="admin-view-panel" id="admin-view-themes">
+      <div class="header-actions">
+        <h2>Galería de Temas 🎨</h2>
+        <p style="color:var(--text-secondary); margin-top:5px; font-size:0.9rem;">Selecciona un tema para aplicarlo a toda la aplicación. Usa el Módulo Dev para crear nuevos temas.</p>
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--neon-cyan);">Temas Predeterminados</h3>
+        <div id="themes-default-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+          <!-- Tarjetas generadas por JS -->
+        </div>
+      </div>
+
+      <div style="margin-top: 3rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--neon-purple);">Mis Temas Guardados</h3>
+        <div id="themes-custom-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+          <!-- Tarjetas generadas por JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= VISTA 7: COMPANY DETAILS ================= -->
       <div id="admin-view-company" class="admin-view-panel">
         <div class="inventory-controls" style="margin-bottom: 1.5rem;">
           <h2 style="font-size: 1.8rem; font-weight: 700;">Datos de la Empresa</h2>

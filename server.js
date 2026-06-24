@@ -196,7 +196,32 @@ app.get('/api/loyalty/customers', async (req, res) => {
 
 app.post('/api/menu/upload-image', (req, res) => {
   // Mock image upload
-  res.json({ success: true, imagePath: 'ima_mock.jpeg' });
+  res.json({ success: true, fileName: 'ima_mock.jpeg' });
+});
+
+// --- DEVELOPER UPLOADS ---
+app.post('/api/developer/upload-file', (req, res) => {
+  try {
+    const { fileName, data } = req.body;
+    if (!fileName || !data) return res.status(400).json({ error: 'Faltan datos' });
+    
+    // El payload data suele venir como "data:image/jpeg;base64,/9j/4AAQ..."
+    const parts = data.split(';base64,');
+    const ext = fileName.split('.').pop();
+    const safeName = `theme_file_${Date.now()}.${ext}`;
+    
+    const base64Data = parts.length > 1 ? parts[1] : parts[0];
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+    
+    fs.writeFileSync(path.join(uploadsDir, safeName), buffer);
+    res.json({ success: true, fileName: `uploads/${safeName}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- EMPLEADOS ---
@@ -261,9 +286,9 @@ app.post('/api/developer/settings', async (req, res) => {
 
 app.post('/api/developer/theme', async (req, res) => {
   try {
-    const { themeColors } = req.body;
+    const { activeTheme } = req.body;
     const current = await db.getSettings();
-    await db.updateSettings({ ...current, themeColors });
+    await db.updateSettings({ ...current, activeTheme });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -271,17 +296,17 @@ app.post('/api/developer/theme', async (req, res) => {
 app.post('/api/developer/theme/reset', async (req, res) => {
   try {
     const current = await db.getSettings();
-    await db.updateSettings({ ...current, themeColors: {} });
+    await db.updateSettings({ ...current, activeTheme: null });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/developer/preset', async (req, res) => {
   try {
-    const { name, colors } = req.body;
+    const { name, styles } = req.body;
     const current = await db.getSettings();
     const presets = current.customPresets || [];
-    const newPreset = { id: `preset_${Date.now()}`, name, colors };
+    const newPreset = { id: `preset_${Date.now()}`, name, styles };
     presets.push(newPreset);
     await db.updateSettings({ ...current, customPresets: presets });
     res.json({ success: true, preset: newPreset });

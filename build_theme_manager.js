@@ -1,4 +1,6 @@
-// Gestor de Temas y Módulo de Desarrollo en Tiempo Real - Sr. Waffle
+const fs = require('fs');
+
+const content = `// Gestor de Temas y Módulo de Desarrollo en Tiempo Real - Sr. Waffle
 (function () {
   let customPresets = [];
   
@@ -7,7 +9,7 @@
   let currentTypography = ''; // Puede ser url de google fonts o archivo local
   let currentBgImage = ''; // URL o archivo local
   let currentTexts = { title: '', banner: '' };
-  let currentLayout = { buttonShape: 'rounded', shadows: 'soft', menuPos: 'sidebar' };
+  let currentLayout = { buttonShape: 'rounded', shadows: 'soft' };
   let currentCustomCss = '';
 
   const COLOR_VARIABLES = [
@@ -72,11 +74,11 @@
   };
 
   function hexToRgba(hex, alpha) {
-    if (!hex || hex[0] !== '#') return `rgba(255, 255, 255, ${alpha})`;
+    if (!hex || hex[0] !== '#') return \`rgba(255, 255, 255, \${alpha})\`;
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    return \`rgba(\${r}, \${g}, \${b}, \${alpha})\`;
   }
 
   function showToast(message, isError = false) {
@@ -114,8 +116,8 @@
     // 2. Imagen de Fondo
     if (styles.bgImage !== undefined) {
       currentBgImage = styles.bgImage;
-      if (styles.bgImage && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
-        document.body.style.backgroundImage = `url('${styles.bgImage}')`;
+      if (styles.bgImage) {
+        document.body.style.backgroundImage = \`url('\${styles.bgImage}')\`;
         document.body.style.backgroundSize = 'cover';
         document.body.style.backgroundPosition = 'center';
         document.body.style.backgroundAttachment = 'fixed';
@@ -128,10 +130,9 @@
     if (styles.texts) {
       currentTexts = { ...styles.texts };
       if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        const titleEl = document.querySelector('.hero-title, h1:not(.section-title)'); // Evitar h1 del admin si lo hubiera
+        const titleEl = document.querySelector('h1'); // Assuming the main title
         if (titleEl && styles.texts.title) titleEl.innerText = styles.texts.title;
-        const bannerEl = document.querySelector('.neon-slogan, .hero-badge');
-        if (bannerEl && styles.texts.banner) bannerEl.innerHTML = styles.texts.banner.replace(/\n/g, '<br>');
+        // Handle banner if present
       }
     }
 
@@ -147,19 +148,19 @@
       
       if (styles.typography) {
         // Asume archivo subido
-        fontStyleEl.textContent = `
+        fontStyleEl.textContent = \`
           @font-face {
             font-family: 'ThemeCustomFont';
-            src: url('${styles.typography}');
+            src: url('\${styles.typography}');
           }
           :root { --font-family-primary: 'ThemeCustomFont', sans-serif; }
           body, input, select, button, textarea { font-family: var(--font-family-primary) !important; }
-        `;
+        \`;
       } else {
-        fontStyleEl.textContent = `
+        fontStyleEl.textContent = \`
           :root { --font-family-primary: 'Outfit', sans-serif; }
           body, input, select, button, textarea { font-family: var(--font-family-primary) !important; }
-        `;
+        \`;
       }
     }
 
@@ -167,12 +168,10 @@
     if (styles.layout) {
       currentLayout = { ...styles.layout };
       document.body.classList.remove('btn-shape-rounded', 'btn-shape-square', 'btn-shape-pill');
-      document.body.classList.remove('menu-pos-sidebar', 'menu-pos-top', 'menu-pos-hidden');
       document.body.classList.remove('shadows-neon', 'shadows-soft', 'shadows-none');
       
-      if (styles.layout.buttonShape) document.body.classList.add(`btn-shape-${styles.layout.buttonShape}`);
-      if (styles.layout.shadows) document.body.classList.add(`shadows-${styles.layout.shadows}`);
-      if (styles.layout.menuPos) document.body.classList.add(`menu-pos-${styles.layout.menuPos}`);
+      if (styles.layout.buttonShape) document.body.classList.add(\`btn-shape-\${styles.layout.buttonShape}\`);
+      if (styles.layout.shadows) document.body.classList.add(\`shadows-\${styles.layout.shadows}\`);
       
       let layoutStyleEl = document.getElementById('theme-layout-style');
       if (!layoutStyleEl) {
@@ -181,18 +180,12 @@
         document.head.appendChild(layoutStyleEl);
       }
       // Inject CSS para las clases de layout si es necesario
-      layoutStyleEl.textContent = `
+      layoutStyleEl.textContent = \`
         body.btn-shape-square button, body.btn-shape-square .btn-primary, body.btn-shape-square .btn-secondary, body.btn-shape-square .admin-menu-item { border-radius: 0 !important; }
         body.btn-shape-pill button, body.btn-shape-pill .btn-primary, body.btn-shape-pill .btn-secondary, body.btn-shape-pill .admin-menu-item { border-radius: 50px !important; }
         body.shadows-none * { box-shadow: none !important; text-shadow: none !important; }
         body.shadows-soft .btn-primary, body.shadows-soft .admin-view-panel { box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; }
-        /* Opciones de Menu Layout para Cliente */
-        body.is-client-page.menu-pos-sidebar header { width: 250px !important; height: 100vh !important; position: fixed !important; flex-direction: column !important; top: 0 !important; left: 0 !important; align-items: center; justify-content: flex-start !important; padding-top: 2rem; border-right: 1px solid rgba(255,255,255,0.1); border-bottom: none !important; z-index: 1000; }
-        body.is-client-page.menu-pos-sidebar nav { flex-direction: column !important; margin-top: 2rem; width: 100%; align-items: center; gap: 1.5rem; }
-        body.is-client-page.menu-pos-sidebar main, body.is-client-page.menu-pos-sidebar section.app-view { margin-left: 250px !important; width: calc(100% - 250px) !important; padding-left: 2rem; }
-        body.is-client-page.menu-pos-hidden nav { display: none !important; }
-
-      `;
+      \`;
     }
 
     // 6. CSS Personalizado
@@ -209,9 +202,6 @@
   }
 
   async function init() {
-    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-      document.body.classList.add('is-client-page');
-    }
     const computedStyles = getComputedStyle(document.documentElement);
     COLOR_VARIABLES.forEach(v => {
       const computedValue = computedStyles.getPropertyValue(v.varName).trim();
@@ -243,7 +233,7 @@
     if (document.getElementById('dev-customizer-container')) return;
 
     const styleEl = document.createElement('style');
-    styleEl.textContent = `
+    styleEl.textContent = \`
       .dev-widget-fab { position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; border-radius: 50%; background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--neon-purple, #9d4edd); box-shadow: 0 0 15px var(--neon-purple-glow, rgba(157, 78, 221, 0.5)); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 999999; transition: all 0.3s; }
       .dev-widget-fab:hover { transform: scale(1.1) rotate(15deg); box-shadow: 0 0 25px var(--neon-purple, #9d4edd); }
       .dev-widget-panel { position: fixed; bottom: 95px; right: 25px; width: 380px; max-height: calc(100vh - 140px); background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); z-index: 999999; display: flex; flex-direction: column; overflow: hidden; transition: all 0.4s; transform: scale(0.9) translateY(20px); opacity: 0; pointer-events: none; }
@@ -267,21 +257,13 @@
       .dev-panel-footer { padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 10px; background: rgba(0, 0, 0, 0.1); }
       .dev-btn-save { flex: 2; background: linear-gradient(135deg, var(--neon-purple, #9d4edd) 0%, #7b2cbf 100%); border: none; color: #fff; padding: 8px; border-radius: 6px; font-weight: 700; cursor: pointer; }
       .dev-btn-reset { flex: 1; background: transparent; border: 1px solid var(--neon-pink, #ff007f); color: var(--neon-pink, #ff007f); padding: 8px; border-radius: 6px; font-weight: 700; cursor: pointer; }
-    `;
+    \`;
     document.head.appendChild(styleEl);
 
     const container = document.createElement('div');
     container.id = 'dev-customizer-container';
-    container.innerHTML = `
+    container.innerHTML = \`
       <button class="dev-widget-fab" title="Abrir Theme Builder">🎨</button>
-      
-      <div id="dev-css-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:600px; height:450px; background:rgba(15,15,15,0.98); border:1px solid var(--neon-purple); border-radius:12px; z-index:9999999; flex-direction:column; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
-        <div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; color:var(--neon-purple);">Editor de CSS Avanzado</h3>
-          <button id="dev-close-css-btn" style="background:none; border:none; color:#fff; cursor:pointer; font-size:20px;">&times;</button>
-        </div>
-        <textarea id="dev-custom-css" style="flex-grow:1; background:#1e1e1e; color:#d4d4d4; font-family:monospace; padding:15px; border:none; resize:none;" placeholder="/* Escribe tu CSS personalizado aquí */"></textarea>
-      </div>
       <div class="dev-widget-panel">
         <div class="dev-panel-header">
           <h3>Theme Builder</h3>
@@ -318,19 +300,13 @@
             <option value="neon">Neón (Cyberpunk)</option>
             <option value="none">Sin Sombras (Plano)</option>
           </select>
-          <label style="font-size: 0.8rem; color:#ccc; margin-top:5px; display:block;">Posición del Menú:</label>
-          <select id="dev-layout-menu" class="dev-select">
-            <option value="sidebar">Lateral Izquierdo (Por defecto)</option>
-            <option value="top">Superior Horizontal</option>
-            <option value="hidden">Oculto Desplegable</option>
-          </select>
 
           <div class="dev-section-title">Textos Públicos</div>
           <input type="text" id="dev-text-title" class="dev-input" placeholder="Título principal (Ej. Sr. Waffle)">
           <input type="text" id="dev-text-banner" class="dev-input" placeholder="Texto de Banner promocional">
 
           <div class="dev-section-title">CSS Personalizado Avanzado</div>
-          <button id="dev-open-css-btn" class="dev-file-btn" style="width:100%; border-color:var(--neon-purple); color:var(--neon-purple);">Abrir Editor de CSS 📝</button>
+          <textarea id="dev-custom-css" class="dev-textarea" placeholder="body { ... }"></textarea>
 
           <div class="dev-section-title" style="margin-top:10px;">Guardar como Preset</div>
           <div style="display:flex; gap:10px;">
@@ -343,7 +319,7 @@
           <button class="dev-btn-save" type="button">Aplicar Tema Global</button>
         </div>
       </div>
-    `;
+    \`;
     document.body.appendChild(container);
 
     // Poblar colores
@@ -352,20 +328,19 @@
       const curVal = currentColors[v.varName] || '#ffffff';
       const row = document.createElement('div');
       row.className = 'dev-color-row';
-      row.innerHTML = `
-        <label>${v.label}</label>
+      row.innerHTML = \`
+        <label>\${v.label}</label>
         <div style="display:flex; align-items:center;">
-          <span class="dev-color-hex" id="hex-${v.varName}">${curVal}</span>
-          <input type="color" class="dev-color-input" data-var="${v.varName}" value="${curVal}">
+          <span class="dev-color-hex" id="hex-\${v.varName}">\${curVal}</span>
+          <input type="color" class="dev-color-input" data-var="\${v.varName}" value="\${curVal}">
         </div>
-      `;
+      \`;
       colorsContainer.appendChild(row);
     });
 
     // Populate existing values
     if (currentLayout.buttonShape) document.getElementById('dev-layout-buttons').value = currentLayout.buttonShape;
     if (currentLayout.shadows) document.getElementById('dev-layout-shadows').value = currentLayout.shadows;
-    if (currentLayout.menuPos) document.getElementById('dev-layout-menu').value = currentLayout.menuPos;
     document.getElementById('dev-text-title').value = currentTexts.title || '';
     document.getElementById('dev-text-banner').value = currentTexts.banner || '';
     document.getElementById('dev-custom-css').value = currentCustomCss || '';
@@ -380,7 +355,7 @@
     document.querySelectorAll('.dev-color-input').forEach(inp => {
       inp.oninput = (e) => {
         const vName = e.target.getAttribute('data-var');
-        document.getElementById(`hex-${vName}`).textContent = e.target.value;
+        document.getElementById(\`hex-\${vName}\`).textContent = e.target.value;
         currentColors[vName] = e.target.value;
         applyThemeStyles({ colors: currentColors });
       };
@@ -395,24 +370,8 @@
       currentLayout.shadows = e.target.value;
       applyThemeStyles({ layout: currentLayout });
     };
-    document.getElementById('dev-layout-menu').onchange = (e) => {
-      currentLayout.menuPos = e.target.value;
-      applyThemeStyles({ layout: currentLayout });
-    };
-    document.getElementById('dev-text-title').oninput = (e) => {
-      currentTexts.title = e.target.value;
-      applyThemeStyles({ texts: currentTexts });
-    };
-    document.getElementById('dev-text-banner').oninput = (e) => {
-      currentTexts.banner = e.target.value;
-      applyThemeStyles({ texts: currentTexts });
-    };
-  
 
     // Cambios de CSS en tiempo real
-    document.getElementById('dev-open-css-btn').onclick = () => document.getElementById('dev-css-modal').style.display = 'flex';
-    document.getElementById('dev-close-css-btn').onclick = () => document.getElementById('dev-css-modal').style.display = 'none';
-    
     document.getElementById('dev-custom-css').oninput = (e) => {
       currentCustomCss = e.target.value;
       applyThemeStyles({ customCss: currentCustomCss });
@@ -527,7 +486,7 @@
           body: JSON.stringify({ name, styles })
         });
         if (res.ok) {
-          showToast(`Preset "${name}" guardado`);
+          showToast(\`Preset "\${name}" guardado\`);
           document.getElementById('dev-preset-name').value = '';
         } else {
           showToast('Error al guardar preset', true);
@@ -550,3 +509,7 @@
     init();
   }
 })();
+`;
+
+fs.writeFileSync('theme-manager.js', content);
+console.log('theme-manager.js built successfully');
