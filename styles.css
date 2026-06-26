@@ -46,10 +46,10 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  /* Simulación de textura de concreto pulido */
+  /* Simulación de textura de concreto pulido adaptable */
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(38, 38, 38, 0.4) 0%, transparent 100%),
-    radial-gradient(circle at 90% 80%, rgba(30, 30, 30, 0.6) 0%, transparent 100%),
+    radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--text-primary) 5%, transparent) 0%, transparent 100%),
+    radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--text-primary) 8%, transparent) 0%, transparent 100%),
     linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   background-attachment: fixed;
 }
@@ -296,7 +296,7 @@ nav {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--neon-purple) 0%, #7b2cbf 100%);
-  color: #fff;
+  color: var(--btn-text-color, #fff);
   border: none;
   padding: 0.9rem 2rem;
   font-weight: 700;
@@ -316,7 +316,7 @@ nav {
 
 .btn-secondary {
   background: transparent;
-  color: #fff;
+  color: var(--btn-text-color, #fff);
   border: 2px solid var(--neon-pink);
   padding: 0.9rem 2rem;
   font-weight: 700;

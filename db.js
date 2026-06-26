@@ -293,6 +293,7 @@ const initPostgresTables = async () => {
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS custom_presets TEXT DEFAULT \'[]\';');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS hero_images TEXT DEFAULT \'{}\';');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS hero_carousel_enabled BOOLEAN DEFAULT FALSE;');
+    await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS hero_carousel_interval INTEGER DEFAULT 4000;');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_bg_image TEXT DEFAULT \'\';');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_pin_x INTEGER DEFAULT 50;');
     await client.query('ALTER TABLE settings ADD COLUMN IF NOT EXISTS map_pin_y INTEGER DEFAULT 50;');
@@ -520,7 +521,7 @@ const updateDeveloperSettings = async (developerMode, themeColors) => {
 
 const getCompanyInfo = async () => {
   if (usePostgres) {
-    const res = await pool.query('SELECT company_name, company_address, company_hours, company_instagram, company_phone, whatsapp_orders_enabled, hero_images, hero_carousel_enabled, map_bg_image, map_pin_x, map_pin_y FROM settings LIMIT 1');
+    const res = await pool.query('SELECT company_name, company_address, company_hours, company_instagram, company_phone, whatsapp_orders_enabled, hero_images, hero_carousel_enabled, hero_carousel_interval, map_bg_image, map_pin_x, map_pin_y FROM settings LIMIT 1');
     const row = res.rows[0] || {};
     
     let parsedHeroImages = ['suit_1786.jpg'];
@@ -541,6 +542,7 @@ const getCompanyInfo = async () => {
       whatsappOrdersEnabled: row.whatsapp_orders_enabled !== false,
       heroImages: parsedHeroImages,
       heroCarouselEnabled: !!row.hero_carousel_enabled,
+      heroCarouselInterval: row.hero_carousel_interval !== null && row.hero_carousel_interval !== undefined ? row.hero_carousel_interval : 4000,
       mapBgImage: row.map_bg_image || '',
       mapPinX: row.map_pin_x !== null && row.map_pin_x !== undefined ? row.map_pin_x : 50,
       mapPinY: row.map_pin_y !== null && row.map_pin_y !== undefined ? row.map_pin_y : 50,
@@ -558,6 +560,7 @@ const getCompanyInfo = async () => {
       whatsappOrdersEnabled: settings.whatsappOrdersEnabled !== false,
       heroImages: settings.heroImages || ['suit_1786.jpg'],
       heroCarouselEnabled: !!settings.heroCarouselEnabled,
+      heroCarouselInterval: settings.heroCarouselInterval !== undefined ? settings.heroCarouselInterval : 4000,
       mapBgImage: settings.mapBgImage || '',
       mapPinX: settings.mapPinX !== undefined ? settings.mapPinX : 50,
       mapPinY: settings.mapPinY !== undefined ? settings.mapPinY : 50,
@@ -568,17 +571,18 @@ const getCompanyInfo = async () => {
 };
 
 const updateCompanyInfo = async (info) => {
-  const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, mapBgImage, mapPinX, mapPinY, companyLogo, kdsAlertTime } = info;
+  const { companyName, companyAddress, companyHours, companyInstagram, companyPhone, whatsappOrdersEnabled, heroImages, heroCarouselEnabled, heroCarouselInterval, mapBgImage, mapPinX, mapPinY, companyLogo, kdsAlertTime } = info;
   
   if (usePostgres) {
     await pool.query(
-      'UPDATE settings SET company_name = $1, company_address = $2, company_hours = $3, company_instagram = $4, company_phone = $5, whatsapp_orders_enabled = $6, hero_images = $7, hero_carousel_enabled = $8, map_bg_image = $9, map_pin_x = $10, map_pin_y = $11, company_logo = $12, kds_alert_time = $13 WHERE id = 1',
+      'UPDATE settings SET company_name = $1, company_address = $2, company_hours = $3, company_instagram = $4, company_phone = $5, whatsapp_orders_enabled = $6, hero_images = $7, hero_carousel_enabled = $8, map_bg_image = $9, map_pin_x = $10, map_pin_y = $11, company_logo = $12, kds_alert_time = $13, hero_carousel_interval = $14 WHERE id = 1',
       [
         companyName, companyAddress, companyHours, companyInstagram, companyPhone, !!whatsappOrdersEnabled,
         heroImages ? JSON.stringify(heroImages) : '[]', !!heroCarouselEnabled, mapBgImage || '', 
         mapPinX !== undefined ? parseInt(mapPinX) : 50, mapPinY !== undefined ? parseInt(mapPinY) : 50,
         companyLogo || '',
-        kdsAlertTime !== undefined ? parseInt(kdsAlertTime) : 10
+        kdsAlertTime !== undefined ? parseInt(kdsAlertTime) : 10,
+        heroCarouselInterval !== undefined ? parseInt(heroCarouselInterval) : 4000
       ]
     );
   } else {
@@ -592,6 +596,7 @@ const updateCompanyInfo = async (info) => {
     
     if (heroImages !== undefined) settings.heroImages = heroImages;
     if (heroCarouselEnabled !== undefined) settings.heroCarouselEnabled = !!heroCarouselEnabled;
+    if (heroCarouselInterval !== undefined) settings.heroCarouselInterval = parseInt(heroCarouselInterval);
     if (mapBgImage !== undefined) settings.mapBgImage = mapBgImage;
     if (mapPinX !== undefined) settings.mapPinX = parseInt(mapPinX);
     if (mapPinY !== undefined) settings.mapPinY = parseInt(mapPinY);

@@ -4,11 +4,47 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./src/db/index');
 
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sr_waffle_secret_key_1234';
+
+const authLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  message: { error: 'Demasiados intentos de inicio de sesión' }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '5mb' }));
+
+const authenticateToken = (req, res, next) => {
+  // Permitir todas las peticiones GET excepto ventas y empleados
+  if (req.method === 'GET' && !req.path.startsWith('/api/sales') && !req.path.startsWith('/api/employees')) {
+    return next();
+  }
+  // Permitir rutas de autenticación
+  if (req.path.startsWith('/api/auth/')) {
+    return next();
+  }
+  
+  // Exigir token para todo lo demás
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No autorizado' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(401).json({ error: 'Token inválido' });
+    req.user = user;
+    next();
+  });
+};
+
+// Aplicar middleware a todas las rutas /api/
+app.use('/api', authenticateToken);
 
 // --- API DOCS ---
 app.get('/api/docs', (req, res) => {
@@ -169,22 +205,26 @@ app.post('/api/sales', async (req, res) => {
 });
 
 // --- API AUTH & SETTINGS ---
-app.post('/api/auth/verify-cashier', async (req, res) => {
+app.post('/api/auth/verify-cashier', authLimiter, async (req, res) => {
   try {
     const { employeeId, pin } = req.body;
     const settings = await db.getSettings();
-    if (settings && settings.cashierPin === pin) res.json({ success: true, cashierName: 'Caja Principal' });
-    else res.json({ success: false });
-  } catch (error) { res.status(500).json({ error: 'Error de servidor' }); }
+    if (settings && settings.cashierPin === pin) {
+      const token = jwt.sign({ role: 'cashier', name: 'Caja Principal' }, JWT_SECRET, { expiresIn: '12h' });
+      res.json({ success: true, cashierName: 'Caja Principal', token });
+    } else res.json({ success: false });
+  } catch (error) { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
-app.post('/api/auth/verify-admin', async (req, res) => {
+app.post('/api/auth/verify-admin', authLimiter, async (req, res) => {
   try {
     const { password } = req.body;
     const settings = await db.getSettings();
-    if (settings && settings.adminPassword === password) res.json({ success: true });
-    else res.json({ success: false });
-  } catch (error) { res.status(500).json({ error: 'Error de servidor' }); }
+    if (settings && settings.adminPassword === password) {
+      const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '12h' });
+      res.json({ success: true, token });
+    } else res.json({ success: false });
+  } catch (error) { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 app.get('/api/loyalty/settings', async (req, res) => {
@@ -207,7 +247,13 @@ app.post('/api/developer/upload-file', (req, res) => {
     
     // El payload data suele venir como "data:image/jpeg;base64,/9j/4AAQ..."
     const parts = data.split(';base64,');
-    const ext = fileName.split('.').pop();
+    const ext = fileName.split('.').pop().toLowerCase();
+    
+    // Validación estricta de extensión
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+      return res.status(400).json({ error: 'Formato de archivo no permitido. Use JPG, PNG o WEBP.' });
+    }
+    
     const safeName = `theme_file_${Date.now()}.${ext}`;
     
     const base64Data = parts.length > 1 ? parts[1] : parts[0];
@@ -286,8 +332,26 @@ app.post('/api/developer/settings', async (req, res) => {
 
 app.post('/api/developer/theme', async (req, res) => {
   try {
-    const { activeTheme } = req.body;
+    const { activeTheme, activePresetId } = req.body;
     const current = await db.getSettings();
+    
+    if (activePresetId) {
+      let stylesToApply = null;
+      if (activePresetId.startsWith('default_')) {
+        // We do not save default styles to DB directly to save space, the client will resolve it.
+        await db.updateSettings({ ...current, activePresetId, activeTheme: null });
+        return res.json({ success: true, activePresetId });
+      } else {
+        const customPresets = current.customPresets || [];
+        const preset = customPresets.find(p => p.id === activePresetId);
+        if (preset) {
+          await db.updateSettings({ ...current, activePresetId, activeTheme: preset.styles });
+          return res.json({ success: true, activePresetId, theme: preset.styles });
+        }
+      }
+      return res.status(404).json({ error: 'Preset not found' });
+    }
+
     await db.updateSettings({ ...current, activeTheme });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -304,12 +368,36 @@ app.post('/api/developer/theme/reset', async (req, res) => {
 app.post('/api/developer/preset', async (req, res) => {
   try {
     const { name, styles } = req.body;
+    console.log('--- SAVING NEW PRESET ---');
+    console.log('Preset name:', name);
+    console.log('Received styles:', JSON.stringify(styles).substring(0, 200) + '...');
+    console.log('Contains customCss?', !!styles.customCss);
     const current = await db.getSettings();
     const presets = current.customPresets || [];
     const newPreset = { id: `preset_${Date.now()}`, name, styles };
     presets.push(newPreset);
     await db.updateSettings({ ...current, customPresets: presets });
     res.json({ success: true, preset: newPreset });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+app.put('/api/developer/preset/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, styles } = req.body;
+    const current = await db.getSettings();
+    const presets = current.customPresets || [];
+    
+    const index = presets.findIndex(p => p.id === id);
+    if (index !== -1) {
+      if (name) presets[index].name = name;
+      if (styles) presets[index].styles = styles;
+      await db.updateSettings({ ...current, customPresets: presets });
+      res.json({ success: true, preset: presets[index] });
+    } else {
+      res.status(404).json({ error: 'Preset not found' });
+    }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

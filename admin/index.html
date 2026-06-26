@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sr. Waffle Admin | Panel de Control</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=1782411542514">
   <style>
     body {
       min-height: 100vh;
@@ -238,7 +238,6 @@
     <!-- Sidebar de Navegación Lateral -->
     <aside class="admin-sidebar">
       <div class="logo-container" style="justify-content:center; margin-bottom: 1.5rem;">
-        <div class="logo-waffle-icon"></div>
         <span class="logo-text" style="font-size: 1.2rem; font-family: var(--font-cursive); font-weight: normal;">Sr. Waffle Admin</span>
       </div>
       
@@ -852,14 +851,14 @@
 
       <div style="margin-top: 2rem;">
         <h3 style="margin-bottom: 1rem; color: var(--neon-cyan);">Temas Predeterminados</h3>
-        <div id="themes-default-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+        <div id="themes-default-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
           <!-- Tarjetas generadas por JS -->
         </div>
       </div>
 
       <div style="margin-top: 3rem;">
         <h3 style="margin-bottom: 1rem; color: var(--neon-purple);">Mis Temas Guardados</h3>
-        <div id="themes-custom-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+        <div id="themes-custom-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
           <!-- Tarjetas generadas por JS -->
         </div>
       </div>
@@ -951,6 +950,10 @@
               <span class="dev-slider"></span>
             </label>
             <span style="font-size:1rem; font-weight:700; color:var(--neon-purple);">Carrusel Animado</span>
+          </div>
+          <div class="form-group" style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom: 20px;">
+            <label for="admin-hero-carousel-interval" style="font-size:0.9rem; font-weight:600; color:var(--text-secondary);">Tiempo entre imágenes (segundos):</label>
+            <input type="number" id="admin-hero-carousel-interval" class="form-control" value="4" min="1" max="20" style="width: 80px; background:#181818; border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:0.5rem; text-align:center;">
           </div>
           <div class="form-group">
             <input type="file" id="admin-hero-images-upload" multiple accept="image/*" style="display:none;">
@@ -1156,12 +1159,86 @@
     </div>
   </div>
 
+  <!-- ================= MODAL DE EDICIÓN RÁPIDA DE TEMAS ================= -->
+  <div class="pos-modal-overlay" id="theme-edit-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 600px; padding: 2rem; max-height: 90vh; overflow-y: auto; margin: 2rem auto;">
+      <h2 style="color:var(--neon-cyan); margin-bottom:1rem;" id="theme-edit-title">Editar Tema</h2>
+      <input type="hidden" id="theme-edit-id">
+      
+      <div class="form-group">
+        <label>Nombre del Tema</label>
+        <input type="text" id="theme-edit-name" class="form-control">
+      </div>
+      
+      <h3 style="margin:1.5rem 0 1rem; color:#fff; font-size:1.1rem; border-bottom:1px solid #333; padding-bottom:0.5rem;">Diseño (Layout)</h3>
+      <div class="form-group">
+        <label>Posición del Menú</label>
+        <select id="theme-edit-menu-pos" class="form-control">
+          <option value="sidebar">Barra Lateral (Izquierda)</option>
+          <option value="top">Barra Superior</option>
+          <option value="hidden">Oculto (Botón Desplegable)</option>
+        </select>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div class="form-group">
+          <label>Forma de Botones</label>
+          <select id="theme-edit-btn-shape" class="form-control">
+            <option value="rounded">Redondeados</option>
+            <option value="pill">Píldora</option>
+            <option value="square">Cuadrados</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estilo de Sombras</label>
+          <select id="theme-edit-shadows" class="form-control">
+            <option value="neon">Neón (Brillo)</option>
+            <option value="soft">Suave (Elegante)</option>
+            <option value="none">Sin sombras</option>
+          </select>
+        </div>
+      </div>
+
+      <h3 style="margin:1.5rem 0 1rem; color:#fff; font-size:1.1rem; border-bottom:1px solid #333; padding-bottom:0.5rem;">Colores Principales</h3>
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:15px;" id="theme-edit-colors-container">
+        <!-- Los colores se inyectarán con JS -->
+      </div>
+      
+      <h3 style="margin:1.5rem 0 1rem; color:#fff; font-size:1.1rem; border-bottom:1px solid #333; padding-bottom:0.5rem;">Fondo Principal</h3>
+      <div class="form-group">
+        <label>Subir Imagen de Fondo (Se guardará en el servidor)</label>
+        <input type="file" id="theme-edit-bg-upload" class="form-control" accept="image/*" style="margin-bottom: 0.5rem;">
+        <label>O ingresar URL de Imagen (Dejar vacío para usar los colores planos)</label>
+        <input type="text" id="theme-edit-bg-image" class="form-control" placeholder="Ej: https://... o /uploads/mifondo.jpg">
+      </div>
+
+      <h3 style="margin:1.5rem 0 1rem; color:#fff; font-size:1.1rem; border-bottom:1px solid #333; padding-bottom:0.5rem;">Textos (Portada)</h3>
+      <div class="form-group">
+        <label>Título (Slogan principal)</label>
+        <input type="text" id="theme-edit-text-title" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Banner Animado</label>
+        <input type="text" id="theme-edit-text-banner" class="form-control">
+      </div>
+      
+      <div style="display:flex; gap:15px; margin-top:25px;">
+        <button class="btn-secondary" id="theme-edit-cancel-btn" style="flex:1; padding: 0.9rem 1rem;">Cancelar</button>
+        <button class="btn-primary" id="theme-edit-save-btn" style="flex:1; padding: 0.9rem 1rem;">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+
   <!-- CONTROLADORES JAVASCRIPT -->
-  <script src="/theme-manager.js?v=10"></script>
+  <script src="/theme-manager.js?v=1782406455730"></script>
   <!-- EXTERNAL LIBS -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   
-  <script src="app.js"></script>
+  <script src="app.js?v=1782476133182"></script>
+
+  
 </body>
 </html>

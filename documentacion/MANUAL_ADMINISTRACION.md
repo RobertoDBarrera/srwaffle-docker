@@ -6,21 +6,24 @@ Este documento reúne toda la información técnica necesaria para desplegar, op
 
 ## 🧭 1. Directorio de Acceso (URLs y URIs)
 
-El sistema expone tres portales web independientes a través del servidor Express:
+El sistema expone cuatro portales web independientes a través del servidor Express:
 
 | Interfaz | URI de Acceso | Rol / Destinatarios | Método de Acceso | Clave por Defecto |
 | :--- | :--- | :--- | :--- | :--- |
 | **Web de Clientes** | `/` (ej: `http://localhost:3000/`) | Clientes (armado de waffle en 2D y pedidos de WhatsApp) | Público (Acceso libre) | No aplica |
 | **Caja Registradora POS** | `/caja` (ej: `http://localhost:3000/caja`) | Cajeros (registro rápido de comandas en mostrador) | Bloqueo por PIN Individual | Asignado en Admin |
+| **Pantalla de Cocina KDS** | `/cocina` (ej: `http://localhost:3000/cocina`) | Cocineros (gestión visual de tickets y tiempos de preparación) | Bloqueo por PIN Individual | Asignado en Admin |
 | **Panel de Administración** | `/admin` (ej: `http://localhost:3000/admin`) | Propietarios y Administradores (inventario, CRUDs, métricas y CSV) | Bloqueo por Contraseña | **`admin`** |
 
 ---
 
-## 🔒 2. Seguridad y Credenciales
+## 🔒 2. Seguridad y Credenciales (Autenticación JWT)
 
-El control de accesos se valida en el backend mediante consultas seguras a la base de datos:
+El control de accesos se valida en el backend mediante consultas seguras a la base de datos y la emisión de tokens JWT:
 *   **Modificación de claves:** El administrador puede cambiar la contraseña general de administración desde la pestaña **Seguridad**, y gestionar los PINs individuales de acceso para cada cajero/cocinero desde la pestaña **Empleados**.
-*   **Persistencia:** Las credenciales se almacenan de forma segura en la tabla `settings` (o en `settings.json` en modo emulación).
+*   **Tokens (JWT):** Al iniciar sesión correctamente (tanto en el panel de Administración como en la Caja), el servidor genera un `JSON Web Token` (JWT). Este token se almacena en el `sessionStorage` del navegador y es requerido para todas las operaciones (POST, PUT, DELETE y lecturas sensibles) con la API.
+*   **Limitación de Tasa (Rate Limiting):** El servidor implementa un límite de peticiones (Rate Limiting) en las rutas de validación de PIN/Contraseña para evitar ataques de fuerza bruta.
+*   **Persistencia:** Las credenciales subyacentes se almacenan de forma segura en la tabla `settings` (o en `settings.json` en modo emulación).
 
 ---
 
@@ -172,7 +175,7 @@ Para realizar conciliaciones de caja o analizar periodos específicos:
 
 ## 🙋‍♂️ 6. Módulo de Ayuda Interactiva Integrado (User Onboarding)
 
-Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin fricciones, se ha integrado un **sistema de ayuda interactiva** en los tres portales web de la aplicación. Para evitar la contaminación visual del diseño y el solapamiento con otros botones importantes de control, los accesos se ubicaron estratégicamente de la siguiente forma:
+Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin fricciones, se ha integrado un **sistema de ayuda interactiva** en los cuatro portales web de la aplicación. Para evitar la contaminación visual del diseño y el solapamiento con otros botones importantes de control, los accesos se ubicaron estratégicamente de la siguiente forma:
 
 1. **Web de Clientes (`/`):** 
    - **Acceso:** Ubicado en la barra de navegación del encabezado (como un enlace neon morado destacado: `Ayuda ❓`).
@@ -192,3 +195,15 @@ Para garantizar que los usuarios puedan utilizar el sistema con confianza y sin 
 
 Cada una de estas opciones abre un modal translúcido con efecto glassmorphism (`backdrop-filter: blur`) que se integra de manera armónica al estilo cyberpunk de la aplicación.
 
+---
+
+## 🎨 7. Modo Desarrollador y Editor de Temas
+
+El administrador dispone de herramientas exclusivas para el branding y la personalización gráfica avanzada de todas las pantallas del sistema:
+1. **Modo Desarrollador:** Se puede activar desde la pestaña de Configuración. Esto habilita el menú **Temas Visuales** y permite inyectar Custom CSS al instante.
+2. **Theme Builder / Editor de Temas:** Una vez habilitado el Modo Desarrollador, la página principal y el panel de administración muestran un widget flotante con el icono de una paleta (🎨).
+3. **Personalización en Tiempo Real:** 
+   - Cambiar colores hexadecimales de las variables de fondo (Primario, Secundario, Terciario), tarjeta, encabezado, etc.
+   - Ajustar los colores de los resplandores neón (Morado, Rosa, Cian, Amarillo, Rojo).
+   - Configurar la imagen de fondo subiendo una directamente al servidor (sólo admite formatos `.jpg`, `.jpeg`, `.png`, `.webp` por seguridad).
+4. **Presets:** Una vez editado un tema, se puede guardar bajo un "Nombre de Preset" personalizado. Los presets pueden ser compartidos o clonados y se almacenan internamente en la Base de Datos para que persistan de manera global en todos los dispositivos conectados.

@@ -49,7 +49,8 @@ El dueño tiene acceso a un Panel de Administración (`/admin`) protegido cripto
 ## 📱 4. Personalización sin necesidad de programadores
 El dueño es dueño del sistema. No necesita llamar a un técnico para adaptar el local.
 *   **Cambio de Precios Instantáneo:** ¿Aumentó la harina? Con un clic, actualizas el precio de tu Masa y el cambio se refleja en la Caja y en el Catálogo web al instante.
+*   **Theme Builder Dinámico (Editor de Temas):** Cambia el color principal de la marca, los resplandores neón y el fondo de pantalla en vivo. Puedes guardar tus combinaciones de colores como "Presets" y alternar la apariencia de todo el local comercial (cajas, menú, paneles) de acuerdo a la temporada sin programar ni una sola línea de código.
 *   **Tu propia App:** Sube el logo de tu negocio, cambia las fotos promocionales y actualiza tu número de WhatsApp directamente desde el panel de control. El ecosistema tomará tu marca al 100%.
-*   **Nube Persistente de Imágenes:** Cuando subes fotos de tus deliciosos waffles o bebidas, el sistema las guarda de manera permanente. Aunque haya actualizaciones del servidor, nunca perderás tu valiosa galería visual.
+*   **Nube Persistente de Imágenes:** Cuando subes fotos de tus deliciosos waffles o fondos personalizados, el sistema las guarda de manera permanente. Aunque haya actualizaciones del servidor, nunca perderás tu valiosa galería visual.
 
 > En resumen, **Sr. Waffle** elimina el estrés operativo. El cajero se concentra en sonreír, el cocinero en preparar, el cliente en disfrutar la experiencia interactiva, y el dueño en ver crecer sus métricas.

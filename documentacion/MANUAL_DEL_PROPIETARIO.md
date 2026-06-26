@@ -2,10 +2,11 @@
 
 ¡Bienvenido al sistema integral de Sr. Waffle! Este documento es tu biblia operativa. Aquí aprenderás **paso a paso** cómo utilizar el 100% de las funciones del sistema. Cualquier usuario nuevo que lea esta guía podrá administrar, operar y entender el negocio sin conocimientos técnicos.
 
-El sistema se divide en tres partes operativas principales:
-1. **La Caja Registradora (POS):** Donde cobras y atiendes.
-2. **La Pantalla de Cocina (KDS):** Donde preparan los pedidos.
-3. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
+El sistema se divide en cuatro partes operativas principales:
+1. **App Cliente (Web Pública):** Donde tus clientes ven el menú y arman sus pedidos.
+2. **La Caja Registradora (POS):** Donde cobras y atiendes.
+3. **La Pantalla de Cocina (KDS):** Donde preparan los pedidos.
+4. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
 
 ---
 
@@ -120,14 +121,52 @@ Aquí decides qué productos vas a poner a la venta para que tus cajeros los pue
 - Ponles su Nombre, asígnales un **PIN numérico de 4 dígitos** (para que nadie más pueda usar su usuario) y elige su **Rol** (Cajero o Cocinero).
 - Si un empleado se va de la empresa, búscalo en la lista y presiona el ícono de **Tacho de basura** para revocarle el acceso.
 
-### 3.9 Seguridad
+### 3.9 Seguridad y Control de Sesiones
 - Es el lugar más sensible. Aquí cambias la **Contraseña Maestra** que utilizas para entrar a este panel `/admin`. 
 - Ingresa tu contraseña actual y escribe una nueva. ¡No la olvides!
+- **Sesiones Automáticas:** Por tu seguridad, si tú o tus cajeros dejan el sistema inactivo, el sistema cerrará la sesión de forma automática y volverá a pedir la contraseña o PIN.
+- **Defensa Activa:** Si alguien intenta adivinar tu contraseña ingresando claves incorrectas más de 20 veces, el sistema bloqueará temporalmente el acceso para proteger tu negocio.
 
-### 3.10 Módulo Dev (Herramientas Técnicas)
-*Sección para casos extremos o soporte técnico.*
+### 3.10 Temas Visuales (Branding)
+*Aparece solo si activaste el "Modo Desarrollador" en la pestaña de Opciones Configurables.*
+- Te permite gestionar los "Presets" (Temas) de tu aplicación. 
+- Puedes clonar temas existentes, borrarlos o aplicar un tema diferente a todas las pantallas.
+
+### 3.11 Módulo Dev (Herramientas Técnicas)
+*Aparece solo si activaste el "Modo Desarrollador". Sección para casos extremos o soporte técnico.*
 - Te permite resetear toda la base de datos para empezar de cero (cuidado, esto borra todas tus ventas).
 - Te permite inyectar ventas falsas de prueba si estás haciendo simulacros de entrenamiento con tu personal.
+
+---
+
+## 📱 PARTE 4: App Cliente (Web Pública)
+Esta es la cara visible de tu negocio. Tus clientes ingresan desde sus celulares (yendo a `/`) y no necesitan ninguna contraseña.
+
+### 4.1 Menú Digital y Armado de Waffle
+- **Catálogo:** Los clientes pueden deslizar para ver fotos reales de tus Waffles Especiales y Bebidas, junto a su precio.
+- **Armador Interactivo:** Si tocan "Armá tu Waffle", un asistente los guiará para elegir Masa, Toppings, Salsas y Helados. Mientras eligen, verán un dibujo 2D armándose en tiempo real.
+- **Pedido por WhatsApp:** Al terminar, el sistema genera automáticamente un mensaje estructurado y abre WhatsApp para enviarlo al número de tu local.
+
+### 4.2 Rastreador de Pedidos
+- Arriba de todo, el cliente verá un botón "Rastrear Pedido".
+- Ahí pueden escribir el **Código de Rastreo de 4 dígitos** que el cajero les dio en el mostrador. 
+- El sistema les dirá al instante si su waffle está "Pendiente", "En Preparación" o "Listo".
+
+---
+
+## 🎨 PARTE 5: Editor de Temas (Theme Builder)
+¿Te aburriste de los colores actuales? Como propietario, tienes el poder de rediseñar tu aplicación en tiempo real sin llamar a un programador.
+
+### 5.1 Cómo activar el Editor
+1. Ve a la pestaña **Opciones Configurables** en tu panel de Administración y marca la casilla **"Activar Modo Desarrollador"**.
+2. A partir de ese momento, verás flotando en la pantalla un ícono circular azul de una paleta de pintor (🎨).
+
+### 5.2 Modificar Colores y Fondos
+1. Haz clic en la paleta flotante para abrir el **Theme Builder**.
+2. **Colores Base:** Cambia el color de fondo primario, el color de las tarjetas, etc., haciendo clic en los cuadritos de color.
+3. **Resplandores Neón:** Ajusta la intensidad y el tono del Morado, Rosa o Cian.
+4. **Fondo de Pantalla:** En la sección "Imagen de Fondo", puedes subir una foto (JPG, PNG) directamente desde tu computadora. ¡Tu fondo cambiará al instante!
+5. **Guardar Preset:** Si te gusta cómo quedó, escribe un nombre abajo (ej. "Tema Verano") y presiona **Guardar Preset**. Tu diseño quedará guardado para siempre en la base de datos.
 
 ---
 

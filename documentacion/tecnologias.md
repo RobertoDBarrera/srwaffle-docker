@@ -12,8 +12,11 @@ El backend se ha desarrollado como un servidor ligero en **Node.js** enfocado en
 *   **Framework Web:** [Express.js](https://expressjs.com/) (v4.19.2)
     *   Utilizado para servir el contenido estático de las interfaces de cliente, caja y administración.
     *   Provee los endpoints de la API REST que gestionan las consultas de menú, stock, historial y seguridad.
-    *   Configurado con un límite extendido de payload (`50mb`) para permitir la transferencia directa de imágenes serializadas en JSON.
-*   **Middleware:** [CORS](https://www.npmjs.com/package/cors) (v2.8.5) para permitir solicitudes de recursos cruzados de manera segura en entornos locales.
+    *   Configurado con un límite de payload de `5mb` (para prevenir ataques DoS de cargas masivas) permitiendo transferencias ágiles.
+*   **Middleware y Seguridad:**
+    *   [CORS](https://www.npmjs.com/package/cors) (v2.8.5) para permitir solicitudes de recursos cruzados.
+    *   [JSON Web Tokens (JWT)](https://www.npmjs.com/package/jsonwebtoken) para autenticación basada en tokens sin estado (Stateless Auth) en todas las rutas privadas.
+    *   [Express Rate Limit](https://www.npmjs.com/package/express-rate-limit) para mitigar y prevenir ataques de fuerza bruta limitando los intentos de inicio de sesión de caja y administración.
 *   **Persistencia de Datos (PostgreSQL con Emulación Local):**
     *   Migrada de archivos locales JSON a una base de datos relacional **PostgreSQL** para garantizar la escalabilidad, la integridad de los datos y la preparación para despliegues en la nube.
     *   **Capa de Emulación Local Integrada:** Si no se detecta una conexión activa a PostgreSQL en el puerto configurado (o si falta `DATABASE_URL` en `.env`), el backend inicia de forma automática en modo de **emulación local**, redirigiendo transparentemente las operaciones DDL, CRUD y transaccionales a archivos JSON locales en `/data`. Esto elimina la necesidad de configurar bases de datos para desarrollo y pruebas en local.
@@ -32,7 +35,7 @@ El backend se ha desarrollado como un servidor ligero en **Node.js** enfocado en
 
 ## 🎨 2. Frontend y Experiencia de Usuario (UX/UI)
 
-El frontend se divide en tres portales independientes de diseño responsivo y estética neo-retro/cyberpunk con luces de neón en morado y cian. Toda la interfaz se construyó de manera nativa sin frameworks pesados, garantizando un tiempo de carga inmediato y total compatibilidad.
+El frontend se divide en cuatro portales independientes de diseño responsivo y estética neo-retro/cyberpunk con luces de neón en morado y cian. Toda la interfaz se construyó de manera nativa sin frameworks pesados, garantizando un tiempo de carga inmediato y total compatibilidad.
 
 ### A) Web Pública de Clientes (`/`)
 *   **HTML5:** Estructura semántica moderna e interactiva.
@@ -48,7 +51,12 @@ El frontend se divide en tres portales independientes de diseño responsivo y es
 *   **Seguridad:** Pantalla de bloqueo integrada a nivel de interfaz que se autentica consumiendo el endpoint `/api/auth/verify-cashier` del servidor.
 *   **Características:** Carrito de compras local (comanda) que soporta waffles personalizados y de carta con cálculo dinámico de subtotales, método de pago y envío directo al registro central de transacciones.
 
-### C) Módulo de Administración (`/admin`)
+### C) Módulo de Pantalla de Cocina (KDS) (`/cocina`)
+*   **Objetivo:** Gestión visual de tickets en preparación para los cocineros.
+*   **Seguridad:** Autenticación por PIN (`/api/auth/verify-kitchen`) generando un JWT.
+*   **Características:** Tablero estilo Kanban (Recibidos, Preparando, Listos) con alertas intermitentes automáticas para pedidos demorados y notificaciones sonoras.
+
+### D) Módulo de Administración (`/admin`)
 *   **Objetivo:** Dashboard centralizado para gerencia e inventario.
 *   **Autenticación:** Bloqueo de seguridad que requiere contraseña validada mediante `/api/auth/verify-admin`.
 *   **Características Especiales:**

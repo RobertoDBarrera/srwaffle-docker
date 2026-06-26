@@ -1,32 +1,27 @@
 const fs = require('fs');
-let html = fs.readFileSync('admin/index.html', 'utf8');
-const viewPanelStr = `
-    <!-- ================= VISTA: TEMAS (GALERIA) ================= -->
-    <div class="admin-view-panel" id="admin-view-themes" style="display: none;">
-      <div class="header-actions">
-        <h2>Galería de Temas 🎨</h2>
-        <p style="color:var(--text-secondary); margin-top:5px; font-size:0.9rem;">Selecciona un tema para aplicarlo a toda la aplicación. Usa el Módulo Dev para crear nuevos temas.</p>
-      </div>
 
-      <div style="margin-top: 2rem;">
-        <h3 style="margin-bottom: 1rem; color: var(--neon-cyan);">Temas Predeterminados</h3>
-        <div id="themes-default-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-          <!-- Tarjetas generadas por JS -->
-        </div>
-      </div>
+let adminHtml = fs.readFileSync('admin/index.html', 'utf8');
 
-      <div style="margin-top: 3rem;">
-        <h3 style="margin-bottom: 1rem; color: var(--neon-purple);">Mis Temas Guardados</h3>
-        <div id="themes-custom-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-          <!-- Tarjetas generadas por JS -->
-        </div>
-      </div>
-    </div>
-`;
-if (!html.includes('id="admin-view-themes"')) {
-  html = html.replace('<!-- ================= VISTA 7: COMPANY DETAILS ================= -->', viewPanelStr + '\n    <!-- ================= VISTA 7: COMPANY DETAILS ================= -->');
-  fs.writeFileSync('admin/index.html', html);
-  console.log('Fixed admin-view-themes missing panel.');
+if (!adminHtml.includes('admin-hero-carousel-interval')) {
+  const insertHtml = `
+          <div class="form-group" style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom: 20px;">
+            <label for="admin-hero-carousel-interval" style="font-size:0.9rem; font-weight:600; color:var(--text-secondary);">Tiempo entre imágenes (segundos):</label>
+            <input type="number" id="admin-hero-carousel-interval" class="form-control" value="4" min="1" max="20" style="width: 80px; background:#181818; border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:0.5rem; text-align:center;">
+          </div>`;
+          
+  const targetStr = `<span style="font-size:1rem; font-weight:700; color:var(--neon-purple);">Carrusel Animado</span>
+          </div>`;
+          
+  if (adminHtml.includes(targetStr)) {
+    adminHtml = adminHtml.replace(
+      targetStr,
+      targetStr + insertHtml
+    );
+    fs.writeFileSync('admin/index.html', adminHtml);
+    console.log('Successfully patched admin/index.html');
+  } else {
+    console.log('Target string not found in admin/index.html');
+  }
 } else {
-  console.log('Panel already exists.');
+  console.log('Already patched');
 }

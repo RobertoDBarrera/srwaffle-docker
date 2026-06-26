@@ -27,6 +27,55 @@
   ];
 
   const PRESETS = {
+    argentina: {
+      name: 'Argentina Mundial ⭐⭐⭐',
+      styles: {
+        colors: {
+          '--bg-primary': '#ffffff',
+          '--bg-secondary': '#e6f2ff',
+          '--bg-tertiary': '#cce6ff',
+          '--bg-card-raw': '#ffffff',
+          '--bg-header-raw': '#74acdf',
+          '--bg-footer': '#ffffff',
+          '--neon-purple': '#74acdf',
+          '--neon-pink': '#f6b40e',
+          '--neon-cyan': '#1a1a1a',
+          '--neon-yellow': '#d4af37',
+          '--neon-red': '#e63946',
+          '--text-primary': '#1a1a1a',
+          '--text-secondary': '#4a4a4a'
+        },
+        layout: { buttonShape: 'pill', shadows: 'soft', menuPos: 'top' },
+        texts: {
+          publicTitle: '¡Vamos Argentina! ⭐️⭐️⭐️',
+          publicBanner: 'Disfrutá tu waffle como un Campeón del Mundo 🏆'
+        },
+        customCss: `
+body.is-client-page {
+  background: linear-gradient(135deg, rgba(116, 172, 223, 0.1) 0%, #ffffff 50%, rgba(116, 172, 223, 0.1) 100%);
+}
+body.is-client-page header {
+  border-bottom: 3px solid #f6b40e;
+}
+body.is-client-page .hero-title {
+  color: #74acdf;
+  text-shadow: 2px 2px 0px #1a1a1a, 4px 4px 0px #f6b40e;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+body.is-client-page .neon-slogan {
+  background-color: #f6b40e;
+  color: #1a1a1a;
+  border-radius: 20px;
+  padding: 5px 15px;
+  font-weight: bold;
+}
+body.is-client-page .waffle-card {
+  border: 2px solid #74acdf;
+}
+        `
+      }
+    },
     cyberpunk: {
       name: 'Cyberpunk 🌐',
       styles: {
@@ -71,6 +120,8 @@
     }
   };
 
+  window.SrWafflePresets = PRESETS;
+
   function hexToRgba(hex, alpha) {
     if (!hex || hex[0] !== '#') return `rgba(255, 255, 255, ${alpha})`;
     const r = parseInt(hex.slice(1, 3), 16);
@@ -100,15 +151,27 @@
     // 1. Colores
     if (styles.colors) {
       currentColors = { ...styles.colors };
+      
+      let varsStyleEl = document.getElementById('theme-vars-style');
+      if (!varsStyleEl) {
+        varsStyleEl = document.createElement('style');
+        varsStyleEl.id = 'theme-vars-style';
+        document.head.appendChild(varsStyleEl);
+      }
+      
+      let cssVars = 'body.is-client-page {\n';
       Object.entries(styles.colors).forEach(([variable, value]) => {
         if (!value) return;
-        document.documentElement.style.setProperty(variable, value);
-        if (variable === '--neon-purple') document.documentElement.style.setProperty('--neon-purple-glow', hexToRgba(value, 0.5));
-        if (variable === '--neon-pink') document.documentElement.style.setProperty('--neon-pink-glow', hexToRgba(value, 0.5));
-        if (variable === '--neon-cyan') document.documentElement.style.setProperty('--neon-cyan-glow', hexToRgba(value, 0.4));
-        if (variable === '--neon-yellow') document.documentElement.style.setProperty('--neon-yellow-glow', hexToRgba(value, 0.4));
-        if (variable === '--neon-red') document.documentElement.style.setProperty('--neon-red-glow', hexToRgba(value, 0.4));
+        cssVars += `  ${variable}: ${value} !important;\n`;
+        if (variable === '--neon-purple') cssVars += `  --neon-purple-glow: ${hexToRgba(value, 0.5)} !important;\n`;
+        if (variable === '--neon-pink') cssVars += `  --neon-pink-glow: ${hexToRgba(value, 0.5)} !important;\n`;
+        if (variable === '--neon-cyan') cssVars += `  --neon-cyan-glow: ${hexToRgba(value, 0.4)} !important;\n`;
+        if (variable === '--neon-yellow') cssVars += `  --neon-yellow-glow: ${hexToRgba(value, 0.4)} !important;\n`;
+        if (variable === '--neon-red') cssVars += `  --neon-red-glow: ${hexToRgba(value, 0.4)} !important;\n`;
       });
+        if (styles.colors['--btn-text-color']) cssVars += `  --btn-text-color: ${styles.colors['--btn-text-color']} !important;\n`;
+      cssVars += '}';
+      varsStyleEl.textContent = cssVars;
     }
 
     // 2. Imagen de Fondo
@@ -128,10 +191,10 @@
     if (styles.texts) {
       currentTexts = { ...styles.texts };
       if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        const titleEl = document.querySelector('.hero-title, h1:not(.section-title)'); // Evitar h1 del admin si lo hubiera
-        if (titleEl && styles.texts.title) titleEl.innerText = styles.texts.title;
-        const bannerEl = document.querySelector('.neon-slogan, .hero-badge');
-        if (bannerEl && styles.texts.banner) bannerEl.innerHTML = styles.texts.banner.replace(/\n/g, '<br>');
+        const titleEl = document.querySelector('.neon-slogan'); // Evitar h1 del admin si lo hubiera
+        if (titleEl && styles.texts.publicTitle) titleEl.innerHTML = styles.texts.publicTitle.replace(/\n/g, '<br>');
+        const bannerEl = document.querySelector('.hero-badge');
+        if (bannerEl && styles.texts.publicBanner) bannerEl.innerHTML = styles.texts.publicBanner.replace(/\n/g, '<br>');
       }
     }
 

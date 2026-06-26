@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             images[currentHeroIdx].style.opacity = '0';
             currentHeroIdx = (currentHeroIdx + 1) % images.length;
             images[currentHeroIdx].style.opacity = '1';
-          }, 4000);
+          }, companyInfo.heroCarouselInterval || 4000);
         }
       }
 

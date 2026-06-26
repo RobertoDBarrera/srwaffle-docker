@@ -1,4 +1,25 @@
 // Lógica del Módulo de Administración - Sr. Waffle (Backoffice)
+
+// --- INTERCEPTOR DE FETCH PARA JWT ---
+const originalFetch = window.fetch;
+window.fetch = async function() {
+  let [resource, config] = arguments;
+  if(config === undefined) { config = {}; }
+  if(config.headers === undefined) { config.headers = {}; }
+  const token = sessionStorage.getItem('admin_jwt_token');
+  if(token) { config.headers['Authorization'] = 'Bearer ' + token; }
+  
+  const response = await originalFetch(resource, config);
+  if (response.status === 401 && resource !== '/api/auth/verify-admin') {
+    // Token expirado o inválido
+    sessionStorage.removeItem('admin_authenticated');
+    sessionStorage.removeItem('admin_jwt_token');
+    document.getElementById('admin-login-overlay').style.display = 'flex';
+    showToast('Sesión cerrada');
+  }
+  return response;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   // --- INICIALIZACIÓN DE ESTADO ---
   let stock = {};
@@ -44,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
       toast.classList.remove('active');
     }, 3000);
   };
+  window.showToast = showToast;
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
@@ -108,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.success) {
         sessionStorage.setItem('admin_authenticated', 'true');
+        sessionStorage.setItem('admin_jwt_token', data.token);
         loginOverlay.style.display = 'none';
         showToast('Sesión administrativa iniciada');
         passwordInput.value = '';
@@ -129,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cerrar Sesión
   document.getElementById('admin-logout').addEventListener('click', () => {
     sessionStorage.removeItem('admin_authenticated');
+    sessionStorage.removeItem('admin_jwt_token');
     loginOverlay.style.display = 'flex';
   });
 
@@ -1954,6 +1978,8 @@ document.addEventListener('DOMContentLoaded', () => {
       window.currentHeroImages = data.heroImages || [];
       const carouselToggle = document.getElementById('admin-hero-carousel-toggle');
       if (carouselToggle) carouselToggle.checked = !!data.heroCarouselEnabled;
+      const carouselInterval = document.getElementById('admin-hero-carousel-interval');
+      if (carouselInterval) carouselInterval.value = data.heroCarouselInterval ? data.heroCarouselInterval / 1000 : 4;
       renderHeroPreviews();
 
       // Cargar settings de Mapa
@@ -2157,6 +2183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const heroPreviewContainer = document.getElementById('admin-hero-images-preview');
   const heroSaveBtn = document.getElementById('admin-hero-save-btn');
   const heroCarouselToggle = document.getElementById('admin-hero-carousel-toggle');
+  const heroCarouselInterval = document.getElementById('admin-hero-carousel-interval');
 
   if (heroUploadBtn) {
     heroUploadBtn.onclick = () => heroUploadInput.click();
@@ -2207,7 +2234,8 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const payload = {
           heroImages: window.currentHeroImages,
-          heroCarouselEnabled: heroCarouselToggle ? heroCarouselToggle.checked : false
+          heroCarouselEnabled: heroCarouselToggle ? heroCarouselToggle.checked : false,
+          heroCarouselInterval: heroCarouselInterval ? parseInt(heroCarouselInterval.value) * 1000 : 4000
         };
         const res = await fetch('/api/company/info', {
           method: 'POST',
@@ -2504,13 +2532,18 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch('/api/developer/settings');
       const data = await res.json() || {};
-      
       const customPresets = data.customPresets || [];
       
-      const defaultPresets = [
-        { id: 'default_cyberpunk', name: 'Cyberpunk 🌐', isDefault: true },
-        { id: 'default_sunset', name: 'Retro Sunset 🌅', isDefault: true }
-      ];
+      const defaultPresets = [];
+      if (window.SrWafflePresets) {
+        for (const key in window.SrWafflePresets) {
+          defaultPresets.push({
+            id: 'default_' + key,
+            name: window.SrWafflePresets[key].name,
+            isDefault: true
+          });
+        }
+      }
       
       const renderGrid = (containerId, items) => {
         const container = document.getElementById(containerId);
@@ -2520,8 +2553,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const card = document.createElement('div');
           card.style.cssText = 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 1rem;';
           card.innerHTML = `
-            <h4 style="margin: 0; color: #fff;">${preset.name}</h4>
-            <button class="btn-primary" style="margin-top: auto;" onclick="window.applyThemePreset('${preset.id}')">Activar Tema</button>
+            <div class="pos-waffle-card" style="display:flex; flex-direction:column;">
+              <h4 style="margin: 0; color: #fff;">${preset.name}</h4>
+              <div style="display:flex; gap: 8px; margin-top: auto;">
+                <button class="btn-secondary" style="flex:1; padding: 0.5rem 0.2rem; font-size: 0.8rem;" onclick="window.editThemePreset('${preset.id}')">${preset.id.startsWith('default_') ? 'Clonar' : 'Editar'}</button>
+                <button class="btn-primary" style="flex:1; padding: 0.5rem 0.2rem; font-size: 0.8rem;" onclick="window.applyThemePreset('${preset.id}')">Activar</button>
+                ${!preset.id.startsWith('default_') ? `<button type="button" class="btn-secondary" style="flex: 0 0 60px; background:rgba(220,53,69,0.2); border-color:#dc3545; padding: 0.5rem; display:flex; justify-content:center; align-items:center;" onclick="event.preventDefault(); event.stopPropagation(); console.log('Botón borrar presionado'); window.deleteThemePreset('${preset.id}')"><span style="font-size:0.8rem; font-weight:bold; color:#ff4444;">BORRAR</span></button>` : ''}
+              </div>
+            </div>
           `;
           container.appendChild(card);
         });
@@ -2536,6 +2575,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  window.deleteThemePreset = async (presetId) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:99999; display:flex; justify-content:center; align-items:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#1a1a1a; padding:2rem; border-radius:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);';
+    box.innerHTML = `
+      <h3 style="color:#fff; margin-bottom:1rem;">¿Borrar tema personalizado?</h3>
+      <p style="color:#ccc; margin-bottom:2rem;">Esta acción no se puede deshacer.</p>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button id="btn-cancel-delete" class="btn-secondary">Cancelar</button>
+        <button id="btn-confirm-delete" class="btn-primary" style="background:#dc3545; border-color:#dc3545;">Sí, Borrar</button>
+      </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById('btn-cancel-delete').onclick = () => overlay.remove();
+    document.getElementById('btn-confirm-delete').onclick = async () => {
+      overlay.remove();
+      try {
+        const res = await fetch(`/api/developer/preset/${presetId}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Tema borrado con éxito');
+          loadThemesGallery();
+        } else {
+          showToast('Error al borrar', true);
+        }
+      } catch(e) {
+        console.error(e);
+        showToast('Error de red', true);
+      }
+    };
+  };
+
   window.applyThemePreset = async (presetId) => {
     try {
       const res = await fetch('/api/developer/settings');
@@ -2543,11 +2616,9 @@ document.addEventListener('DOMContentLoaded', () => {
       
       let stylesToApply = null;
       if (presetId.startsWith('default_')) {
-        // Fallback for defaults
-        if (presetId === 'default_cyberpunk') {
-          stylesToApply = { colors: { '--bg-primary': '#121212', '--neon-purple': '#9d4edd', '--neon-pink': '#ff007f', '--neon-cyan': '#00f5d4', '--neon-yellow': '#fee440' }, layout: { buttonShape: 'rounded', shadows: 'neon' } };
-        } else if (presetId === 'default_sunset') {
-          stylesToApply = { colors: { '--bg-primary': '#1a0826', '--neon-purple': '#f72585', '--neon-pink': '#b5179e', '--neon-cyan': '#4cc9f0', '--neon-yellow': '#ffbe0b' }, layout: { buttonShape: 'rounded', shadows: 'neon' } };
+        const key = presetId.replace('default_', '');
+        if (window.SrWafflePresets && window.SrWafflePresets[key]) {
+          stylesToApply = window.SrWafflePresets[key].styles;
         }
       } else {
         const customPresets = data.customPresets || [];
@@ -2557,7 +2628,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (!stylesToApply) return showToast('Tema no encontrado', true);
       
-      // Save as active theme
       const saveRes = await fetch('/api/developer/theme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2575,5 +2645,207 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Error de red', true);
     }
   };
+
+});
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+  // --- EDICIÓN DE TEMAS ---
+  const COLOR_VARIABLES_ADMIN = [
+    { varName: '--bg-primary', label: 'Fondo Principal' },
+    { varName: '--bg-secondary', label: 'Fondo Secundario' },
+    { varName: '--bg-card-raw', label: 'Fondo de Tarjetas' },
+    { varName: '--bg-header-raw', label: 'Color de Cabecera' },
+    { varName: '--neon-purple', label: 'Acento Principal (Púrpura)' },
+    { varName: '--neon-pink', label: 'Acento Sec. (Rosa)' },
+    { varName: '--neon-cyan', label: 'Acento (Cian)' },
+    { varName: '--neon-yellow', label: 'Acento (Amarillo)' },
+    { varName: '--text-primary', label: 'Texto Principal' },
+    { varName: '--text-secondary', label: 'Texto Secundario' },
+    { varName: '--btn-text-color', label: 'Texto de Botones' }
+  ];
+
+  let currentEditingThemeId = null;
+  let isEditingDefaultTheme = false;
+  let currentEditingThemeCustomCss = '';
+  let currentEditingThemeBgImage = '';
+
+  const editModal = document.getElementById('theme-edit-modal');
+  const colorsContainer = document.getElementById('theme-edit-colors-container');
+
+  if (colorsContainer) {
+    COLOR_VARIABLES_ADMIN.forEach(color => {
+      const div = document.createElement('div');
+      div.className = 'form-group';
+      div.innerHTML = `
+        <label>${color.label}</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="color" id="theme-edit-color-${color.varName}" style="width:40px; height:40px; border:none; border-radius:4px; cursor:pointer; background:none;">
+          <input type="text" id="theme-edit-hex-${color.varName}" class="form-control" style="flex:1;" placeholder="#000000">
+        </div>
+      `;
+      colorsContainer.appendChild(div);
+
+      // Sync color and hex inputs
+      const colorInput = div.querySelector('input[type="color"]');
+      const hexInput = div.querySelector('input[type="text"]');
+      colorInput.addEventListener('input', (e) => hexInput.value = e.target.value);
+      hexInput.addEventListener('input', (e) => {
+        if (/^#[0-9A-F]{6}$/i.test(e.target.value)) colorInput.value = e.target.value;
+      });
+    });
+  }
+
+  window.editThemePreset = async (presetId) => {
+    try {
+      const res = await fetch('/api/developer/settings');
+      const data = await res.json() || {};
+      
+      let themeData = null;
+      isEditingDefaultTheme = false;
+      
+      if (presetId.startsWith('default_')) {
+        const key = presetId.replace('default_', '');
+        if (window.SrWafflePresets && window.SrWafflePresets[key]) {
+          themeData = JSON.parse(JSON.stringify(window.SrWafflePresets[key]));
+          isEditingDefaultTheme = true;
+        }
+      } else {
+        const customPresets = data.customPresets || [];
+        themeData = customPresets.find(p => p.id === presetId);
+      }
+      
+      if (!themeData) return showToast('Tema no encontrado para editar', true);
+
+      currentEditingThemeId = presetId;
+      currentEditingThemeCustomCss = themeData.styles?.customCss || '';
+      currentEditingThemeBgImage = themeData.styles?.bgImage || '';
+      
+      document.getElementById('theme-edit-name').value = themeData.name + (isEditingDefaultTheme ? ' (Copia)' : '');
+      document.getElementById('theme-edit-menu-pos').value = themeData.styles?.layout?.menuPos || 'sidebar';
+      document.getElementById('theme-edit-btn-shape').value = themeData.styles?.layout?.buttonShape || 'rounded';
+      document.getElementById('theme-edit-shadows').value = themeData.styles?.layout?.shadows || 'neon';
+      
+      document.getElementById('theme-edit-text-title').value = themeData.styles?.texts?.publicTitle || '';
+      document.getElementById('theme-edit-text-banner').value = themeData.styles?.texts?.publicBanner || '';
+      
+      if (document.getElementById('theme-edit-bg-image')) {
+        document.getElementById('theme-edit-bg-image').value = themeData.styles?.bgImage || '';
+      }
+
+      const colors = themeData.styles?.colors || {};
+      COLOR_VARIABLES_ADMIN.forEach(color => {
+        const val = colors[color.varName] || '#000000';
+        document.getElementById(`theme-edit-color-${color.varName}`).value = val;
+        document.getElementById(`theme-edit-hex-${color.varName}`).value = val;
+      });
+
+      editModal.style.display = 'flex';
+    } catch (e) {
+      console.error(e);
+      showToast('Error al cargar datos del tema', true);
+    }
+  };
+
+  if (document.getElementById('theme-edit-cancel-btn')) {
+    document.getElementById('theme-edit-cancel-btn').addEventListener('click', () => {
+      editModal.style.display = 'none';
+    });
+  }
+
+  if (document.getElementById('theme-edit-save-btn')) {
+    document.getElementById('theme-edit-save-btn').addEventListener('click', async () => {
+      const name = document.getElementById('theme-edit-name').value;
+      if (!name) return showToast('El nombre es obligatorio', true);
+
+      // Collect styles
+      const colors = {};
+      COLOR_VARIABLES_ADMIN.forEach(color => {
+        colors[color.varName] = document.getElementById(`theme-edit-hex-${color.varName}`).value;
+      });
+
+      const layout = {
+        menuPos: document.getElementById('theme-edit-menu-pos').value,
+        buttonShape: document.getElementById('theme-edit-btn-shape').value,
+        shadows: document.getElementById('theme-edit-shadows').value
+      };
+
+      const texts = {
+        publicTitle: document.getElementById('theme-edit-text-title').value,
+        publicBanner: document.getElementById('theme-edit-text-banner').value
+      };
+
+      let bgImage = currentEditingThemeBgImage;
+      const bgUploadInput = document.getElementById('theme-edit-bg-upload');
+      if (bgUploadInput && bgUploadInput.files.length > 0) {
+        const file = bgUploadInput.files[0];
+        try {
+          const uploadRes = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              try {
+                const res = await fetch('/api/developer/upload-file', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fileName: file.name, data: e.target.result })
+                });
+                const resData = await res.json();
+                if (resData.success) resolve(resData.fileName);
+                else reject(resData.error || 'Error del servidor');
+              } catch (err) { reject(err.message); }
+            };
+            reader.onerror = () => reject('Error al leer el archivo local');
+            reader.readAsDataURL(file);
+          });
+          bgImage = '/' + uploadRes; // el servidor devuelve "uploads/archivo.ext"
+        } catch (err) {
+          showToast('Error subiendo imagen: ' + err, true);
+          return;
+        }
+      } else if (document.getElementById('theme-edit-bg-image')) {
+        bgImage = document.getElementById('theme-edit-bg-image').value.trim();
+      }
+
+      const styles = { 
+        colors, 
+        layout, 
+        texts,
+        customCss: currentEditingThemeCustomCss,
+        bgImage: bgImage
+      };
+
+      try {
+        let endpoint = '/api/developer/preset';
+        let method = 'POST';
+        
+        if (!isEditingDefaultTheme) {
+           endpoint = `/api/developer/preset/${currentEditingThemeId}`;
+           method = 'PUT';
+        }
+
+        const res = await fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, styles })
+        });
+
+        let resData = {};
+        try { resData = await res.json(); } catch(e){}
+
+        if (res.ok) {
+          const savedPresetId = resData.preset ? resData.preset.id : currentEditingThemeId;
+          window.showToast('Tema guardado. Aplicando...', false);
+          editModal.style.display = 'none';
+          window.applyThemePreset(savedPresetId);
+        } else {
+          window.showToast('Error: ' + (resData.error || res.status), true);
+          console.error('Save failed:', resData);
+        }
+      } catch(e) {
+        console.error(e);
+        window.showToast('Error de red: ' + e.message, true);
+      }
+    });
+  }
 
 });

@@ -1,4 +1,24 @@
 // Lógica del Módulo de Caja POS - Sr. Waffle (Versión 2 - Modelo Relacional Estricto)
+
+// --- INTERCEPTOR DE FETCH PARA JWT ---
+const originalFetch = window.fetch;
+window.fetch = async function() {
+  let [resource, config] = arguments;
+  if(config === undefined) { config = {}; }
+  if(config.headers === undefined) { config.headers = {}; }
+  const token = sessionStorage.getItem('caja_jwt_token');
+  if(token) { config.headers['Authorization'] = 'Bearer ' + token; }
+  
+  const response = await originalFetch(resource, config);
+  if (response.status === 401 && resource !== '/api/auth/verify-cashier') {
+    // Token expirado o inválido
+    sessionStorage.removeItem('caja_authenticated');
+    sessionStorage.removeItem('caja_jwt_token');
+    document.getElementById('caja-login-overlay').style.display = 'flex';
+  }
+  return response;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   let stock = [];
   let masas = [];
@@ -90,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await res.json();
           if (data.success) {
             sessionStorage.setItem('caja_authenticated', 'true');
+            sessionStorage.setItem('caja_jwt_token', data.token);
             sessionStorage.setItem('caja_cashier_name', data.cashierName || 'Caja');
             loginOverlay.style.display = 'none';
             showToast('Caja abierta');
@@ -109,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.querySelector('.pin-clear').addEventListener('click', () => { if (pinInput.length>0) { pinInput=pinInput.slice(0,-1); updatePinDots(); }});
   document.querySelector('.pin-clear-all').addEventListener('click', () => { pinInput=''; updatePinDots(); });
-  document.getElementById('caja-logout').addEventListener('click', () => { sessionStorage.removeItem('caja_authenticated'); loginOverlay.style.display='flex'; });
+  document.getElementById('caja-logout').addEventListener('click', () => { sessionStorage.removeItem('caja_authenticated'); sessionStorage.removeItem('caja_jwt_token'); loginOverlay.style.display='flex'; });
 
   const startCaja = async () => { await loadState(); renderPOS(); };
 
