@@ -346,6 +346,7 @@ const initPostgresTables = async () => {
     `);
     await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_name VARCHAR(255) DEFAULT \'Administrador\';');
     await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS kds_completed_at TIMESTAMPTZ;');
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);');
 
     // loyalty customers
     await client.query(`
@@ -365,6 +366,17 @@ const initPostgresTables = async () => {
         role VARCHAR(50) NOT NULL DEFAULT 'cashier',
         active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // reviews
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id SERIAL PRIMARY KEY,
+        sale_id VARCHAR(100) NOT NULL,
+        rating VARCHAR(20) NOT NULL,
+        comment TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -951,6 +963,7 @@ const getSales = async () => {
       paymentMethod: row.payment_method,
       status: row.status,
       cashierName: row.cashier_name || 'Administrador',
+      customerName: row.customer_name || null,
       kdsCompletedAt: row.kds_completed_at ? row.kds_completed_at.toISOString() : null
     }));
   } else {
@@ -981,12 +994,12 @@ const getSaleById = async (saleId) => {
 const createSale = async (sale) => {
   if (usePostgres) {
     await pool.query(
-      'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, sale.status || 'completed', sale.cashierName || 'Administrador']
+      'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name, customer_name) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, sale.status || 'completed', sale.cashierName || 'Administrador', sale.customerName || null]
     );
   } else {
     const sales = readJSON(SALES_FILE);
-    sales.push({ ...sale, cashierName: sale.cashierName || 'Administrador', status: sale.status || 'completed' });
+    sales.push({ ...sale, cashierName: sale.cashierName || 'Administrador', customerName: sale.customerName || null, status: sale.status || 'completed' });
     writeJSON(SALES_FILE, sales);
   }
 };
@@ -1358,6 +1371,46 @@ const getTicketStatus = async (ticketNum) => {
   }
 };
 
+const getReviews = async () => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT * FROM reviews ORDER BY created_at DESC');
+    return res.rows;
+  } else {
+    return new Promise((resolve, reject) => {
+      sqliteDb.all('SELECT * FROM reviews ORDER BY created_at DESC', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  }
+};
+
+const addReview = async (saleId, rating, comment) => {
+  if (usePostgres) {
+    const res = await pool.query(
+      'INSERT INTO reviews (sale_id, rating, comment) VALUES ($1, $2, $3) RETURNING *',
+      [saleId, rating, comment]
+    );
+    return res.rows[0];
+  } else {
+    return new Promise((resolve, reject) => {
+      sqliteDb.run(
+        'INSERT INTO reviews (sale_id, rating, comment) VALUES (?, ?, ?)',
+        [saleId, rating, comment],
+        function(err) {
+          if (err) reject(err);
+          else {
+            sqliteDb.get('SELECT * FROM reviews WHERE id = ?', [this.lastID], (err, row) => {
+              if (err) reject(err);
+              else resolve(row);
+            });
+          }
+        }
+      );
+    });
+  }
+};
+
 module.exports = {
   pool,
   initDb,
@@ -1396,5 +1449,7 @@ module.exports = {
   createEmployee,
   updateEmployee,
   deleteEmployee,
-  getTicketStatus
+  getTicketStatus,
+  getReviews,
+  addReview
 };

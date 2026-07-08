@@ -3,6 +3,8 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const db = require('./src/db/index');
+const dbSettings = require('./src/db/settings');
+const unitConverter = require('./src/services/UnitConverter');
 
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
@@ -22,12 +24,12 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const authenticateToken = (req, res, next) => {
-  // Permitir todas las peticiones GET excepto ventas y empleados
-  if (req.method === 'GET' && !req.path.startsWith('/api/sales') && !req.path.startsWith('/api/employees')) {
+  // Permitir todas las peticiones GET excepto ventas
+  if (req.method === 'GET' && !req.path.startsWith('/sales')) {
     return next();
   }
   // Permitir rutas de autenticación
-  if (req.path.startsWith('/api/auth/')) {
+  if (req.path.startsWith('/auth/')) {
     return next();
   }
   
@@ -42,6 +44,15 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// Prevenir caché en todas las respuestas de la API
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
 
 // Aplicar middleware a todas las rutas /api/
 app.use('/api', authenticateToken);
@@ -68,9 +79,63 @@ app.put('/api/stock/:id', async (req, res) => {
   try { res.json({ success: true, item: await db.updateStockItem(req.params.id, req.body) }); }
   catch (e) { res.status(500).json({error: e.message}); }
 });
+app.get('/api/stock/:id/history', async (req, res) => {
+  try { res.json(await db.getHistory(req.params.id)); }
+  catch (e) { res.status(500).json({error: e.message}); }
+});
+app.post('/api/stock/update', async (req, res) => {
+  try {
+    const { id, stockToAdd, purchase_quantity, purchase_unit, total_cost } = req.body;
+    if (stockToAdd) {
+      await db.restockItem(id, stockToAdd, purchase_quantity || stockToAdd, purchase_unit || 'un', total_cost || 0);
+    }
+    res.json({ success: true });
+  }
+  catch (e) { res.status(500).json({error: e.message}); }
+});
 app.delete('/api/stock/:id', async (req, res) => {
   try { res.json({ success: true, result: await db.deleteStockItem(req.params.id) }); }
   catch (e) { res.status(500).json({error: e.message}); }
+});
+
+// ERP Routes
+app.get('/api/units', async (req, res) => {
+  try {
+    const { pool } = require('./src/db/pool');
+    const result = await pool.query('SELECT * FROM units');
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/products/:id/presentations', async (req, res) => {
+  try {
+    const { pool } = require('./src/db/pool');
+    const result = await pool.query('SELECT * FROM product_presentations WHERE product_id = $1', [req.params.id]);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/products/:id/presentations', async (req, res) => {
+  try {
+    const { pool } = require('./src/db/pool');
+    const id = 'pres_' + Date.now();
+    await pool.query(
+      'INSERT INTO product_presentations (id, product_id, name, quantity, unit_id) VALUES ($1, $2, $3, $4, $5)',
+      [id, req.params.id, req.body.name, req.body.quantity, req.body.unit_id]
+    );
+    res.json({ id, ...req.body });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/inventory/purchase', async (req, res) => {
+  try {
+    const { productId, presentationId, packs } = req.body;
+    const baseQuantity = await unitConverter.getBaseQuantityFromPresentation(presentationId, packs);
+    await db.updateStockQuantity(productId, baseQuantity);
+    res.json({ success: true, baseQuantity });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // --- API MASAS ---
@@ -92,13 +157,18 @@ app.delete('/api/masas/:id', async (req, res) => {
 });
 app.post('/api/masas/:id/produce', async (req, res) => {
   try {
-    const { qty } = req.body;
+    const qty = req.body.qty || req.body.batches;
+    console.log('Produce payload:', req.body, 'qty:', qty);
     const masa = await db.getMasa(req.params.id);
     if (!masa) return res.status(404).json({error:'Masa no encontrada'});
     // Descontar inventario
     if (masa.ingredients && masa.ingredients.length > 0) {
       for (const ing of masa.ingredients) {
-        await db.updateStockQuantity(ing.stock_id, -(ing.qty * qty));
+        const sid = ing.stockId || ing.stock_id;
+        console.log('Ingredient:', ing, 'sid:', sid, 'ing.qty:', ing.qty, 'delta:', -(ing.qty * qty));
+        if (sid) {
+          await db.updateStockQuantity(sid, -(ing.qty * qty));
+        }
       }
     }
     // Sumar masas
@@ -143,6 +213,27 @@ app.delete('/api/menu/:id', async (req, res) => {
   catch (e) { res.status(500).json({error: e.message}); }
 });
 
+// --- API REVIEWS ---
+app.get('/api/reviews', async (req, res) => {
+  try { res.json(await db.getReviews()); }
+  catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const { sale_id, rating, comment } = req.body;
+    if (!sale_id || !rating) return res.status(400).json({error: 'Sale ID y Rating son requeridos'});
+    
+    const sale = await db.getSaleById(sale_id);
+    if (!sale) return res.status(404).json({error: 'Código de seguimiento (ticket) inválido o no encontrado.'});
+    
+    const newReview = await db.addReview(sale_id, rating, comment || '');
+    res.json(newReview);
+  } catch (e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
 // --- API SALES ---
 app.get('/api/sales', async (req, res) => {
   try { res.json(await db.getSales()); }
@@ -151,7 +242,7 @@ app.get('/api/sales', async (req, res) => {
 
 app.post('/api/sales', async (req, res) => {
   try {
-    const { items, total, paymentMethod, cashierName } = req.body;
+    const { items, total, paymentMethod, cashierName, customerName } = req.body;
     
     // Descuento de stock en POS según la nueva lógica (Option 1)
     for (const item of items) {
@@ -189,8 +280,19 @@ app.post('/api/sales', async (req, res) => {
       }
     }
 
+    const sales = await db.getSales();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaysSales = sales.filter(s => new Date(s.date || s.created_at) >= today);
+    const usedCodes = new Set(todaysSales.map(s => s.id));
+    
+    let ticketCode;
+    do {
+      ticketCode = Math.floor(1000 + Math.random() * 9000).toString();
+    } while (usedCodes.has(ticketCode));
+
     const newSale = {
-      id: `sale_${Date.now()}`,
+      id: ticketCode,
       date: new Date().toISOString(),
       items, total, paymentMethod,
       cashierName: cashierName || 'Administrador',
@@ -208,11 +310,29 @@ app.post('/api/sales', async (req, res) => {
 app.post('/api/auth/verify-cashier', authLimiter, async (req, res) => {
   try {
     const { employeeId, pin } = req.body;
-    const settings = await db.getSettings();
-    if (settings && settings.cashierPin === pin) {
-      const token = jwt.sign({ role: 'cashier', name: 'Caja Principal' }, JWT_SECRET, { expiresIn: '12h' });
-      res.json({ success: true, cashierName: 'Caja Principal', token });
-    } else res.json({ success: false });
+    let isValid = false;
+    let cashierName = 'Caja Principal';
+    
+    if (employeeId) {
+      const employees = await db.getEmployees();
+      const emp = employees.find(e => e.id === employeeId);
+      if (emp && emp.pin === pin && emp.active) {
+        isValid = true;
+        cashierName = emp.name;
+      }
+    } else {
+      const settings = await db.getSettings();
+      if (settings && settings.cashierPin === pin) {
+        isValid = true;
+      }
+    }
+    
+    if (isValid) {
+      const token = jwt.sign({ role: 'cashier', name: cashierName }, JWT_SECRET, { expiresIn: '12h' });
+      res.json({ success: true, cashierName, token });
+    } else {
+      res.json({ success: false });
+    }
   } catch (error) { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 

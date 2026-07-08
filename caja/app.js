@@ -59,6 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Las masas no tienen precio de venta, el precio lo define el POS o el waffle
     // Pero en Waffles Personalizados, cobramos $1500 de base (Masa)
     let price = 1500; 
+    
+    if (config.spread) {
+      const s = getStockItem(config.spread);
+      if (s) price += s.price_per_portion || 0;
+    }
+    if (config.whippedCream) {
+      const s = getStockItem('top_crema_batida');
+      if (s) price += s.price_per_portion || 0;
+    }
+
     config.toppings.forEach(id => {
       const s = getStockItem(id);
       if (s) price += s.price_per_portion || 0;
@@ -70,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     config.icecreams.forEach(id => {
       if (!id || id === 'none') return;
       const s = getStockItem(id);
-      if (s) price += s.price_per_portion || 0;
+      if (s) price += s.price_per_portion || s.price || 0;
     });
     return price;
   };
@@ -90,6 +100,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch('/api/employees');
+      if (res.ok) {
+        const emps = await res.json();
+        const select = document.getElementById('caja-employee-select');
+        if (select) {
+          select.innerHTML = '<option value="">Caja Principal (Global)</option>';
+          const cashiers = emps.filter(e => e.active && e.role !== 'kitchen');
+          cashiers.forEach(e => {
+            select.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+  
+  fetchEmployees();
+
   // Auth Logic
   const updatePinDots = () => {
     for (let i = 0; i < 4; i++) {
@@ -104,8 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pinInput.length === 4) {
       setTimeout(async () => {
         try {
+          const select = document.getElementById('caja-employee-select');
+          const empId = select ? select.value : undefined;
           const res = await fetch('/api/auth/verify-cashier', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pinInput })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeId: empId, pin: pinInput })
           });
           const data = await res.json();
           if (data.success) {
@@ -203,6 +236,134 @@ document.addEventListener('DOMContentLoaded', () => {
     const customBtn = document.getElementById('pos-custom-waffle-btn');
     if (customBtn) customBtn.onclick = showPOSWaffleBuilderModal;
   };
+  // --- VISUALIZADOR DE WAFFLE EN POS ---
+  const updatePOSVisualWaffle = (wrapperId, config) => {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+
+    const backElement = wrapper.querySelector('.waffle-back');
+    const frontElement = wrapper.querySelector('.waffle-front');
+    const toppingsContainer = wrapper.querySelector('.visual-toppings-container');
+    const chocolateOverlay = wrapper.querySelector('.syrup-chocolate');
+    const dulceOverlay = wrapper.querySelector('.syrup-dulce-leche');
+    const caramelOverlay = wrapper.querySelector('.syrup-caramelo');
+    const redOverlay = wrapper.querySelector('.syrup-rojo');
+    const spreadOverlay = wrapper.querySelector('.spread-overlay');
+    const whippedCreamOverlay = wrapper.querySelector('.visual-whipped-cream');
+
+    const baseClass = `base-${config.base.replace('base_', '').replace('_', '-')}`;
+    if (backElement) {
+      backElement.className = 'waffle-back';
+      backElement.classList.add(baseClass);
+    }
+    if (frontElement) {
+      frontElement.className = 'waffle-front';
+      frontElement.classList.add(baseClass);
+    }
+
+    if (spreadOverlay) {
+      spreadOverlay.className = 'spread-overlay';
+      if (config.spread) {
+        const spreadItem = getStockItem(config.spread);
+        if (spreadItem) {
+          const name = spreadItem.name.toLowerCase();
+          if (name.includes('nutella') || name.includes('choc')) spreadOverlay.classList.add('active-nutella');
+          else spreadOverlay.classList.add('active-dulce');
+        }
+      }
+    }
+
+    if (chocolateOverlay) chocolateOverlay.classList.remove('active');
+    if (dulceOverlay) dulceOverlay.classList.remove('active');
+    if (caramelOverlay) caramelOverlay.classList.remove('active');
+    if (redOverlay) redOverlay.classList.remove('active');
+
+    config.syrups.forEach(syrupId => {
+       const sItem = getStockItem(syrupId);
+       if (sItem) {
+         const name = sItem.name.toLowerCase();
+         if (name.includes('choc') && chocolateOverlay) chocolateOverlay.classList.add('active');
+         else if (name.includes('dulce') && dulceOverlay) dulceOverlay.classList.add('active');
+         else if ((name.includes('rojo') || name.includes('red') || name.includes('frut')) && redOverlay) redOverlay.classList.add('active');
+         else if (caramelOverlay) caramelOverlay.classList.add('active');
+       }
+    });
+
+    if (whippedCreamOverlay) {
+      if (config.whippedCream) whippedCreamOverlay.classList.add('active');
+      else whippedCreamOverlay.classList.remove('active');
+    }
+
+    if (toppingsContainer) {
+      toppingsContainer.innerHTML = '';
+      config.toppings.forEach(toppingId => {
+        const itemStock = getStockItem(toppingId);
+        if (!itemStock) return;
+        const name = itemStock.name.toLowerCase();
+
+        for (let k = 0; k < 8; k++) {
+          const toppingElement = document.createElement('div');
+          toppingElement.className = `visual-topping-item vt-${toppingId}`;
+          const x = 100 + Math.random() * 120 - 12;
+          const y = 60 + Math.random() * 110 - 12;
+          const randomRotation = Math.floor(Math.random() * 360);
+          
+          toppingElement.style.left = `${x}px`;
+          toppingElement.style.top = `${y}px`;
+          toppingElement.style.setProperty('--rot', `${randomRotation}deg`);
+          
+          if (name.includes('rocklet') || name.includes('lentil') || name.includes('color')) {
+            toppingElement.classList.add('topping-rocklet');
+            const rockletColors = ['#e63946', '#fee440', '#00f5d4', '#ff007f', '#a020f0', '#0077b6'];
+            toppingElement.style.setProperty('--rocklet-color', rockletColors[Math.floor(Math.random() * rockletColors.length)]);
+          } else if (name.includes('oreo') || name.includes('gallet')) {
+            toppingElement.classList.add('topping-oreo');
+          } else if (name.includes('choc') || name.includes('ralladura')) {
+            toppingElement.classList.add('topping-shaving');
+          } else if (name.includes('frutil') || name.includes('mora') || name.includes('red') || name.includes('rojo')) {
+            toppingElement.classList.add('topping-berry');
+          } else {
+            toppingElement.classList.add('topping-generic');
+          }
+          toppingsContainer.appendChild(toppingElement);
+        }
+      });
+    }
+
+    const icecreamsContainer = wrapper.querySelector('.visual-icecreams-container');
+    if (icecreamsContainer) {
+      icecreamsContainer.innerHTML = '';
+      if (config.icecreams) {
+        config.icecreams.forEach((iceId, index) => {
+          if (!iceId) return;
+          const sItem = getStockItem(iceId);
+          if (!sItem) return;
+
+          const name = sItem.name.toLowerCase();
+          const scoop = document.createElement('div');
+          scoop.className = `visual-icecream-scoop scoop-${index}`;
+          
+          if (name.includes('vainilla') || name.includes('crema') || name.includes('blanco')) {
+            scoop.style.backgroundColor = '#f3e5ab';
+            scoop.style.borderColor = '#d4c58a';
+          } else if (name.includes('choc')) {
+            scoop.style.backgroundColor = '#4e342e';
+            scoop.style.borderColor = '#3e2723';
+          } else if (name.includes('dulce') || name.includes('caramel')) {
+            scoop.style.backgroundColor = '#d2691e';
+            scoop.style.borderColor = '#b87333';
+          } else if (name.includes('frutil') || name.includes('red') || name.includes('rojo') || name.includes('cereza') || name.includes('rosa')) {
+            scoop.style.backgroundColor = '#f1b6c8';
+            scoop.style.borderColor = '#e294aa';
+          } else {
+            scoop.style.backgroundColor = '#e8d5f0';
+            scoop.style.borderColor = '#cba3d8';
+          }
+          icecreamsContainer.appendChild(scoop);
+        });
+      }
+    }
+  };
 
   const showPOSWaffleBuilderModal = () => {
     posWaffle = { base: masas.length ? masas[0].id : '', toppings: [], syrups: [], icecreams: [] };
@@ -210,27 +371,83 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.className = 'pos-modal-overlay';
     modal.innerHTML = `
       <div class="pos-waffle-modal">
-        <div class="pos-waffle-modal-left" style="background:#111; display:flex; align-items:center; justify-content:center;">
-           <h3 style="color:var(--neon-cyan)">Personalizador Visual (BETA)</h3>
+        <div class="pos-waffle-modal-left" style="background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+           <h3 style="color:var(--neon-cyan); margin-bottom: 2rem;">Personalizador Visual (BETA)</h3>
+           <div class="waffle-canvas-wrapper" id="pos-waffle-canvas-wrapper" style="transform: scale(0.9);">
+             <div class="builder-neon-glow"></div>
+             <div class="waffle-assembly-box" style="position: relative; width: 320px; height: 320px; z-index: 2;">
+               <div class="waffle-back">
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div>
+               </div>
+               <div class="spread-overlay" id="pos-spread-overlay"></div>
+               <div class="syrup-overlay syrup-chocolate"></div>
+               <div class="syrup-overlay syrup-dulce-leche"></div>
+               <div class="syrup-overlay syrup-caramelo"></div>
+               <div class="syrup-overlay syrup-rojo"></div>
+               <div class="visual-whipped-cream" id="pos-visual-whipped-cream"></div>
+               <div class="visual-icecreams-container"></div>
+               <div class="waffle-front">
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+                 <div class="waffle-bubble"></div><div class="waffle-bubble"></div>
+               </div>
+               <div class="visual-toppings-container"></div>
+             </div>
+           </div>
         </div>
         <div class="pos-waffle-modal-right" style="overflow-y: auto; max-height: 90vh; padding-right: 10px;">
           <h2 style="font-family: var(--font-cursive); font-size: 2rem;">Armador POS</h2>
           
           <div class="builder-step">
-            <h3>Paso 1: Masa ($1500 base)</h3>
-            <div class="builder-options-grid" id="pos-bases-grid"></div>
+            <h3>Paso 1: Masa</h3>
+            <div style="margin-bottom: 0.5rem;">
+              <select id="pos-bases-select" class="form-control" style="background:#181818; border: 1px solid rgba(255,255,255,0.1); color:#fff; width:100%; border-radius:6px; padding:0.6rem; font-size:0.9rem; font-weight:600;">
+              </select>
+            </div>
           </div>
+
           <div class="builder-step">
-            <h3>Paso 2: Toppings Extras</h3>
+            <h3>Paso 2: Relleno</h3>
+            <div style="margin-bottom: 0.5rem;">
+              <select id="pos-spreads-select" class="form-control" style="background:#181818; border: 1px solid rgba(255,255,255,0.1); color:#fff; width:100%; border-radius:6px; padding:0.6rem; font-size:0.9rem; font-weight:600;">
+              </select>
+            </div>
+          </div>
+
+          <div class="builder-step">
+            <h3>Paso 3: Helado (Hasta 3 bochas)</h3>
+            <div style="margin-bottom: 0.5rem;">
+              <select id="pos-icecream-count" style="background:#181818; border: 1px solid rgba(255,255,255,0.1); color:#fff; width:100%; border-radius:6px; padding:0.6rem; font-size:0.9rem; font-weight:600;">
+                <option value="0">Sin helado</option>
+                <option value="1">1 bocha de helado</option>
+                <option value="2">2 bochas de helado</option>
+                <option value="3">3 bochas de helado</option>
+              </select>
+            </div>
+            <div id="pos-icecreams-flavor-selectors" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+            </div>
+          </div>
+
+          <div class="builder-step">
+            <h3>Paso 4: Toppings Extras (Hasta 4)</h3>
             <div class="builder-options-grid" id="pos-toppings-grid"></div>
           </div>
+
           <div class="builder-step">
-            <h3>Paso 3: Salsas</h3>
-            <div class="builder-options-grid" id="pos-syrups-grid"></div>
+            <h3>Paso 5: ¿Querés Crema Batida?</h3>
+            <div style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+              <input type="checkbox" id="pos-whipped-cream-check" style="transform: scale(1.5);">
+              <label for="pos-whipped-cream-check" style="margin: 0; font-size: 1rem; color: #fff; cursor: pointer;">Sí, agregar crema batida</label>
+            </div>
           </div>
+
           <div class="builder-step">
-            <h3>Paso 4: Helado (Opcional)</h3>
-            <div class="builder-options-grid" id="pos-icecreams-grid"></div>
+            <h3>Paso 6: Salsas (Hasta 2)</h3>
+            <div class="builder-options-grid" id="pos-syrups-grid"></div>
           </div>
           
           <div class="price-summary-box" style="margin-top:auto; margin-bottom: 15px;">
@@ -249,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateUI = () => {
       document.getElementById('pos-modal-price-value').textContent = formatCurrency(calculateWafflePrice(posWaffle));
+      updatePOSVisualWaffle('pos-waffle-canvas-wrapper', posWaffle);
     };
 
     const renderGrid = (id, items, type, multi) => {
@@ -272,7 +490,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!multi) posWaffle.base = i.id;
             else {
               if (sel) posWaffle[type] = posWaffle[type].filter(x => x !== i.id);
-              else posWaffle[type].push(i.id);
+              else {
+                 if (type === 'toppings' && posWaffle[type].length >= 4) { showToast('Máximo 4 toppings', true); return; }
+                 if (type === 'syrups' && posWaffle[type].length >= 2) { showToast('Máximo 2 salsas', true); return; }
+                 posWaffle[type].push(i.id);
+              }
             }
             renderGrid(id, items, type, multi);
             updateUI();
@@ -282,10 +504,74 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     };
 
-    renderGrid('pos-bases-grid', masas, 'masa', false);
+    // Paso 1: Masa Select
+    const basesSelect = document.getElementById('pos-bases-select');
+    if (basesSelect) {
+      basesSelect.innerHTML = `<option value="">-- Seleccionar Masa --</option>` + 
+        masas.map(b => `<option value="${b.id}" ${b.stock <= 0 ? 'disabled style="color:gray;"' : ''}>${b.name} (${b.price_per_portion > 0 ? '+'+formatCurrency(b.price_per_portion) : 'Incluido'})${b.stock <= 0 ? ' [SIN STOCK]' : ''}</option>`).join('');
+      basesSelect.onchange = () => { posWaffle.base = basesSelect.value; updateUI(); };
+      posWaffle.base = basesSelect.value;
+    }
+
+    // Paso 2: Relleno Select
+    const spreadsSelect = document.getElementById('pos-spreads-select');
+    if (spreadsSelect) {
+      const spreads = stock.filter(s => s.category === 'spread');
+      spreadsSelect.innerHTML = `<option value="">Sin Relleno</option>` + 
+        spreads.map(b => `<option value="${b.id}" ${b.stock <= 0 ? 'disabled style="color:gray;"' : ''}>${b.name} (${b.price_per_portion > 0 ? '+'+formatCurrency(b.price_per_portion) : 'Gratis'})${b.stock <= 0 ? ' [SIN STOCK]' : ''}</option>`).join('');
+      spreadsSelect.onchange = () => { posWaffle.spread = spreadsSelect.value; updateUI(); };
+      posWaffle.spread = spreadsSelect.value;
+    }
+
+    // Paso 3: Helados
+    const icecreamCountSelect = document.getElementById('pos-icecream-count');
+    const flavorSelectorsContainer = document.getElementById('pos-icecreams-flavor-selectors');
+    const icecreamsStock = stock.filter(s => s.category === 'icecream');
+    
+    const updateFlavorSelectors = () => {
+      const count = parseInt(icecreamCountSelect.value) || 0;
+      flavorSelectorsContainer.innerHTML = '';
+      while (posWaffle.icecreams.length < count) {
+        const firstAvailable = icecreamsStock.find(i => i.stock > 0);
+        posWaffle.icecreams.push(firstAvailable ? firstAvailable.id : '');
+      }
+      while (posWaffle.icecreams.length > count) { posWaffle.icecreams.pop(); }
+
+      for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+        div.style.display = 'flex'; div.style.flexDirection = 'column'; div.style.gap = '4px';
+        div.innerHTML = `
+          <label style="font-size:0.75rem; color:var(--text-secondary);">Sabor de la Bocha ${i + 1}</label>
+          <select class="pos-icecream-flavor-select form-control" data-index="${i}" style="background:#181818; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.5rem; border-radius:6px; font-size:0.85rem; width:100%;">
+            ${icecreamsStock.map(ice => {
+              const isOutOfStock = ice.stock <= 0;
+              return `<option value="${ice.id}" ${posWaffle.icecreams[i] === ice.id ? 'selected' : ''} ${isOutOfStock ? 'disabled style="color:gray;"' : ''}>${ice.name} (${formatCurrency(ice.price_per_portion || ice.price || 0)})${isOutOfStock ? ' [SIN STOCK]' : ''}</option>`;
+            }).join('')}
+          </select>
+        `;
+        flavorSelectorsContainer.appendChild(div);
+      }
+      flavorSelectorsContainer.querySelectorAll('.pos-icecream-flavor-select').forEach(select => {
+        select.onchange = () => { posWaffle.icecreams[parseInt(select.getAttribute('data-index'))] = select.value; updateUI(); };
+      });
+    };
+    if (icecreamCountSelect) {
+      icecreamCountSelect.value = "0";
+      icecreamCountSelect.onchange = () => { updateFlavorSelectors(); updateUI(); };
+      updateFlavorSelectors();
+    }
+
+    // Paso 4: Toppings Extras (Max 4)
     renderGrid('pos-toppings-grid', stock.filter(s => s.category === 'topping'), 'toppings', true);
+    
+    // Paso 5: Crema Batida
+    const whippedCreamCheck = document.getElementById('pos-whipped-cream-check');
+    if (whippedCreamCheck) {
+      whippedCreamCheck.onchange = (e) => { posWaffle.whippedCream = e.target.checked; updateUI(); };
+    }
+
+    // Paso 6: Salsas (Max 2)
     renderGrid('pos-syrups-grid', stock.filter(s => s.category === 'syrup'), 'syrups', true);
-    renderGrid('pos-icecreams-grid', stock.filter(s => s.category === 'icecream'), 'icecreams', true);
     
     updateUI();
 
@@ -294,8 +580,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const price = calculateWafflePrice(posWaffle);
       const m = getMasa(posWaffle.base);
       let details = `Masa: ${m ? m.name : 'N/A'}`;
+      if (posWaffle.spread) details += ` + Relleno: ${getStockItem(posWaffle.spread)?.name || 'N/A'}`;
+      if (posWaffle.icecreams.length) details += ` + Helado: ${posWaffle.icecreams.map(id=>getStockItem(id)?.name).join(',')}`;
       if (posWaffle.toppings.length) details += ` + Toppings: ${posWaffle.toppings.map(id=>getStockItem(id)?.name).join(',')}`;
+      if (posWaffle.whippedCream) details += ` + Crema`;
       if (posWaffle.syrups.length) details += ` + Salsas: ${posWaffle.syrups.map(id=>getStockItem(id)?.name).join(',')}`;
+      
       addToCart({
         id: `custom_${Date.now()}`, name: 'Waffle Customizado', details, price, type: 'custom_waffle', config: posWaffle
       });
@@ -343,16 +633,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const checkoutSuccessClose = document.getElementById('checkout-success-close');
+  if (checkoutSuccessClose) {
+    checkoutSuccessClose.onclick = () => {
+      document.getElementById('checkout-success-modal').style.display = 'none';
+    };
+  }
+
   checkoutBtn.onclick = async () => {
     if (cart.length === 0) return;
     try {
       const total = cart.reduce((s, i) => s + i.price, 0);
       const res = await fetch('/api/sales', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart, total, paymentMethod: selectedPaymentMethod, cashierName: sessionStorage.getItem('caja_cashier_name') })
+        body: JSON.stringify({ 
+          items: cart, 
+          total, 
+          paymentMethod: selectedPaymentMethod, 
+          cashierName: sessionStorage.getItem('caja_cashier_name'),
+          customerName: currentLoyaltyCustomer ? currentLoyaltyCustomer.name : null
+        })
       });
       if (res.ok) {
+        const sale = await res.json();
         showToast('Venta Registrada Exitosamente!');
+        
+        // Populate and show the tracking code modal
+        const trackingCodeEl = document.getElementById('checkout-tracking-code');
+        const successModalEl = document.getElementById('checkout-success-modal');
+        if (trackingCodeEl && successModalEl) {
+          trackingCodeEl.innerText = sale.id;
+          successModalEl.style.display = 'flex';
+        }
+        
         cart = []; renderCart(); loadState(); // reload stock
       } else {
         const err = await res.json();

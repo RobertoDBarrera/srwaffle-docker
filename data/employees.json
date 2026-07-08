@@ -1,9 +1,16 @@
 [
   {
-    "id": "emp_1782238229952",
-    "name": "Test",
+    "id": "emp_1783340870442",
+    "name": "cajero1",
     "pin": "1234",
     "role": "cashier",
+    "active": true
+  },
+  {
+    "id": "emp_1783340886673",
+    "name": "cocinero1",
+    "pin": "1234",
+    "role": "kitchen",
     "active": true
   }
 ]

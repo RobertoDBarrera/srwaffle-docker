@@ -29,6 +29,7 @@ const getMasa = async (id) => {
 };
 
 const createMasa = async (item) => {
+  item.id = item.id || 'ma_' + Date.now();
   if (isPostgres()) {
     await pool.query(
       'INSERT INTO masas (id, name, stock, min_stock, yield_qty, cost_per_portion, ingredients) VALUES ($1, $2, $3, $4, $5, $6, $7)',
@@ -45,8 +46,8 @@ const createMasa = async (item) => {
 const updateMasa = async (id, item) => {
   if (isPostgres()) {
     await pool.query(
-      'UPDATE masas SET name=$1, stock=$2, min_stock=$3, yield_qty=$4, cost_per_portion=$5, ingredients=$6 WHERE id=$7',
-      [item.name, item.stock, item.minStock, item.yield_qty, item.cost_per_portion, JSON.stringify(item.ingredients), id]
+      'UPDATE masas SET name=COALESCE($1, name), stock=COALESCE($2, stock), min_stock=COALESCE($3, min_stock), yield_qty=COALESCE($4, yield_qty), cost_per_portion=COALESCE($5, cost_per_portion), ingredients=COALESCE($6, ingredients) WHERE id=$7',
+      [item.name ?? null, item.stock ?? null, item.minStock ?? null, item.yield_qty ?? null, item.cost_per_portion ?? null, item.ingredients ? JSON.stringify(item.ingredients) : null, id]
     );
   } else {
     const masas = readJSON('masas.json', []);
@@ -71,6 +72,9 @@ const deleteMasa = async (id) => {
 };
 
 const updateMasaQuantity = async (id, delta) => {
+  if (isNaN(delta) || delta === null || delta === undefined) {
+    throw new Error('Cantidad inválida para actualizar stock de masa');
+  }
   if (isPostgres()) {
     await pool.query('UPDATE masas SET stock = stock + $1 WHERE id = $2', [delta, id]);
   } else {

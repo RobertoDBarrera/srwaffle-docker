@@ -10,6 +10,7 @@ const getMenu = async () => {
 };
 
 const createMenuItem = async (item) => {
+  item.id = item.id || 'mn_' + Date.now();
   if (isPostgres()) {
     await pool.query(
       `INSERT INTO menu (id, type, reference_id, name, price, is_visible)

@@ -32,7 +32,7 @@ const updateSettings = async (settings) => {
 };
 
 const getEmployees = async () => { return readJSON('employees.json', []); };
-const createEmployee = async (emp) => { const list = await getEmployees(); list.push(emp); writeJSON('employees.json', list); return emp; };
+const createEmployee = async (emp) => { emp.id = emp.id || 'emp_' + Date.now(); const list = await getEmployees(); list.push(emp); writeJSON('employees.json', list); return emp; };
 const updateEmployee = async (id, data) => { const list = await getEmployees(); const idx = list.findIndex(e=>e.id===id); if(idx!==-1){ list[idx]={...list[idx], ...data}; writeJSON('employees.json', list); } };
 const deleteEmployee = async (id) => { const list = await getEmployees(); const filtered = list.filter(e=>e.id!==id); writeJSON('employees.json', filtered); };
 

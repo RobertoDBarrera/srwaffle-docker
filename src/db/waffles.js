@@ -6,8 +6,8 @@ const getWaffles = async () => {
     const res = await pool.query('SELECT * FROM waffles');
     return res.rows.map(r => ({
       id: r.id, name: r.name, description: r.description,
-      price: r.price, cost: r.cost, is_visible: r.is_visible,
-      image: r.image, ingredients: typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients
+      cost: r.cost, image: r.image,
+      ingredients: typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients
     }));
   }
   return readJSON('waffles.json', []);
@@ -20,8 +20,8 @@ const getWaffle = async (id) => {
     const r = res.rows[0];
     return {
       id: r.id, name: r.name, description: r.description,
-      price: r.price, cost: r.cost, is_visible: r.is_visible,
-      image: r.image, ingredients: typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients
+      cost: r.cost, image: r.image,
+      ingredients: typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : r.ingredients
     };
   }
   const waffles = readJSON('waffles.json', []);
@@ -29,10 +29,11 @@ const getWaffle = async (id) => {
 };
 
 const createWaffle = async (item) => {
+  item.id = item.id || 'wf_' + Date.now();
   if (isPostgres()) {
     await pool.query(
-      'INSERT INTO waffles (id, name, description, price, cost, is_visible, image, ingredients) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [item.id, item.name, item.description || '', item.price || 0, item.cost || 0, item.is_visible !== false, item.image || '', JSON.stringify(item.ingredients || [])]
+      'INSERT INTO waffles (id, name, description, cost, image, ingredients) VALUES ($1, $2, $3, $4, $5, $6)',
+      [item.id, item.name, item.description || '', item.cost || 0, item.image || '', JSON.stringify(item.ingredients || [])]
     );
   } else {
     const waffles = readJSON('waffles.json', []);
@@ -45,8 +46,8 @@ const createWaffle = async (item) => {
 const updateWaffle = async (id, item) => {
   if (isPostgres()) {
     await pool.query(
-      'UPDATE waffles SET name=$1, description=$2, price=$3, cost=$4, is_visible=$5, image=$6, ingredients=$7 WHERE id=$8',
-      [item.name, item.description, item.price, item.cost, item.is_visible, item.image, JSON.stringify(item.ingredients), id]
+      'UPDATE waffles SET name=$1, description=$2, cost=$3, image=$4, ingredients=$5 WHERE id=$6',
+      [item.name, item.description, item.cost, item.image, JSON.stringify(item.ingredients), id]
     );
   } else {
     const waffles = readJSON('waffles.json', []);

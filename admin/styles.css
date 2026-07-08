@@ -22,6 +22,8 @@
   --neon-yellow-glow: rgba(254, 228, 64, 0.4);
   --neon-red: #ff3333;
   --neon-red-glow: rgba(255, 51, 51, 0.4);
+  --neon-green: #2ecc71;
+  --neon-green-glow: rgba(46, 204, 113, 0.4);
 
   --text-primary: #ffffff;
   --text-secondary: #cccccc;

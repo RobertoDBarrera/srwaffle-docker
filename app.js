@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // --- INICIALIZACIÓN DE ESTADO ---
   let stock = [];
+  let masas = [];
   let menu = [];
   let loyaltyEnabled = false;
 
@@ -9,10 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadState = async () => {
     try {
       const stockRes = await fetch('/api/stock');
-      stock = await stockRes.json();
+      const flatStock = await stockRes.json();
+      stock = {
+         bases: flatStock.filter(s => ['raw_material', 'packaging', 'cleaning', 'Base'].includes(s.category)),
+         spreads: flatStock.filter(s => ['spread', 'Relleno'].includes(s.category)),
+         toppings: flatStock.filter(s => ['topping', 'Topping'].includes(s.category)),
+         syrups: flatStock.filter(s => ['syrup', 'Sirope'].includes(s.category)),
+         drinks: flatStock.filter(s => ['drink', 'Bebida'].includes(s.category)),
+         icecreams: flatStock.filter(s => ['icecream', 'Helado'].includes(s.category))
+      };
 
       const menuRes = await fetch('/api/menu');
       menu = await menuRes.json();
+
+      const masasRes = await fetch('/api/masas');
+      masas = await masasRes.json();
 
       try {
         const settingsRes = await fetch('/api/loyalty/settings');
@@ -253,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chocolateOverlay = wrapper.querySelector('.syrup-chocolate');
     const dulceOverlay = wrapper.querySelector('.syrup-dulce-leche');
     const caramelOverlay = wrapper.querySelector('.syrup-caramelo');
+    const redOverlay = wrapper.querySelector('.syrup-rojo');
     const spreadOverlay = wrapper.querySelector('.spread-overlay');
     const whippedCreamOverlay = wrapper.querySelector('.visual-whipped-cream');
 
@@ -268,25 +281,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (spreadOverlay) {
       spreadOverlay.className = 'spread-overlay';
-      if (config.spread === 'syr_nutella') {
-        spreadOverlay.classList.add('active-nutella');
-      } else if (config.spread === 'syr_dulce_leche_spread') {
-        spreadOverlay.classList.add('active-dulce');
+      if (config.spread) {
+        const spreadItem = getStockItem(config.spread);
+        if (spreadItem) {
+          const name = spreadItem.name.toLowerCase();
+          if (name.includes('nutella') || name.includes('choc')) {
+            spreadOverlay.classList.add('active-nutella');
+          } else {
+            spreadOverlay.classList.add('active-dulce'); // default for any other spread
+          }
+        }
       }
     }
 
-    if (chocolateOverlay) {
-      if (config.syrups.includes('syr_chocolate')) chocolateOverlay.classList.add('active');
-      else chocolateOverlay.classList.remove('active');
-    }
-    if (dulceOverlay) {
-      if (config.syrups.includes('syr_dulce_leche')) dulceOverlay.classList.add('active');
-      else dulceOverlay.classList.remove('active');
-    }
-    if (caramelOverlay) {
-      if (config.syrups.includes('syr_caramelo')) caramelOverlay.classList.add('active');
-      else caramelOverlay.classList.remove('active');
-    }
+    if (chocolateOverlay) chocolateOverlay.classList.remove('active');
+    if (dulceOverlay) dulceOverlay.classList.remove('active');
+    if (caramelOverlay) caramelOverlay.classList.remove('active');
+    if (redOverlay) redOverlay.classList.remove('active');
+
+    config.syrups.forEach(syrupId => {
+       const sItem = getStockItem(syrupId);
+       if (sItem) {
+         const name = sItem.name.toLowerCase();
+         if (name.includes('choc') && chocolateOverlay) chocolateOverlay.classList.add('active');
+         else if (name.includes('dulce') && dulceOverlay) dulceOverlay.classList.add('active');
+         else if ((name.includes('rojo') || name.includes('red') || name.includes('frut')) && redOverlay) redOverlay.classList.add('active');
+         else if (caramelOverlay) caramelOverlay.classList.add('active');
+       }
+    });
 
     if (whippedCreamOverlay) {
       if (config.whippedCream) whippedCreamOverlay.classList.add('active');
@@ -299,14 +321,15 @@ document.addEventListener('DOMContentLoaded', () => {
       config.toppings.forEach(toppingId => {
         const itemStock = getStockItem(toppingId);
         if (!itemStock) return;
+        const name = itemStock.name.toLowerCase();
 
         for (let k = 0; k < 8; k++) {
           const toppingElement = document.createElement('div');
           toppingElement.className = `visual-topping-item vt-${toppingId}`;
           
-          // Toppings sit on top of the ice cream/cream at the mouth of the cone
-          const x = 75 + Math.random() * 170 - 12;
-          const y = 45 + Math.random() * 110 - 12;
+          // Toppings spawn tightly over the 3 scoops to prevent floating in the air
+          const x = 100 + Math.random() * 120 - 12; // 100 to 220
+          const y = 60 + Math.random() * 110 - 12;  // 60 to 170
 
           const randomRotation = Math.floor(Math.random() * 360);
           
@@ -314,9 +337,18 @@ document.addEventListener('DOMContentLoaded', () => {
           toppingElement.style.top = `${y}px`;
           toppingElement.style.setProperty('--rot', `${randomRotation}deg`);
           
-          if (toppingId === 'top_rocklets') {
+          if (name.includes('rocklet') || name.includes('lentil') || name.includes('color')) {
+            toppingElement.classList.add('topping-rocklet');
             const rockletColors = ['#e63946', '#fee440', '#00f5d4', '#ff007f', '#a020f0', '#0077b6'];
-            toppingElement.style.backgroundColor = rockletColors[Math.floor(Math.random() * rockletColors.length)];
+            toppingElement.style.setProperty('--rocklet-color', rockletColors[Math.floor(Math.random() * rockletColors.length)]);
+          } else if (name.includes('oreo') || name.includes('gallet')) {
+            toppingElement.classList.add('topping-oreo');
+          } else if (name.includes('choc') || name.includes('ralladura')) {
+            toppingElement.classList.add('topping-shaving');
+          } else if (name.includes('frutil') || name.includes('mora') || name.includes('red') || name.includes('rojo')) {
+            toppingElement.classList.add('topping-berry');
+          } else {
+            toppingElement.classList.add('topping-generic');
           }
 
           toppingsContainer.appendChild(toppingElement);
@@ -330,10 +362,29 @@ document.addEventListener('DOMContentLoaded', () => {
       if (config.icecreams) {
         config.icecreams.forEach((iceId, index) => {
           if (!iceId) return;
+          const sItem = getStockItem(iceId);
+          if (!sItem) return;
+
+          const name = sItem.name.toLowerCase();
           const scoop = document.createElement('div');
-          scoop.className = `visual-icecream-scoop scoop-${index} scoop-${iceId}`;
-          if (iceId !== 'ice_vainilla' && iceId !== 'ice_chocolate' && iceId !== 'ice_dulce_leche') {
-            scoop.classList.add('scoop-generic-ice');
+          scoop.className = `visual-icecream-scoop scoop-${index}`;
+          
+          if (name.includes('vainilla') || name.includes('crema') || name.includes('blanco')) {
+            scoop.style.backgroundColor = '#f3e5ab';
+            scoop.style.borderColor = '#d4c58a';
+          } else if (name.includes('choc')) {
+            scoop.style.backgroundColor = '#4e342e';
+            scoop.style.borderColor = '#3e2723';
+          } else if (name.includes('dulce') || name.includes('caramel')) {
+            scoop.style.backgroundColor = '#d2691e';
+            scoop.style.borderColor = '#b87333';
+          } else if (name.includes('frutil') || name.includes('red') || name.includes('rojo') || name.includes('cereza') || name.includes('rosa')) {
+            scoop.style.backgroundColor = '#f1b6c8';
+            scoop.style.borderColor = '#e294aa';
+          } else {
+            // Generico / Default (Rosa por defecto o un color mixto)
+            scoop.style.backgroundColor = '#e8d5f0'; // lila suave
+            scoop.style.borderColor = '#cba3d8';
           }
           icecreamsContainer.appendChild(scoop);
         });
@@ -495,15 +546,36 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     }
 
-    renderBuilderOptions('client-bases-options', 'bases', 'radio', (baseId) => {
-      clientWaffle.base = baseId;
-      updateClientBuilderUI();
-    });
+    const basesSelect = document.getElementById('client-bases-select');
+    if (basesSelect) {
+      basesSelect.innerHTML = `<option value="">-- Seleccionar Masa --</option>` + 
+        (masas || []).map(b => `<option value="${b.id}" ${b.stock <= 0 ? 'disabled style="color:gray;"' : ''}>${b.name} (${b.price_per_portion > 0 ? '+'+formatCurrency(b.price_per_portion) : 'Incluido'})${b.stock <= 0 ? ' [SIN STOCK]' : ''}</option>`).join('');
+      
+      basesSelect.onchange = () => {
+        clientWaffle.base = basesSelect.value;
+        updateClientBuilderUI();
+      };
+    }
 
-    renderBuilderOptions('client-spreads-options', 'syrups', 'radio', (spreadId) => {
-      clientWaffle.spread = spreadId;
-      updateClientBuilderUI();
-    });
+    const spreadsSelect = document.getElementById('client-spreads-select');
+    if (spreadsSelect) {
+      spreadsSelect.innerHTML = `<option value="none">Sin Relleno</option>` + 
+        (stock.spreads || []).map(b => `<option value="${b.id}" ${b.stock <= 0 ? 'disabled style="color:gray;"' : ''}>${b.name} (${b.price_per_portion > 0 ? '+'+formatCurrency(b.price_per_portion) : 'Gratis'})${b.stock <= 0 ? ' [SIN STOCK]' : ''}</option>`).join('');
+      
+      spreadsSelect.onchange = () => {
+        clientWaffle.spread = spreadsSelect.value === 'none' ? '' : spreadsSelect.value;
+        updateClientBuilderUI();
+      };
+    }
+
+    const whippedCreamCheck = document.getElementById('client-whipped-cream-check');
+    if (whippedCreamCheck) {
+      whippedCreamCheck.checked = false;
+      whippedCreamCheck.onchange = (e) => {
+        clientWaffle.whippedCream = e.target.checked;
+        updateClientBuilderUI();
+      };
+    }
 
     renderBuilderOptions('client-toppings-options', 'toppings', 'checkbox', (toppingId, checked) => {
       if (checked) {
@@ -517,11 +589,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       updateClientBuilderUI();
       return true;
-    });
-
-    renderBuilderOptions('client-whipped-cream-options', 'toppings', 'radio', (creamId) => {
-      clientWaffle.whippedCream = (creamId === 'top_crema_batida');
-      updateClientBuilderUI();
     });
 
     renderBuilderOptions('client-syrups-options', 'syrups', 'checkbox', (syrupId, checked) => {
@@ -687,17 +754,14 @@ document.addEventListener('DOMContentLoaded', () => {
     container.innerHTML = '';
     let items = stock[category] ? [...stock[category]] : [];
 
-    if (category === 'syrups') {
+    if (category === 'spreads') {
       if (containerId === 'client-spreads-options') {
-        items = items.filter(item => item.id === 'syr_nutella' || item.id === 'syr_dulce_leche_spread');
         items.unshift({
           id: 'none',
           name: 'Sin Relleno',
           price: 0,
           stock: 9999
         });
-      } else if (containerId === 'client-syrups-options') {
-        items = items.filter(item => item.id !== 'syr_nutella' && item.id !== 'syr_dulce_leche_spread');
       }
     } else if (category === 'toppings') {
       if (containerId === 'client-toppings-options') {
@@ -849,6 +913,89 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error(err);
       } finally {
         trackerSearchBtn.innerText = 'Buscar';
+      }
+    };
+  }
+
+  // --- RESEÑAS ---
+  const reviewBtn = document.getElementById('review-btn');
+  const reviewModal = document.getElementById('review-modal');
+  const reviewClose = document.getElementById('review-modal-close');
+  const reviewSubmitBtn = document.getElementById('review-submit-btn');
+  const reviewTicketInput = document.getElementById('review-ticket-input');
+  const reviewCommentInput = document.getElementById('review-comment-input');
+  const reviewRatingBtns = document.querySelectorAll('.review-rating-btn');
+  const reviewMessage = document.getElementById('review-message');
+  
+  let selectedRating = null;
+
+  if (reviewBtn && reviewModal) {
+    reviewBtn.onclick = () => {
+      reviewModal.style.display = 'flex';
+      reviewTicketInput.value = '';
+      reviewCommentInput.value = '';
+      selectedRating = null;
+      reviewMessage.style.display = 'none';
+      reviewRatingBtns.forEach(btn => btn.style.borderColor = 'transparent');
+    };
+
+    reviewClose.onclick = () => reviewModal.style.display = 'none';
+    reviewModal.onclick = (e) => {
+      if (e.target === reviewModal) reviewModal.style.display = 'none';
+    };
+
+    reviewRatingBtns.forEach(btn => {
+      btn.onclick = () => {
+        reviewRatingBtns.forEach(b => b.style.borderColor = 'transparent');
+        btn.style.borderColor = '#FFD700';
+        selectedRating = btn.getAttribute('data-rating');
+      };
+    });
+
+    reviewSubmitBtn.onclick = async () => {
+      const ticket = reviewTicketInput.value.trim();
+      const comment = reviewCommentInput.value.trim();
+
+      if (ticket.length !== 4) {
+        alert('Por favor, ingresá los 4 dígitos de tu ticket.');
+        return;
+      }
+      if (!selectedRating) {
+        alert('Por favor, seleccioná una calificación (👍 o 👎).');
+        return;
+      }
+
+      reviewSubmitBtn.innerText = 'Enviando...';
+      reviewSubmitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sale_id: ticket, rating: selectedRating, comment })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          reviewMessage.innerText = data.error || 'Error al enviar la reseña.';
+          reviewMessage.style.color = '#ff4d4d';
+          reviewMessage.style.display = 'block';
+        } else {
+          reviewMessage.innerText = '¡Gracias por tu reseña! 💛';
+          reviewMessage.style.color = '#00ff00';
+          reviewMessage.style.display = 'block';
+          setTimeout(() => {
+            reviewModal.style.display = 'none';
+          }, 2000);
+        }
+      } catch (err) {
+        console.error(err);
+        reviewMessage.innerText = 'Error de conexión.';
+        reviewMessage.style.color = '#ff4d4d';
+        reviewMessage.style.display = 'block';
+      } finally {
+        reviewSubmitBtn.innerText = 'Enviar Reseña';
+        reviewSubmitBtn.disabled = false;
       }
     };
   }

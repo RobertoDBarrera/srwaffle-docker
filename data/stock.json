@@ -1,210 +1,258 @@
-{
-  "bases": [
-    {
-      "id": "base_tradicional",
-      "name": "Masa Tradicional",
-      "category": "bases",
-      "stock": 112,
-      "minStock": 20,
-      "price": 450,
-      "unit": "porciones"
-    },
-    {
-      "id": "base_chocolate",
-      "name": "Masa de Chocolate",
-      "category": "bases",
-      "stock": 95,
-      "minStock": 20,
-      "price": 500,
-      "unit": "porciones"
-    },
-    {
-      "id": "base_red_velvet",
-      "name": "Masa Red Velvet",
-      "category": "bases",
-      "stock": 45,
-      "minStock": 15,
-      "price": 550,
-      "unit": "porciones"
-    }
-  ],
-  "toppings": [
-    {
-      "id": "top_oreo",
-      "name": "Galletitas Oreo",
-      "category": "toppings",
-      "stock": 78,
-      "minStock": 15,
-      "price": 120,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_kitkat",
-      "name": "KitKat Troceado",
-      "category": "toppings",
-      "stock": 60,
-      "minStock": 15,
-      "price": 160,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_frutilla",
-      "name": "Frutillas Frescas",
-      "category": "toppings",
-      "stock": 7,
-      "minStock": 10,
-      "price": 180,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_chips",
-      "name": "Chips de Chocolate",
-      "category": "toppings",
-      "stock": 150,
-      "minStock": 25,
-      "price": 90,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_marshmallows",
-      "name": "Marshmallows",
-      "category": "toppings",
-      "stock": 75,
-      "minStock": 12,
-      "price": 100,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_rocklets",
-      "name": "Rocklets",
-      "category": "toppings",
-      "stock": 90,
-      "minStock": 15,
-      "price": 110,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_nuez",
-      "name": "Nueces Picadas",
-      "category": "toppings",
-      "stock": 40,
-      "minStock": 10,
-      "price": 140,
-      "unit": "porciones"
-    },
-    {
-      "id": "top_crema_batida",
-      "name": "Crema Batida",
-      "category": "toppings",
-      "stock": 73,
-      "minStock": 10,
-      "price": 120,
-      "unit": "porciones"
-    }
-  ],
-  "syrups": [
-    {
-      "id": "syr_chocolate",
-      "name": "Salsa de Chocolate",
-      "category": "syrups",
-      "stock": 143,
-      "minStock": 30,
-      "price": 80,
-      "unit": "porciones"
-    },
-    {
-      "id": "syr_dulce_leche",
-      "name": "Dulce de Leche",
-      "category": "syrups",
-      "stock": 179,
-      "minStock": 40,
-      "price": 90,
-      "unit": "porciones"
-    },
-    {
-      "id": "syr_caramelo",
-      "name": "Salsa de Caramelo",
-      "category": "syrups",
-      "stock": 95,
-      "minStock": 20,
-      "price": 80,
-      "unit": "porciones"
-    },
-    {
-      "id": "syr_nutella",
-      "name": "Nutella",
-      "category": "syrups",
-      "stock": 93,
-      "minStock": 15,
-      "price": 150,
-      "unit": "porciones"
-    },
-    {
-      "id": "syr_dulce_leche_spread",
-      "name": "Dulce de Leche (Relleno)",
-      "category": "syrups",
-      "stock": 120,
-      "minStock": 20,
-      "price": 100,
-      "unit": "porciones"
-    }
-  ],
-  "drinks": [
-    {
-      "id": "drink_agua",
-      "name": "Agua Mineral (500ml)",
-      "category": "drinks",
-      "stock": 45,
-      "minStock": 10,
-      "price": 250,
-      "unit": "unidades"
-    },
-    {
-      "id": "drink_cola",
-      "name": "Gaseosa Cola (Lata)",
-      "category": "drinks",
-      "stock": 51,
-      "minStock": 12,
-      "price": 300,
-      "unit": "unidades"
-    },
-    {
-      "id": "drink_jugo",
-      "name": "Jugo Naranja (Exprimido)",
-      "category": "drinks",
-      "stock": 18,
-      "minStock": 8,
-      "price": 380,
-      "unit": "unidades"
-    }
-  ],
-  "icecreams": [
-    {
-      "id": "ice_vainilla",
-      "name": "Helado de Vainilla",
-      "category": "icecreams",
-      "stock": 53,
-      "minStock": 10,
-      "price": 150,
-      "unit": "bochas"
-    },
-    {
-      "id": "ice_chocolate",
-      "name": "Helado de Chocolate",
-      "category": "icecreams",
-      "stock": 50,
-      "minStock": 10,
-      "price": 150,
-      "unit": "bochas"
-    },
-    {
-      "id": "ice_dulce_leche",
-      "name": "Helado de Dulce de Leche",
-      "category": "icecreams",
-      "stock": 80,
-      "minStock": 15,
-      "price": 150,
-      "unit": "bochas"
-    }
-  ]
-}
+[
+  {
+    "id": "base_tradicional",
+    "name": "Masa Tradicional",
+    "category": "raw_material",
+    "stock": 112,
+    "minStock": 20,
+    "price": 450,
+    "unit": "porciones"
+  },
+  {
+    "id": "base_chocolate",
+    "name": "Masa de Chocolate",
+    "category": "raw_material",
+    "stock": 95,
+    "minStock": 20,
+    "price": 500,
+    "unit": "porciones"
+  },
+  {
+    "id": "base_red_velvet",
+    "name": "Masa Red Velvet",
+    "category": "raw_material",
+    "stock": 45,
+    "minStock": 15,
+    "price": 550,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_oreo",
+    "name": "Galletitas Oreo",
+    "category": "topping",
+    "stock": 78,
+    "minStock": 15,
+    "price": 120,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_kitkat",
+    "name": "KitKat Troceado",
+    "category": "topping",
+    "stock": 60,
+    "minStock": 15,
+    "price": 160,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_frutilla",
+    "name": "Frutillas Frescas",
+    "category": "topping",
+    "stock": 7,
+    "minStock": 10,
+    "price": 180,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_chips",
+    "name": "Chips de Chocolate",
+    "category": "topping",
+    "stock": 150,
+    "minStock": 25,
+    "price": 90,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_marshmallows",
+    "name": "Marshmallows",
+    "category": "topping",
+    "stock": 75,
+    "minStock": 12,
+    "price": 100,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_rocklets",
+    "name": "Rocklets",
+    "category": "topping",
+    "stock": 90,
+    "minStock": 15,
+    "price": 110,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_nuez",
+    "name": "Nueces Picadas",
+    "category": "topping",
+    "stock": 40,
+    "minStock": 10,
+    "price": 140,
+    "unit": "porciones"
+  },
+  {
+    "id": "top_crema_batida",
+    "name": "Crema Batida",
+    "category": "topping",
+    "stock": 73,
+    "minStock": 10,
+    "price": 120,
+    "unit": "porciones"
+  },
+  {
+    "id": "syr_chocolate",
+    "name": "Salsa de Chocolate",
+    "category": "syrup",
+    "stock": 143,
+    "minStock": 30,
+    "price": 80,
+    "unit": "porciones"
+  },
+  {
+    "id": "syr_dulce_leche",
+    "name": "Dulce de Leche",
+    "category": "syrup",
+    "stock": 179,
+    "minStock": 40,
+    "price": 90,
+    "unit": "porciones"
+  },
+  {
+    "id": "syr_caramelo",
+    "name": "Salsa de Caramelo",
+    "category": "syrup",
+    "stock": 95,
+    "minStock": 20,
+    "price": 80,
+    "unit": "porciones"
+  },
+  {
+    "id": "syr_nutella",
+    "name": "Nutella",
+    "category": "syrup",
+    "stock": 93,
+    "minStock": 15,
+    "price": 150,
+    "unit": "porciones"
+  },
+  {
+    "id": "syr_dulce_leche_spread",
+    "name": "Dulce de Leche (Relleno)",
+    "category": "syrup",
+    "stock": 120,
+    "minStock": 20,
+    "price": 100,
+    "unit": "porciones"
+  },
+  {
+    "id": "drink_agua",
+    "name": "Agua Mineral (500ml)",
+    "category": "drink",
+    "stock": 45,
+    "minStock": 10,
+    "price": 250,
+    "unit": "unidades"
+  },
+  {
+    "id": "drink_cola",
+    "name": "Gaseosa Cola (Lata)",
+    "category": "drink",
+    "stock": 51,
+    "minStock": 12,
+    "price": 300,
+    "unit": "unidades"
+  },
+  {
+    "id": "drink_jugo",
+    "name": "Jugo Naranja (Exprimido)",
+    "category": "drink",
+    "stock": 18,
+    "minStock": 8,
+    "price": 380,
+    "unit": "unidades"
+  },
+  {
+    "id": "ice_vainilla",
+    "name": "Helado de Vainilla",
+    "category": "icecream",
+    "stock": 53,
+    "minStock": 10,
+    "price": 150,
+    "unit": "bochas"
+  },
+  {
+    "id": "ice_chocolate",
+    "name": "Helado de Chocolate",
+    "category": "icecream",
+    "stock": 50,
+    "minStock": 10,
+    "price": 150,
+    "unit": "bochas"
+  },
+  {
+    "id": "ice_dulce_leche",
+    "name": "Helado de Dulce de Leche",
+    "category": "icecream",
+    "stock": 80,
+    "minStock": 15,
+    "price": 150,
+    "unit": "bochas"
+  },
+  {
+    "id": "st_caja_waffle",
+    "name": "Caja para Waffle (Packaging)",
+    "category": "packaging",
+    "stock": 500,
+    "minStock": 100,
+    "cost": 50,
+    "price": 0,
+    "unit": "un",
+    "purchase_quantity": 500,
+    "purchase_unit": "un",
+    "total_cost": 25000
+  },
+  {
+    "id": "st_banana",
+    "name": "Bananas Frescas",
+    "category": "topping",
+    "stock": 3000,
+    "minStock": 500,
+    "cost": 1500,
+    "price": 200,
+    "unit": "g",
+    "portion_size": 50,
+    "price_per_portion": 200,
+    "purchase_quantity": 3,
+    "purchase_unit": "kg",
+    "total_cost": 4500
+  },
+  {
+    "id": "st_frutos_rojos",
+    "name": "Salsa Frutos Rojos",
+    "category": "syrup",
+    "stock": 2000,
+    "minStock": 300,
+    "cost": 5000,
+    "price": 300,
+    "unit": "g",
+    "portion_size": 30,
+    "price_per_portion": 300,
+    "purchase_quantity": 2,
+    "purchase_unit": "kg",
+    "total_cost": 10000
+  },
+  {
+    "id": "st_americana",
+    "name": "Helado Americana",
+    "category": "icecream",
+    "stock": 50,
+    "minStock": 10,
+    "cost": 300,
+    "price": 500,
+    "unit": "bochas",
+    "portion_size": 1,
+    "price_per_portion": 500,
+    "purchase_quantity": 50,
+    "purchase_unit": "bochas",
+    "total_cost": 15000
+  }
+]
