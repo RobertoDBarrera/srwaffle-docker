@@ -23,13 +23,27 @@
     }
 
     .nav-help-link:hover {
-      color: #fff;
-      text-shadow: 0 0 10px var(--neon-purple-glow);
+      color: var(--neon-pink);
+      text-shadow: 0 0 8px var(--neon-pink-glow);
+    }
+    #demo-banner {
+      display: none;
+      background: #e65100;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: bold;
+      z-index: 10000;
+      position: sticky;
+      top: 0;
+      width: 100%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 
 <body class="is-client-page">
+<div id="demo-banner">MODO DEMO ACTIVADO - Los datos registrados aquí son ficticios y no afectarán a tu producción</div>
   <!-- Toast Notification Container -->
 
   <!-- ENCABEZADO GLOBAL -->
@@ -256,15 +270,51 @@
           <div class="price-summary-title">Total Estimado</div>
           <div class="price-summary-value" id="client-waffle-price-value">$0</div>
         </div>
-        <button class="btn-primary" id="client-send-wa-btn"
-          style="width: 100%; margin-top: 1.5rem; background: #25D366; border-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          Pedir por WhatsApp 💬
+        <button class="btn-primary" id="client-add-to-cart-btn"
+          style="width: 100%; margin-top: 1.5rem; background: var(--btn-primary-bg, #9d4edd); border-color: var(--btn-primary-bg, #9d4edd); color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          Agregar al Carrito 🛒
         </button>
       </div>
     </div>
   </section>
 
+  <!-- BOTÓN FLOTANTE DEL CARRITO -->
+  <div id="floating-cart-btn" style="position: fixed; bottom: 30px; right: 30px; background: var(--neon-purple); border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 15px var(--neon-purple-glow); z-index: 1000; transition: transform 0.2s;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle>
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+    </svg>
+    <span id="floating-cart-count" style="position: absolute; top: -5px; right: -5px; background: var(--neon-cyan); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; border: 2px solid #111;">0</span>
+  </div>
 
+  <!-- MODAL / SIDEBAR DEL CARRITO -->
+  <div class="pos-modal-overlay" id="client-cart-modal" style="display: none; z-index: 99999;">
+    <div class="pos-waffle-modal" style="width: 90%; max-width: 500px; height: 90vh; max-height: 800px; display: flex; flex-direction: column; background: #111; border: 1px solid var(--neon-purple); border-radius: 12px; box-shadow: 0 0 25px var(--neon-purple-glow); position: relative; margin: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <h2 style="font-family: var(--font-cursive); font-size: 1.8rem; color: #fff; margin: 0;">Tu Pedido</h2>
+        <button id="client-cart-close" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+      
+      <div id="client-cart-items" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+        <!-- Se llena con app.js -->
+        <div style="text-align: center; color: var(--text-secondary); margin-top: 50px;">El carrito está vacío</div>
+      </div>
+      
+      <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.5); border-radius: 0 0 12px 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <span style="font-size: 1.2rem; font-weight: 600; color: #fff;">Total:</span>
+          <span id="client-cart-total" style="font-size: 1.5rem; font-weight: bold; color: var(--neon-cyan);">$0</span>
+        </div>
+        
+        <button class="btn-primary" id="client-cart-kiosk-btn" style="width: 100%; margin-bottom: 10px; background: var(--neon-purple); border-color: var(--neon-purple); display: flex; align-items: center; justify-content: center; gap: 8px;">
+          Confirmar Pedido (Pagar en Caja) 🛍️
+        </button>
+        <button class="btn-secondary" id="client-cart-wa-btn" style="width: 100%; background: #25D366; border-color: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          Enviar por WhatsApp 💬
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
   <div class="toast-notification" id="toast">Notificación de Sistema</div>
@@ -323,32 +373,25 @@
   <div class="pos-modal-overlay" id="help-modal" style="display: none; z-index: 99999;">
     <div class="inventory-modal"
       style="max-width: 550px; width: 90%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--neon-purple); box-shadow: 0 0 25px var(--neon-purple-glow);">
-      <h2
-        style="font-family: var(--font-cursive); font-size: 2.2rem; text-align: center; color: var(--neon-purple); margin-bottom: 15px;">
-        Guía de Uso: Sr. Waffle</h2>
 
       <div
-        style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); max-height: 350px; overflow-y: auto; padding-right: 10px;">
-        <p style="margin-bottom: 12px; font-weight: 700; color: #fff;">¡Bienvenido al armador digital de Bubble Waffles!
-        </p>
+        style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary); max-height: 350px; overflow-y: auto; padding-right: 10px; padding-top: 10px;">
 
         <ol style="margin-left: 20px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
-          <li><strong>Explorar el Menú:</strong> Podés ver nuestras combinaciones de carta haciendo clic en <em>"Nuestro
-              Menú"</em> en el encabezado.</li>
+          <li><strong>Explorar el Menú:</strong> Podés ver nuestras combinaciones de carta haciendo clic en <em>"Nuestro Menú"</em> en el encabezado.</li>
           <li><strong>Armar tu propio Waffle:</strong>
             <ul style="margin-left: 15px; margin-top: 5px; list-style-type: circle;">
-              <li>Paso 1: Elegí tu <strong>Masa Base</strong> preferida (Tradicional, Chocolate o Red Velvet).</li>
-              <li>Paso 2: Elegí el <strong>Relleno</strong> untable para la masa (Nutella, Dulce de Leche o Nada).</li>
-              <li>Paso 3: Sumá hasta 3 bochas de tus sabores favoritos de <strong>Helado</strong>.</li>
-              <li>Paso 4: Agregá hasta 4 <strong>Toppings</strong> (chocolates, frutas, etc.).</li>
-              <li>Paso 5: Seleccioná si querés agregar <strong>Crema Batida</strong>.</li>
-              <li>Paso 6: Coroná tu waffle con hasta 2 <strong>Salsas</strong>.</li>
+              <li>Paso 1: Elegí tu Masa Base preferida (Tradicional, Chocolate o Red Velvet).</li>
+              <li>Paso 2: Elegí el Relleno untable para la masa (Nutella, Dulce de Leche o Nada).</li>
+              <li>Paso 3: Sumá hasta 3 bochas de tus sabores favoritos de Helado.</li>
+              <li>Paso 4: Agregá hasta 4 Toppings (chocolates, frutas, etc.).</li>
+              <li>Paso 5: Seleccioná si querés agregar Crema Batida.</li>
+              <li>Paso 6: Coroná tu waffle con hasta 2 Salsas.</li>
             </ul>
           </li>
-          <li><strong>Visualización en tiempo real:</strong> En el lado izquierdo verás cómo se va construyendo tu
-            waffle dinámicamente y el precio total estimado.</li>
-          <li><strong>Realizar tu Pedido:</strong> Diseñá el waffle a tu gusto y mostrale esta pantalla a nuestro
-            personal en el local para que te lo preparemos exactamente como lo diseñaste.</li>
+          <li><strong>Visualización en tiempo real:</strong> En el lado izquierdo verás cómo se va construyendo tu waffle dinámicamente y el precio total estimado.</li>
+          <li><strong>Realizar tu Pedido:</strong> Diseñá tu pedido a tu gusto, andá eligiendo del menú o preparando tu waffle personalizado y agregalos al carrito. Cuando quieras pedir simplemente confirmá el pedido desde el carro (abajo a la derecha) y guardate el código que le tenés que dar al cajero para pagar.</li>
+          <li><strong>Seguimiento:</strong> En cuanto el cajero confirme tu pedido podés hacer el seguimiento escaneando el código QR y buscando tu pedido (el número que te dio antes), también podés dejar tu reseña cuando quieras.</li>
         </ol>
       </div>
 
@@ -422,15 +465,15 @@
   <div class="pos-modal-overlay" id="review-modal" style="display: none; z-index: 99999;">
     <div class="inventory-modal" style="max-width: 550px; width: 90%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: #FFD700; box-shadow: 0 0 25px rgba(255,215,0,0.3); text-align: center;">
       <h2 style="font-family: var(--font-cursive); font-size: 2.2rem; color: #FFD700; margin-bottom: 5px;">Dejá tu Reseña</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">Contanos cómo fue tu experiencia.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">Ayudanos a mejorar nuestro servicio evaluando tu última compra.</p>
       
-      <div style="margin-bottom: 15px;">
+      <div style="margin-bottom: 20px;">
         <input type="text" id="review-ticket-input" placeholder="Ticket (Ej: 3559)" maxlength="4" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 8px; font-size: 1.1rem; text-align: center; width: 200px; letter-spacing: 2px;">
       </div>
       
       <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;">
-        <button type="button" class="review-rating-btn" data-rating="positive" style="background: rgba(0,255,0,0.1); border: 2px solid transparent; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; transition: all 0.3s;">👍</button>
-        <button type="button" class="review-rating-btn" data-rating="negative" style="background: rgba(255,0,0,0.1); border: 2px solid transparent; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; transition: all 0.3s;">👎</button>
+        <button type="button" class="review-rating-btn" data-rating="2" style="background: rgba(0,255,0,0.1); border: 2px solid transparent; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; transition: all 0.3s;">👍</button>
+        <button type="button" class="review-rating-btn" data-rating="1" style="background: rgba(255,0,0,0.1); border: 2px solid transparent; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; transition: all 0.3s;">👎</button>
       </div>
       
       <div style="margin-bottom: 20px;">
@@ -446,10 +489,27 @@
     </div>
   </div>
 
+  <!-- MODAL DE PEDIDO KIOSCO -->
+  <div class="pos-modal-overlay" id="kiosk-ticket-modal" style="display: none; z-index: 99999;">
+    <div class="inventory-modal" style="max-width: 550px; width: 90%; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(15px); border-color: var(--neon-cyan); box-shadow: 0 0 25px var(--neon-cyan-glow); text-align: center;">
+      <h2 style="font-family: var(--font-cursive); font-size: 2.2rem; color: var(--neon-cyan); margin-bottom: 5px;">¡Pedido Enviado!</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 1rem;">Acércate a la caja y dictá el siguiente código para abonar y retirar tu pedido.</p>
+      
+      <div style="margin: 30px 0;">
+        <span style="font-size: 1.2rem; color: #888; display: block; margin-bottom: 10px;">Tu número de Ticket:</span>
+        <div id="kiosk-ticket-code" style="font-size: 4rem; font-weight: 800; color: #fff; letter-spacing: 5px; text-shadow: 0 0 20px rgba(255,255,255,0.5);">----</div>
+      </div>
+
+      <div class="modal-actions" style="justify-content: center; margin-top: 30px;">
+        <button class="btn-primary" id="kiosk-modal-close" style="padding: 0.8rem 3rem; border-radius: 20px; font-size: 1.1rem;">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CONTROLADORES JAVASCRIPT -->
   <script src="/theme-manager.js?v=1782406455731"></script>
   <script src="data.js"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 
 </html>

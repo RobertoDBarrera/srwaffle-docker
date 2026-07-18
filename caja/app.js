@@ -20,12 +20,20 @@ window.fetch = async function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  let stock = [];
+    
+    // Check Demo Mode
+    fetch('/api/demo/status').then(r=>r.json()).then(d=>{
+      const banner = document.getElementById('demo-banner');
+      if(banner) banner.style.display = d.isDemoMode ? 'block' : 'none';
+    }).catch(e=>console.error(e));
+
+    let stock = [];
   let masas = [];
   let waffles = [];
   let menu = [];
   
   let cart = [];
+  let currentKioskOrderId = null;
   let selectedPaymentMethod = 'Efectivo';
   let loyaltyEnabled = false;
   let loyaltyPointsThreshold = 100;
@@ -87,13 +95,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loadState = async () => {
     try {
-      const [stkRes, masRes, wafRes, menuRes] = await Promise.all([
-        fetch('/api/stock'), fetch('/api/masas'), fetch('/api/waffles'), fetch('/api/menu')
+      const [stkRes, masRes, wafRes, menuRes, compRes] = await Promise.all([
+        fetch('/api/stock'), fetch('/api/masas'), fetch('/api/waffles'), fetch('/api/menu'), fetch('/api/company/info')
       ]);
       stock = await stkRes.json();
       masas = await masRes.json();
       waffles = await wafRes.json();
       menu = await menuRes.json();
+      
+      const companyInfo = await compRes.json();
+      
+      const pmContainer = document.getElementById('pos-payment-methods');
+      if (pmContainer) {
+        pmContainer.innerHTML = '';
+        const methods = companyInfo.paymentMethods || [
+          {name: 'Efectivo', enabled: true},
+          {name: 'Tarjeta de Débito', enabled: true},
+          {name: 'Tarjeta de Crédito', enabled: true}
+        ];
+        
+        let firstSelected = false;
+        methods.forEach(m => {
+          if (m.enabled) {
+            const btn = document.createElement('button');
+            btn.className = 'payment-btn';
+            btn.setAttribute('data-method', m.name);
+            btn.textContent = m.name;
+            
+            if (!firstSelected) {
+              btn.classList.add('selected');
+              selectedPaymentMethod = m.name;
+              firstSelected = true;
+            }
+            
+            btn.onclick = (e) => {
+              document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('selected'));
+              e.target.classList.add('selected');
+              selectedPaymentMethod = m.name;
+            };
+            
+            pmContainer.appendChild(btn);
+          }
+        });
+      }
     } catch (e) {
       console.error(e);
       showToast('Error al cargar datos', true);
@@ -251,14 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const spreadOverlay = wrapper.querySelector('.spread-overlay');
     const whippedCreamOverlay = wrapper.querySelector('.visual-whipped-cream');
 
-    const baseClass = `base-${config.base.replace('base_', '').replace('_', '-')}`;
+    const baseId = config.base || 'base_tradicional';
+    const baseClass = `base-${baseId.replace('base_', '').replace(/_/g, '-')}`;
     if (backElement) {
-      backElement.className = 'waffle-back';
-      backElement.classList.add(baseClass);
+      backElement.className = `waffle-back ${baseClass}`;
     }
     if (frontElement) {
-      frontElement.className = 'waffle-front';
-      frontElement.classList.add(baseClass);
+      frontElement.className = `waffle-front ${baseClass}`;
     }
 
     if (spreadOverlay) {
@@ -373,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="pos-waffle-modal">
         <div class="pos-waffle-modal-left" style="background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center;">
            <h3 style="color:var(--neon-cyan); margin-bottom: 2rem;">Personalizador Visual (BETA)</h3>
-           <div class="waffle-canvas-wrapper" id="pos-waffle-canvas-wrapper" style="transform: scale(0.9);">
+           <div class="waffle-canvas-wrapper" id="pos-waffle-canvas-wrapper" style="width: 380px; height: 380px; transform: scale(0.9);">
              <div class="builder-neon-glow"></div>
              <div class="waffle-assembly-box" style="position: relative; width: 320px; height: 320px; z-index: 2;">
                <div class="waffle-back">
@@ -633,6 +676,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const recoverOrderModal = document.getElementById('recover-order-modal');
+  const recoverOrderInput = document.getElementById('recover-order-code-input');
+  const recoverOrderSubmit = document.getElementById('recover-order-submit');
+  const recoverOrderClose = document.getElementById('recover-order-close');
+
+  const recoverKioskOrder = async () => {
+    if (recoverOrderModal && recoverOrderInput) {
+      recoverOrderInput.value = '';
+      recoverOrderModal.style.display = 'flex';
+      recoverOrderInput.focus();
+    }
+  };
+
+  if (recoverOrderClose) {
+    recoverOrderClose.onclick = () => {
+      recoverOrderModal.style.display = 'none';
+    };
+  }
+
+  if (recoverOrderSubmit && recoverOrderInput) {
+    recoverOrderSubmit.onclick = async () => {
+      const code = recoverOrderInput.value.trim();
+      if (!code) return;
+      
+      try {
+        const res = await fetch(`/api/kiosk-orders/${code}`);
+        if (!res.ok) {
+          showToast('Pedido no encontrado o ya cobrado', true);
+          return;
+        }
+        const order = await res.json();
+        
+        // Load cart
+        cart = [...cart, ...order.cart];
+        currentKioskOrderId = code;
+        
+        // Update UI
+        const badge = document.getElementById('kiosk-order-badge');
+        const badgeId = document.getElementById('kiosk-order-badge-id');
+        if (badge && badgeId) {
+          badgeId.textContent = currentKioskOrderId;
+          badge.style.display = 'block';
+        }
+        
+        showToast(`Pedido #${currentKioskOrderId} recuperado`);
+        recoverOrderModal.style.display = 'none';
+        renderCart();
+      } catch (e) {
+        showToast('Error de conexión', true);
+      }
+    };
+  }
+
+  const kioskRecoverBtn = document.getElementById('pos-kiosk-recover-btn');
+  if (kioskRecoverBtn) {
+    kioskRecoverBtn.onclick = recoverKioskOrder;
+  }
+
   const checkoutSuccessClose = document.getElementById('checkout-success-close');
   if (checkoutSuccessClose) {
     checkoutSuccessClose.onclick = () => {
@@ -651,18 +752,29 @@ document.addEventListener('DOMContentLoaded', () => {
           total, 
           paymentMethod: selectedPaymentMethod, 
           cashierName: sessionStorage.getItem('caja_cashier_name'),
-          customerName: currentLoyaltyCustomer ? currentLoyaltyCustomer.name : null
+          customerName: currentLoyaltyCustomer ? currentLoyaltyCustomer.name : null,
+          id: currentKioskOrderId
         })
       });
       if (res.ok) {
         const sale = await res.json();
         showToast('Venta Registrada Exitosamente!');
         
+        // Clean up kiosk order if it was linked
+        if (currentKioskOrderId) {
+          try {
+            await fetch(`/api/kiosk-orders/${currentKioskOrderId}`, { method: 'DELETE' });
+          } catch(e) {}
+          currentKioskOrderId = null;
+          const badge = document.getElementById('kiosk-order-badge');
+          if (badge) badge.style.display = 'none';
+        }
+
         // Populate and show the tracking code modal
         const trackingCodeEl = document.getElementById('checkout-tracking-code');
         const successModalEl = document.getElementById('checkout-success-modal');
         if (trackingCodeEl && successModalEl) {
-          trackingCodeEl.innerText = sale.id;
+          trackingCodeEl.innerText = sale.sale ? sale.sale.id : sale.id;
           successModalEl.style.display = 'flex';
         }
         
@@ -680,4 +792,70 @@ document.addEventListener('DOMContentLoaded', () => {
     loginOverlay.style.display = 'none';
     startCaja();
   }
+
+  // --- BOTONES DE HEADER (AYUDA Y ÚLTIMAS VENTAS) ---
+  const helpBtn = document.getElementById('help-btn');
+  const helpModal = document.getElementById('help-modal');
+  const helpModalClose = document.getElementById('help-modal-close');
+  if (helpBtn && helpModal) {
+    helpBtn.onclick = () => helpModal.style.display = 'flex';
+  }
+  if (helpModalClose && helpModal) {
+    helpModalClose.onclick = () => helpModal.style.display = 'none';
+  }
+
+  const recentSalesBtn = document.getElementById('recent-sales-btn');
+  const recentSalesModal = document.getElementById('recent-sales-modal');
+  const recentSalesClose = document.getElementById('recent-sales-close');
+  const recentSalesTableBody = document.getElementById('recent-sales-table-body');
+  
+  if (recentSalesBtn && recentSalesModal) {
+    recentSalesBtn.onclick = async () => {
+      try {
+        const res = await fetch('/api/sales');
+        if (!res.ok) throw new Error('Error fetching sales');
+        const allSales = await res.json();
+        
+        // Filtramos solo las ventas de hoy
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todaysSales = allSales.filter(s => new Date(s.date || s.created_at) >= today);
+        
+        recentSalesTableBody.innerHTML = '';
+        todaysSales.reverse().forEach(sale => {
+            const tr = document.createElement('tr');
+            const time = new Date(sale.date || sale.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const s = sale.kdsStatus || sale.status;
+            let statusBadge = '<span style="color:var(--text-secondary)">Desconocido</span>';
+            
+            if (s === 'pending') statusBadge = '<span style="color:var(--neon-yellow)">En Cocina</span>';
+            else if (s === 'preparing') statusBadge = '<span style="color:var(--neon-yellow)">Preparando</span>';
+            else if (s === 'ready') statusBadge = '<span style="color:var(--neon-cyan)">Listo para entregar</span>';
+            else if (s === 'delivered' || s === 'completed') statusBadge = '<span style="color:var(--neon-cyan)">Entregado</span>';
+            else if (s === 'cancelled') statusBadge = '<span style="color:var(--neon-pink)">Cancelado</span>';
+
+            tr.innerHTML = `
+              <td style="font-family: monospace; font-size: 1.1rem; color: var(--neon-yellow);">#${sale.id}</td>
+              <td>${time}</td>
+              <td>${sale.cashier_name || sale.cashierName || 'Caja Central'}</td>
+              <td>${statusBadge}</td>
+              <td style="color: var(--neon-cyan); font-weight: bold;">${formatCurrency(sale.total)}</td>
+            `;
+            recentSalesTableBody.appendChild(tr);
+          });
+          
+          if (todaysSales.length === 0) {
+            recentSalesTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay ventas hoy</td></tr>';
+          }
+        
+        recentSalesModal.style.display = 'flex';
+      } catch (e) {
+        showToast('Error al cargar ventas recientes', true);
+      }
+    };
+  }
+  if (recentSalesClose && recentSalesModal) {
+    recentSalesClose.onclick = () => recentSalesModal.style.display = 'none';
+  }
+
 });

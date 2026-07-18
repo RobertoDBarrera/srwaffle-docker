@@ -20,6 +20,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const STOCK_FILE = path.join(DATA_DIR, 'stock.json');
 const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const SALES_FILE = path.join(DATA_DIR, 'sales.json');
+const KIOSK_ORDERS_FILE = path.join(DATA_DIR, 'kiosk_orders.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const LOYALTY_CUSTOMERS_FILE = path.join(DATA_DIR, 'loyalty_customers.json');
 const EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.json');
@@ -178,6 +179,7 @@ function readJSON(filePath) {
     if (filePath === STOCK_FILE) return INITIAL_STOCK;
     if (filePath === MENU_FILE) return INITIAL_MENU;
     if (filePath === SALES_FILE) return generateMockSales();
+    if (filePath === KIOSK_ORDERS_FILE) return [];
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
     if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
     if (filePath === EMPLOYEES_FILE) return [];
@@ -189,6 +191,7 @@ function readJSON(filePath) {
     if (filePath === STOCK_FILE) return INITIAL_STOCK;
     if (filePath === MENU_FILE) return INITIAL_MENU;
     if (filePath === SALES_FILE) return [];
+    if (filePath === KIOSK_ORDERS_FILE) return [];
     if (filePath === SETTINGS_FILE) return INITIAL_SETTINGS;
     if (filePath === LOYALTY_CUSTOMERS_FILE) return [];
     if (filePath === EMPLOYEES_FILE) return [];
@@ -229,6 +232,7 @@ const initializeDataFiles = () => {
   }
   if (!fs.existsSync(MENU_FILE)) writeJSON(MENU_FILE, INITIAL_MENU);
   if (!fs.existsSync(SALES_FILE)) writeJSON(SALES_FILE, generateMockSales());
+  if (!fs.existsSync(KIOSK_ORDERS_FILE)) writeJSON(KIOSK_ORDERS_FILE, []);
   if (!fs.existsSync(SETTINGS_FILE)) writeJSON(SETTINGS_FILE, INITIAL_SETTINGS);
   if (!fs.existsSync(LOYALTY_CUSTOMERS_FILE)) writeJSON(LOYALTY_CUSTOMERS_FILE, []);
   if (!fs.existsSync(EMPLOYEES_FILE)) writeJSON(EMPLOYEES_FILE, []);
@@ -250,6 +254,14 @@ const initDb = async () => {
   try {
     const client = await pool.connect();
     client.release();
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS kiosk_orders (
+        id VARCHAR(10) PRIMARY KEY,
+        cart JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     usePostgres = true;
     console.log('Conexión a PostgreSQL establecida con éxito.');
     await initPostgresTables();
@@ -347,6 +359,7 @@ const initPostgresTables = async () => {
     await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS cashier_name VARCHAR(255) DEFAULT \'Administrador\';');
     await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS kds_completed_at TIMESTAMPTZ;');
     await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);');
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS "kdsStatus" VARCHAR(50) DEFAULT \'pending\';');
 
     // loyalty customers
     await client.query(`
@@ -376,6 +389,15 @@ const initPostgresTables = async () => {
         sale_id VARCHAR(100) NOT NULL,
         rating VARCHAR(20) NOT NULL,
         comment TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // kiosk_orders
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kiosk_orders (
+        id VARCHAR(100) PRIMARY KEY,
+        cart JSONB NOT NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -964,7 +986,8 @@ const getSales = async () => {
       status: row.status,
       cashierName: row.cashier_name || 'Administrador',
       customerName: row.customer_name || null,
-      kdsCompletedAt: row.kds_completed_at ? row.kds_completed_at.toISOString() : null
+      kdsStatus: row.kdsStatus || row.status,
+      kdsCompletedAt: row.kds_completed_at ? new Date(row.kds_completed_at).toISOString() : null
     }));
   } else {
     return readJSON(SALES_FILE);
@@ -994,8 +1017,8 @@ const getSaleById = async (saleId) => {
 const createSale = async (sale) => {
   if (usePostgres) {
     await pool.query(
-      'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name, customer_name) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, sale.status || 'completed', sale.cashierName || 'Administrador', sale.customerName || null]
+      'INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name, customer_name, "kdsStatus") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+      [sale.id, sale.date, JSON.stringify(sale.items), sale.total, sale.paymentMethod, sale.status || 'completed', sale.cashierName || 'Administrador', sale.customerName || null, sale.kdsStatus || 'pending']
     );
   } else {
     const sales = readJSON(SALES_FILE);
@@ -1307,8 +1330,12 @@ const updateSaleStatus = async (saleId, status) => {
 
 const getKitchenTickets = async () => {
   if (usePostgres) {
-    const res = await pool.query("SELECT * FROM sales WHERE kdsStatus IN ('pending', 'preparing', 'ready') ORDER BY created_at ASC");
-    return res.rows;
+    const res = await pool.query('SELECT * FROM sales WHERE "kdsStatus" IN (\'pending\', \'preparing\', \'ready\') ORDER BY date ASC');
+    return res.rows.map(row => ({
+      ...row,
+      kdsStatus: row.kdsStatus || row.status, // Fallback if missing
+      kdsCompletedAt: row.kds_completed_at
+    }));
   } else {
     const sales = readJSON(SALES_FILE);
     return sales.filter(s => s.kdsStatus === 'pending' || s.kdsStatus === 'preparing' || s.kdsStatus === 'ready').reverse(); // reverse for chronological if unshifted
@@ -1411,6 +1438,37 @@ const addReview = async (saleId, rating, comment) => {
   }
 };
 
+// --- KIOSK ORDERS ---
+const createKioskOrder = async (id, cart) => {
+  if (usePostgres) {
+    await pool.query('INSERT INTO kiosk_orders (id, cart) VALUES ($1, $2)', [id, JSON.stringify(cart)]);
+  } else {
+    const orders = readJSON(KIOSK_ORDERS_FILE);
+    orders.push({ id, cart, created_at: new Date().toISOString() });
+    writeJSON(KIOSK_ORDERS_FILE, orders);
+  }
+};
+
+const getKioskOrder = async (id) => {
+  if (usePostgres) {
+    const res = await pool.query('SELECT * FROM kiosk_orders WHERE id = $1', [id]);
+    if (res.rows.length > 0) return res.rows[0];
+    return null;
+  } else {
+    const orders = readJSON(KIOSK_ORDERS_FILE);
+    return orders.find(o => o.id === id) || null;
+  }
+};
+
+const deleteKioskOrder = async (id) => {
+  if (usePostgres) {
+    await pool.query('DELETE FROM kiosk_orders WHERE id = $1', [id]);
+  } else {
+    const orders = readJSON(KIOSK_ORDERS_FILE);
+    writeJSON(KIOSK_ORDERS_FILE, orders.filter(o => o.id !== id));
+  }
+};
+
 module.exports = {
   pool,
   initDb,
@@ -1451,5 +1509,8 @@ module.exports = {
   deleteEmployee,
   getTicketStatus,
   getReviews,
-  addReview
+  addReview,
+  createKioskOrder,
+  getKioskOrder,
+  deleteKioskOrder
 };

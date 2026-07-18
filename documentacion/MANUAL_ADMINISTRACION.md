@@ -11,6 +11,7 @@ El sistema expone cuatro portales web independientes a través del servidor Expr
 | Interfaz | URI de Acceso | Rol / Destinatarios | Método de Acceso | Clave por Defecto |
 | :--- | :--- | :--- | :--- | :--- |
 | **Web de Clientes** | `/` (ej: `http://localhost:3000/`) | Clientes (armado de waffle en 2D y pedidos de WhatsApp) | Público (Acceso libre) | No aplica |
+| **App Móvil** | `/app` (ej: `http://localhost:3000/app`) | Clientes en mesa (menú digital, rastreo de pedidos y reseñas) | Público (Acceso libre) | No aplica |
 | **Caja Registradora POS** | `/caja` (ej: `http://localhost:3000/caja`) | Cajeros (registro rápido de comandas en mostrador) | Bloqueo por PIN Individual | Asignado en Admin |
 | **Pantalla de Cocina KDS** | `/cocina` (ej: `http://localhost:3000/cocina`) | Cocineros (gestión visual de tickets y tiempos de preparación) | Bloqueo por PIN Individual | Asignado en Admin |
 | **Panel de Administración** | `/admin` (ej: `http://localhost:3000/admin`) | Propietarios y Administradores (inventario, CRUDs, métricas y CSV) | Bloqueo por Contraseña | **`admin`** |
@@ -86,22 +87,68 @@ Para subir la aplicación a internet te recomendamos usar plataformas PaaS optim
 Si necesitas administrar directamente las tablas de PostgreSQL (o realizar consultas manuales), el diseño relacional es el siguiente:
 
 ```sql
--- Tabla: settings (Credenciales)
-CREATE TABLE settings (
-    id SERIAL PRIMARY KEY,
-    admin_password VARCHAR(255) NOT NULL,
-    cashier_pin VARCHAR(4) NOT NULL
+-- ERP: Sistema de Unidades y Depósitos
+CREATE TABLE units (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    base_unit_id VARCHAR(50),
+    conversion_factor DECIMAL(18,6) NOT NULL DEFAULT 1
 );
 
--- Tabla: stock (Inventario de insumos)
-CREATE TABLE stock (
+CREATE TABLE warehouses (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+-- ERP: Catálogo Base (Insumos/Materias Primas)
+CREATE TABLE products (
     id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(50) NOT NULL,    -- 'bases', 'toppings', 'syrups', 'drinks', 'icecreams'
+    category VARCHAR(50) NOT NULL,
+    base_unit_id VARCHAR(50) NOT NULL,
+    min_stock DECIMAL(18,6) NOT NULL DEFAULT 0,
+    cost_method VARCHAR(20) NOT NULL DEFAULT 'FIFO',
+    portion_size DECIMAL(18,6) NOT NULL DEFAULT 0,
+    price_per_portion DECIMAL(18,6) NOT NULL DEFAULT 0
+);
+
+-- ERP: Control de Stock Estricto (Lotes y Movimientos)
+CREATE TABLE stock_lots (
+    id SERIAL PRIMARY KEY,
+    product_id VARCHAR(100) NOT NULL,
+    warehouse_id VARCHAR(50) NOT NULL,
+    quantity_initial DECIMAL(18,6) NOT NULL,
+    quantity_current DECIMAL(18,6) NOT NULL,
+    unit_cost DECIMAL(18,6) NOT NULL,
+    purchase_quantity DECIMAL(18,6) DEFAULT 0,
+    purchase_unit VARCHAR(20),
+    total_cost DECIMAL(18,6) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE stock_movements (
+    id SERIAL PRIMARY KEY,
+    product_id VARCHAR(100) NOT NULL,
+    warehouse_id VARCHAR(50) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    reason VARCHAR(50) NOT NULL,
+    quantity DECIMAL(18,6) NOT NULL,
+    unit_cost DECIMAL(18,6) NOT NULL,
+    lot_id INTEGER,
+    reference_id VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: masas (Insumos Elaborados Internamente)
+CREATE TABLE masas (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
     stock INTEGER NOT NULL DEFAULT 0,
     min_stock INTEGER NOT NULL DEFAULT 0,
-    price INTEGER NOT NULL DEFAULT 0,
-    unit VARCHAR(50) NOT NULL DEFAULT 'porciones'
+    yield_qty INTEGER NOT NULL DEFAULT 1,
+    cost_per_portion INTEGER NOT NULL DEFAULT 0,
+    ingredients JSONB NOT NULL DEFAULT '[]'
 );
 
 -- Tabla: waffles (Fichas Técnicas / Recetario)
@@ -117,8 +164,8 @@ CREATE TABLE waffles (
 -- Tabla: menu (Catálogo de Ventas Público)
 CREATE TABLE menu (
     id VARCHAR(100) PRIMARY KEY,
-    type VARCHAR(50) NOT NULL,            -- 'waffle', 'direct'
-    reference_id VARCHAR(100) NOT NULL,   -- ID de la receta en waffles o del insumo en stock
+    type VARCHAR(50) NOT NULL,
+    reference_id VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
     price INTEGER NOT NULL,
     is_visible BOOLEAN DEFAULT true
@@ -128,12 +175,21 @@ CREATE TABLE menu (
 CREATE TABLE sales (
     id VARCHAR(100) PRIMARY KEY,
     date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    items JSONB NOT NULL,                   -- Estructura de productos vendidos
+    items JSONB NOT NULL,
     total INTEGER NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,   -- 'Efectivo', 'Mercado Pago', 'Tarjeta'
-    status VARCHAR(50) NOT NULL DEFAULT 'completed', -- 'completed', 'refunded'
-    kds_status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'preparing', 'ready', 'delivered'
-    cashier_name VARCHAR(255)
+    payment_method VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'completed',
+    cashier_name VARCHAR(255),
+    "kdsStatus" VARCHAR(50) DEFAULT 'pending',
+    kds_completed_at TIMESTAMPTZ,
+    customer_name VARCHAR(255)
+);
+
+-- Tabla: kiosk_orders (Pedidos temporales)
+CREATE TABLE kiosk_orders (
+    id VARCHAR(100) PRIMARY KEY,
+    cart JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabla: employees (Gestión de Personal)
@@ -141,8 +197,17 @@ CREATE TABLE employees (
     id VARCHAR(100) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     pin VARCHAR(4) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'cashier', -- 'cashier', 'kitchen'
+    role VARCHAR(50) NOT NULL DEFAULT 'cashier',
     active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: reviews (Feedback de Clientes)
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    sale_id VARCHAR(100) NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL, -- 1: negative, 2: positive
+    comment TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -164,7 +229,14 @@ Si se registra una venta incorrecta:
 3.  Hacer clic en el botón rojo **Devolver**.
 4.  **Consecuencia:** La venta cambiará de estado a "Reembolsado" y el stock de todos los insumos descontados en esa venta (masa, toppings, bebidas, helados) se sumará automáticamente de regreso al inventario en la BD.
 
-### C) Exportar Auditorías y Filtrado de Fechas
+### C) Dashboard Analítico de Reseñas
+El feedback de los clientes se centraliza en el Dashboard de Reseñas:
+1. En el Panel de Administración, ir a la pestaña **Reseñas**.
+2. Verás tres tarjetas con métricas en vivo: Total de reseñas, Reseñas positivas (👍) y Reseñas negativas (👎).
+3. Utilizá los filtros interactivos para buscar un número de ticket, seleccionar un rango de fechas o filtrar por un Cajero en específico.
+4. La tabla cruzará automáticamente los datos de la venta para mostrarte qué empleado cobró el ticket que recibió la reseña.
+
+### D) Exportar Auditorías y Filtrado de Fechas
 Para realizar conciliaciones de caja o analizar periodos específicos:
 1.  En el Panel de Administración, ir a **Historial y Métricas**.
 2.  (Opcional) Utilizá los selectores de **Fecha Inicio** y **Fecha Fin** junto al botón **Filtrar** para ver únicamente las ventas de ese rango.

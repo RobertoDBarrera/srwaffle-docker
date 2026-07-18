@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sr. Waffle App</title>
+  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="/theme-manager.js?v=1"></script>
+  <style>
+    #demo-banner {
+      display: none;
+      background: #e65100;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: bold;
+      z-index: 10000;
+      position: sticky;
+      top: 0;
+      width: 100%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+<div id="demo-banner">MODO DEMO ACTIVADO - Los datos registrados aquí son ficticios y no afectarán a tu producción</div>
+  
+  <header class="app-header">
+    <div class="logo">Sr. Waffle</div>
+  </header>
+
+  <main class="app-main">
+    
+    <!-- VISTA: RASTREADOR -->
+    <section id="view-tracker" class="view active">
+      <div class="tracker-container">
+        <h2>Rastrea tu Pedido</h2>
+        <p>Ingresá el código de 4 dígitos de tu ticket para ver el estado en vivo.</p>
+        
+        <div class="input-group">
+          <input type="text" id="ticket-input" placeholder="Ej: 1234" maxlength="4" autocomplete="off">
+          <button id="track-btn">Buscar</button>
+        </div>
+
+        <div id="status-card" class="status-card hidden">
+          <div class="status-icon" id="status-icon"><i class="fas fa-clock"></i></div>
+          <h3 id="status-title">Pendiente</h3>
+          <p id="status-desc">Tu pedido ingresó correctamente.</p>
+          
+          <div id="review-action" class="hidden" style="margin-top: 20px;">
+            <button id="open-review-btn" class="btn-primary">¡Dejanos una Reseña!</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: MENU -->
+    <section id="view-menu" class="view">
+      <div class="menu-container">
+        <h2>Nuestro Menú</h2>
+        
+        <div class="menu-filter" id="menu-filter">
+          <!-- Dinámico -->
+        </div>
+
+        <div id="dynamic-menu-categories">
+          <!-- Dinámico -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: RESEÑAS (MODAL/VISTA) -->
+    <section id="view-review" class="view">
+      <div class="review-container">
+        <h2>Calificá tu Experiencia</h2>
+        <p>Tu opinión nos ayuda a mejorar.</p>
+        
+        <div class="stars" id="review-stars">
+          <i class="fas fa-star" data-val="1"></i>
+          <i class="fas fa-star" data-val="2"></i>
+          <i class="fas fa-star" data-val="3"></i>
+          <i class="fas fa-star" data-val="4"></i>
+          <i class="fas fa-star" data-val="5"></i>
+        </div>
+        
+        <textarea id="review-comment" placeholder="¿Qué te pareció el Waffle?"></textarea>
+        
+        <button id="submit-review-btn" class="btn-primary">Enviar Reseña</button>
+        <button id="cancel-review-btn" class="btn-secondary">Cancelar</button>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active" data-target="view-tracker">
+      <i class="fas fa-search"></i>
+      <span>Rastreador</span>
+    </a>
+    <a href="#" class="nav-item" data-target="view-menu">
+      <i class="fas fa-book-open"></i>
+      <span>Menú</span>
+    </a>
+  </nav>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>

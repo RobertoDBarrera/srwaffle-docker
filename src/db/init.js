@@ -137,6 +137,31 @@ const initPostgresTables = async () => {
       )
     `);
 
+    // ALTER TABLE for sales if they already exist
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS "kdsStatus" VARCHAR(50) DEFAULT \'pending\';');
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS kds_completed_at TIMESTAMPTZ;');
+    await client.query('ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);');
+
+    // reviews
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id SERIAL PRIMARY KEY,
+        sale_id VARCHAR(100) NOT NULL REFERENCES sales(id),
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 2),
+        comment TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // kiosk_orders
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kiosk_orders (
+        id VARCHAR(100) PRIMARY KEY,
+        cart JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // SEEDS
     const checkUnits = await client.query('SELECT COUNT(*) FROM units');
     if (parseInt(checkUnits.rows[0].count) === 0) {
@@ -215,6 +240,7 @@ const initJSON = () => {
   if (!readJSON('menu.json', null)) writeJSON('menu.json', seeds.INITIAL_MENU);
   if (!readJSON('settings.json', null)) writeJSON('settings.json', seeds.INITIAL_SETTINGS);
   if (!readJSON('sales.json', null)) writeJSON('sales.json', []);
+  if (!readJSON('kiosk_orders.json', null)) writeJSON('kiosk_orders.json', []);
 };
 
 const initDB = async () => {

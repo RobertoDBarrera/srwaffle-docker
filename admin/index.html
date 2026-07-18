@@ -215,6 +215,7 @@
   </style>
 </head>
 <body>
+  <div id="demo-banner">MODO DEMO ACTIVADO - Los datos registrados aquí son ficticios y no afectarán a tu producción</div>
 
   <!-- PANTALLA DE LOGEO ADMINISTRATIVO -->
   <div class="admin-login-overlay" id="admin-login-overlay">
@@ -406,9 +407,24 @@
             </div>
           </div>
           <div class="chart-panel">
-            <div class="chart-title">Top Toppings Favoritos</div>
+            <div class="chart-title">Top Productos Más Vendidos</div>
             <div class="ranking-list" id="topping-ranking-container">
               <!-- Ranking -->
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-charts-grid" style="grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px;">
+          <div class="chart-panel">
+            <div class="chart-title">Medios de Pago</div>
+            <div style="position: relative; height:300px; width:100%; display:flex; justify-content:center; align-items:center;">
+              <canvas id="paymentPieChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-title">Heatmap de Ventas (Bloques de 2 horas)</div>
+            <div style="position: relative; height:300px; width:100%; display:flex; justify-content:center; align-items:center;">
+              <canvas id="heatmapChart"></canvas>
             </div>
           </div>
         </div>
@@ -1050,6 +1066,22 @@
           <p style="color:var(--text-secondary); margin-top:5px;">Personalizá la experiencia visual y funcional del sistema.</p>
         </div>
 
+        <!-- Modo Demo -->
+        <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
+          <h3 style="margin-bottom: 1.5rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple); text-align:center;">Modo Demo</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 15px; text-align:center;">
+            Activa el Modo Demo para cargar datos ficticios de prueba.
+          </p>
+          <div style="display:flex; justify-content:center; align-items:center; gap:15px;">
+            <span style="font-size:1rem; font-weight:700; color:var(--text-muted);">Inactivo</span>
+            <label class="dev-switch">
+              <input type="checkbox" id="demo-mode-toggle">
+              <span class="dev-slider"></span>
+            </label>
+            <span style="font-size:1rem; font-weight:700; color:var(--neon-purple);">Activo</span>
+          </div>
+        </div>
+
         <!-- Alerta de Cocina -->
         <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
           <h3 style="margin-bottom: 1.5rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-purple); text-align:center;">Alerta Inteligente KDS</h3>
@@ -1059,6 +1091,19 @@
           <div class="form-group" style="display:flex; gap:10px; align-items:center; justify-content:center;">
             <input type="number" id="kds-alert-time-input" class="form-control" placeholder="Ej: 10" min="1" max="120" required style="width: 150px;">
             <button type="button" class="btn-primary" id="kds-alert-save-btn">Guardar Tiempo</button>
+          </div>
+        </div>
+
+        <!-- Métodos de Pago -->
+        <div style="max-width: 600px; margin: 2rem auto 0;" class="form-panel">
+          <h3 style="margin-bottom: 1.5rem; font-family: var(--font-cursive); font-size: 1.6rem; color: var(--neon-pink); text-align:center;">Métodos de Pago</h3>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom: 15px; text-align:center;">
+            Administrá los métodos de pago disponibles en el kiosco.
+          </p>
+          <div id="admin-payment-methods-container" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 1rem;"></div>
+          <div style="display:flex; gap:10px; margin-bottom: 2rem;">
+            <input type="text" id="admin-new-payment-method" class="form-control" placeholder="Nuevo método (ej: Transferencia)">
+            <button type="button" id="admin-add-payment-btn" class="btn-primary" style="padding: 0.5rem 1rem;">Agregar</button>
           </div>
         </div>
 
@@ -1407,17 +1452,14 @@
     </div>
   </div>
 
-</body>
-</html>
-
-  <!-- CONTROLADORES JAVASCRIPT -->
-  <script src="/theme-manager.js?v=1782406455730"></script>
   <!-- EXTERNAL LIBS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   
-  <script src="app.js?v=2026070801"></script>
-
+  <!-- CONTROLADORES JAVASCRIPT -->
+  <script src="/theme-manager.js?v=1782406455730"></script>
+  <script src="app.js?v=2026071706"></script>
   
 </body>
 </html>

@@ -5,9 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sr. Waffle | KDS Cocina</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3">
+  <style>
+    #demo-banner {
+      display: none;
+      background: #e65100;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: bold;
+      z-index: 10000;
+      position: sticky;
+      top: 0;
+      width: 100%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body>
+<div id="demo-banner">MODO DEMO ACTIVADO - Los datos registrados aquí son ficticios y no afectarán a tu producción</div>
 
   <!-- PANTALLA DE BLOQUEO POR PIN -->
   <div class="kds-login-overlay" id="kds-login-overlay">
@@ -122,6 +138,7 @@
         <p><strong>5. Entregado:</strong> Al entregar el producto al cliente, hacé clic en "Entregado" para limpiar el ticket de la pantalla.</p>
         <p><strong>6. Sonido:</strong> Podés activar/desactivar la alerta sonora de nuevos tickets desde el icono del altavoz arriba a la derecha.</p>
         <p><strong>7. Urgencias:</strong> Los tickets que demoren más de 10 minutos se marcarán en <span style="color: var(--neon-red); font-weight: bold;">ROJO INTERMITENTE</span>.</p>
+        <p><strong>8. Reseñas:</strong> Al marcar un ticket como "Listo", le habilitás automáticamente al cliente la opción de dejarnos una reseña desde su celular (<code>/app/</code>).</p>
       </div>
     </div>
   </div>
@@ -129,6 +146,6 @@
   <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
   <div class="toast-notification" id="toast">Notificación de Sistema</div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

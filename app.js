@@ -1,9 +1,16 @@
 // Lógica del Cliente - Sr. Waffle (Página Pública)
 document.addEventListener('DOMContentLoaded', () => {
+  // Check Demo Mode
+  fetch('/api/demo/status').then(r=>r.json()).then(d=>{
+    const banner = document.getElementById('demo-banner');
+    if(banner) banner.style.display = d.isDemoMode ? 'block' : 'none';
+  }).catch(e=>console.error(e));
+
   // --- INICIALIZACIÓN DE ESTADO ---
   let stock = [];
   let masas = [];
   let menu = [];
+  let waffles = [];
   let loyaltyEnabled = false;
 
   // Carga stock y menú desde la API REST local
@@ -25,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const masasRes = await fetch('/api/masas');
       masas = await masasRes.json();
+
+      const wafflesRes = await fetch('/api/waffles');
+      waffles = await wafflesRes.json();
 
       try {
         const settingsRes = await fetch('/api/loyalty/settings');
@@ -149,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- VARIABLES DE INTERFAZ CLIENTE ---
   let currentView = 'inicio';
+  let clientCart = [];
 
   // Configuración del Waffle Personalizado del Cliente
   let clientWaffle = {
@@ -193,8 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   };
 
+  const getMasa = (id) => masas.find(m => m.id === id);
+
   const calculateWafflePrice = (waffleConfig) => {
-    let price = getStockItem(waffleConfig.base)?.price || 0;
+    let price = 1500; // Base fija para waffles armados, igual que en POS
     if (waffleConfig.spread && waffleConfig.spread !== 'none') {
       price += getStockItem(waffleConfig.spread)?.price || 0;
     }
@@ -438,16 +451,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const priceHtml = item.showPrice !== false ? `<span class="menu-card-price">${formatCurrency(item.price)}</span>` : '';
       
-      // Botón de WhatsApp individual
-      let waButtonHtml = '';
-      if (canOrder) {
-        waButtonHtml = `
-          <button class="menu-wa-btn" data-id="${item.id}" style="width:100%; margin-top:1rem; background: rgba(37, 211, 102, 0.1); color: #25D366; border: 1px solid #25D366; border-radius: 8px; padding: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            Pedir esto
+      // Botón de Agregar al Carrito individual
+      let waButtonHtml = `
+          <button class="menu-wa-btn" data-id="${item.id}" style="width:100%; margin-top:1rem; background: rgba(157, 78, 221, 0.1); color: var(--neon-purple); border: 1px solid var(--neon-purple); border-radius: 8px; padding: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            Agregar al Carrito
           </button>
         `;
-      }
 
       card.innerHTML = `
         ${item.image ? `<img src="${item.image}" alt="${item.name}" class="menu-card-img">` : `<div class="menu-card-img" style="display:flex;align-items:center;justify-content:center;background:#1a1a1a;color:#555;">Sin Imagen</div>`}
@@ -469,32 +479,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Añadir eventos a los botones de WhatsApp
-    if (canOrder) {
-      document.querySelectorAll('.menu-wa-btn').forEach(btn => {
+    // Añadir eventos a los botones de Agregar al Carrito
+    document.querySelectorAll('.menu-wa-btn').forEach(btn => {
         // Efecto hover
         btn.addEventListener('mouseenter', () => {
-          btn.style.background = '#25D366';
+          btn.style.background = 'var(--neon-purple)';
           btn.style.color = '#fff';
         });
         btn.addEventListener('mouseleave', () => {
-          btn.style.background = 'rgba(37, 211, 102, 0.1)';
-          btn.style.color = '#25D366';
+          btn.style.background = 'rgba(157, 78, 221, 0.1)';
+          btn.style.color = 'var(--neon-purple)';
         });
 
-        // Click para pedir
+        // Click para agregar al carrito
         btn.addEventListener('click', () => {
           const id = btn.getAttribute('data-id');
           const item = menu.find(m => m.id === id);
           if (item) {
-            const priceText = item.showPrice !== false ? ` ($${item.price})` : '';
-            const msg = `¡Hola! 👋 Quisiera encargar del menú:\n\n*${item.name}*${priceText}\n\n¿Me confirmás si tienen stock y la demora?`;
-            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-            window.open(waUrl, '_blank');
+            const price = item.price || 0;
+            const details = item.type === 'direct' ? 'Bebida/Adicional' : 'De Carta';
+            
+            let config = null;
+            if (item.type === 'menu_waffle') {
+              config = waffles.find(w => w.id === item.reference_id) || null;
+            }
+
+            addToClientCart({
+              id: item.id + '_' + Date.now(),
+              name: item.name,
+              details: details,
+              price: price,
+              type: item.type === 'direct' ? 'drink' : 'menu_waffle',
+              config: config
+            });
           }
         });
       });
-    }
   };
 
   // --- CLIENT SIDE: ARMADOR INTERACTIVO (CUSTOM BUILDER) ---
@@ -735,6 +755,69 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     }
 
+    const addCartBtn = document.getElementById('client-add-to-cart-btn');
+    if (addCartBtn) {
+      addCartBtn.onclick = async () => {
+        await loadState();
+        let stockOk = true;
+        let outOfStockName = '';
+        
+        const baseItem = getMasa(clientWaffle.base);
+        if (!baseItem || baseItem.stock <= 0) { stockOk = false; outOfStockName = baseItem ? baseItem.name : 'Masa'; }
+        if (clientWaffle.spread && clientWaffle.spread !== 'none') {
+          const spreadItem = getStockItem(clientWaffle.spread);
+          if (!spreadItem || spreadItem.stock <= 0) { stockOk = false; outOfStockName = spreadItem ? spreadItem.name : 'Relleno'; }
+        }
+        clientWaffle.toppings.forEach(tId => {
+          const top = getStockItem(tId);
+          if (!top || top.stock <= 0) { stockOk = false; outOfStockName = top ? top.name : 'Topping'; }
+        });
+        if (clientWaffle.whippedCream) {
+          const creamItem = getStockItem('top_crema_batida');
+          if (!creamItem || creamItem.stock <= 0) { stockOk = false; outOfStockName = creamItem ? creamItem.name : 'Crema Batida'; }
+        }
+        clientWaffle.icecreams.forEach(iId => {
+          const ice = getStockItem(iId);
+          if (!ice || ice.stock <= 0) { stockOk = false; outOfStockName = ice ? ice.name : 'Helado'; }
+        });
+
+        if (!stockOk) {
+          showToast(`Lo sentimos, nos quedamos sin stock de: ${outOfStockName}. Elegí otra opción.`, true);
+          initClientBuilder();
+          return;
+        }
+
+        const price = calculateWafflePrice(clientWaffle);
+        const m = getMasa(clientWaffle.base);
+        let details = `Masa: ${m ? m.name : 'N/A'}`;
+        if (clientWaffle.spread && clientWaffle.spread !== 'none') details += ` + Relleno: ${getStockItem(clientWaffle.spread)?.name || 'N/A'}`;
+        if (clientWaffle.icecreams.length) details += ` + Helado: ${clientWaffle.icecreams.map(id=>getStockItem(id)?.name).join(',')}`;
+        if (clientWaffle.toppings.length) details += ` + Toppings: ${clientWaffle.toppings.map(id=>getStockItem(id)?.name).join(',')}`;
+        if (clientWaffle.whippedCream) details += ` + Crema`;
+        if (clientWaffle.syrups.length) details += ` + Salsas: ${clientWaffle.syrups.map(id=>getStockItem(id)?.name).join(',')}`;
+        
+        addToClientCart({
+          id: `custom_${Date.now()}`,
+          name: 'Waffle Armado',
+          details,
+          price,
+          type: 'custom_waffle',
+          config: JSON.parse(JSON.stringify(clientWaffle))
+        });
+        
+        // Reset builder visual but keep them on page or show cart
+        clientWaffle = {
+          base: 'base_tradicional',
+          spread: 'none',
+          toppings: [],
+          whippedCream: false,
+          syrups: [],
+          icecreams: []
+        };
+        initClientBuilder(); // re-init
+      };
+    }
+
     updateClientBuilderUI();
   };
 
@@ -904,6 +987,12 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (data.kdsStatus === 'ready') {
             trackerMessage.innerText = '¡Listos! Acercate al mostrador para retirarlos.';
             lineFill.style.width = '80%';
+            setActive(stepPending);
+            setActive(stepPreparing);
+            setActive(stepReady);
+          } else if (data.kdsStatus === 'delivered') {
+            trackerMessage.innerText = '¡Pedido entregado! Gracias por elegir Sr. Waffle.';
+            lineFill.style.width = '100%';
             setActive(stepPending);
             setActive(stepPreparing);
             setActive(stepReady);
@@ -1077,7 +1166,159 @@ document.addEventListener('DOMContentLoaded', () => {
     helpBtn.onclick = () => helpModal.style.display = 'flex';
     helpClose.onclick = () => helpModal.style.display = 'none';
     helpModal.onclick = (e) => {
-      if (e.target === helpModal) helpModal.style.display = 'none';
     };
   }
+
+  // --- LÓGICA DEL CARRITO DE COMPRAS CLIENTE ---
+  const floatingCartBtn = document.getElementById('floating-cart-btn');
+  const cartModal = document.getElementById('client-cart-modal');
+  const cartCloseBtn = document.getElementById('client-cart-close');
+  const floatingCartCount = document.getElementById('floating-cart-count');
+  
+  if (floatingCartBtn && cartModal) {
+    floatingCartBtn.onclick = () => {
+      renderClientCart();
+      cartModal.style.display = 'flex';
+    };
+    cartCloseBtn.onclick = () => cartModal.style.display = 'none';
+    cartModal.onclick = (e) => {
+      if (e.target === cartModal) cartModal.style.display = 'none';
+    };
+  }
+
+  window.addToClientCart = (item) => {
+    clientCart.push(item);
+    showToast(`${item.name} agregado al carrito`);
+    if (floatingCartCount) {
+      floatingCartCount.textContent = clientCart.length;
+      floatingCartBtn.style.transform = 'scale(1.2)';
+      setTimeout(() => floatingCartBtn.style.transform = 'scale(1)', 200);
+    }
+  };
+
+  const removeFromClientCart = (index) => {
+    clientCart.splice(index, 1);
+    if (floatingCartCount) {
+      floatingCartCount.textContent = clientCart.length;
+    }
+    renderClientCart();
+  };
+
+  const renderClientCart = () => {
+    const itemsContainer = document.getElementById('client-cart-items');
+    const totalEl = document.getElementById('client-cart-total');
+    const waBtn = document.getElementById('client-cart-wa-btn');
+    const kioskBtn = document.getElementById('client-cart-kiosk-btn');
+    
+    if (!itemsContainer) return;
+    itemsContainer.innerHTML = '';
+    
+    if (waBtn) {
+      waBtn.style.display = companyInfo.whatsappOrdersEnabled !== false ? 'flex' : 'none';
+    }
+
+    if (clientCart.length === 0) {
+      itemsContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin-top: 50px;">El carrito está vacío</div>';
+      totalEl.textContent = '$0';
+      if (waBtn) waBtn.disabled = true;
+      kioskBtn.disabled = true;
+      return;
+    }
+
+    if (waBtn) waBtn.disabled = false;
+    kioskBtn.disabled = false;
+    
+    let total = 0;
+    clientCart.forEach((item, index) => {
+      total += item.price;
+      const el = document.createElement('div');
+      el.style.display = 'flex';
+      el.style.justifyContent = 'space-between';
+      el.style.alignItems = 'center';
+      el.style.padding = '10px';
+      el.style.background = 'rgba(255,255,255,0.05)';
+      el.style.borderRadius = '8px';
+      
+      el.innerHTML = `
+        <div style="flex: 1; padding-right: 10px;">
+          <div style="color: #fff; font-weight: bold; font-size: 0.9rem;">${item.name}</div>
+          <div style="color: var(--text-secondary); font-size: 0.75rem;">${item.details || ''}</div>
+          <div style="color: var(--neon-cyan); font-size: 0.85rem; margin-top: 4px;">${formatCurrency(item.price)}</div>
+        </div>
+        <button class="remove-cart-item" data-index="${index}" style="background: none; border: none; color: var(--neon-red); cursor: pointer; padding: 5px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      `;
+      itemsContainer.appendChild(el);
+    });
+
+    totalEl.textContent = formatCurrency(total);
+    
+    // Bind remove buttons
+    itemsContainer.querySelectorAll('.remove-cart-item').forEach(btn => {
+      btn.onclick = () => removeFromClientCart(parseInt(btn.getAttribute('data-index')));
+    });
+
+    // --- CHECKOUT WHATSAPP ---
+    waBtn.onclick = () => {
+      let msg = `¡Hola! 👋 Quisiera encargar:\n\n`;
+      clientCart.forEach(item => {
+        msg += `* ${item.name} - ${formatCurrency(item.price)}\n`;
+        if (item.details && item.details !== 'De Carta' && item.details !== 'Bebida/Adicional') {
+          msg += `   _${item.details}_\n`;
+        }
+      });
+      msg += `\n*Total:* ${formatCurrency(total)}\n\n¿Me confirmás si tienen stock y la demora?`;
+      
+      const phone = companyInfo.phone || '';
+      if (phone) {
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
+      } else {
+        showToast('WhatsApp no configurado', true);
+      }
+    };
+
+    // --- CHECKOUT KIOSCO ---
+    kioskBtn.onclick = async () => {
+      kioskBtn.innerText = 'Enviando...';
+      kioskBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/kiosk-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart: clientCart })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          cartModal.style.display = 'none';
+          // Limpiar carrito
+          clientCart = [];
+          if (floatingCartCount) floatingCartCount.textContent = '0';
+          
+          // Mostrar modal de ticket
+          const kioskCodeDisplay = document.getElementById('kiosk-ticket-code');
+          const kioskTicketModal = document.getElementById('kiosk-ticket-modal');
+          if (kioskCodeDisplay && kioskTicketModal) {
+            kioskCodeDisplay.innerText = data.id;
+            kioskTicketModal.style.display = 'flex';
+            const closeBtn = document.getElementById('kiosk-modal-close');
+            if (closeBtn) {
+              closeBtn.onclick = () => window.location.reload();
+            }
+          }
+        } else {
+          showToast('Error al generar pedido', true);
+        }
+      } catch (e) {
+        showToast('Error de conexión', true);
+      } finally {
+        kioskBtn.innerHTML = 'Confirmar Pedido (Pagar en Caja) 🛍️';
+        kioskBtn.disabled = false;
+      }
+    };
+  };
+
 });

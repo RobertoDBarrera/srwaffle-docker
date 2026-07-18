@@ -17,11 +17,12 @@
     { varName: '--bg-card-raw', label: 'Fondo Tarjetas' },
     { varName: '--bg-header-raw', label: 'Fondo Banner' },
     { varName: '--bg-footer', label: 'Fondo Footer' },
-    { varName: '--neon-purple', label: 'Púrpura Neón' },
-    { varName: '--neon-pink', label: 'Rosa Neón' },
-    { varName: '--neon-cyan', label: 'Cian Neón' },
-    { varName: '--neon-yellow', label: 'Amarillo Neón' },
-    { varName: '--neon-red', label: 'Rojo Neón' },
+    { varName: '--neon-purple', label: 'Título y Detalles' },
+    { varName: '--btn-primary-bg', label: 'Color Botones' },
+    { varName: '--neon-pink', label: 'Botones Sec. / Acento' },
+    { varName: '--neon-cyan', label: 'Color Activo / Bordes' },
+    { varName: '--neon-yellow', label: 'Destacado / Estrellas' },
+    { varName: '--neon-red', label: 'Peligro / Alertas' },
     { varName: '--text-primary', label: 'Texto Principal' },
     { varName: '--text-secondary', label: 'Texto Secundario' }
   ];
@@ -164,6 +165,7 @@ body.is-client-page .waffle-card {
         if (!value) return;
         cssVars += `  ${variable}: ${value} !important;\n`;
         if (variable === '--neon-purple') cssVars += `  --neon-purple-glow: ${hexToRgba(value, 0.5)} !important;\n`;
+        if (variable === '--btn-primary-bg') cssVars += `  --btn-primary-glow: ${hexToRgba(value, 0.5)} !important;\n`;
         if (variable === '--neon-pink') cssVars += `  --neon-pink-glow: ${hexToRgba(value, 0.5)} !important;\n`;
         if (variable === '--neon-cyan') cssVars += `  --neon-cyan-glow: ${hexToRgba(value, 0.4)} !important;\n`;
         if (variable === '--neon-yellow') cssVars += `  --neon-yellow-glow: ${hexToRgba(value, 0.4)} !important;\n`;

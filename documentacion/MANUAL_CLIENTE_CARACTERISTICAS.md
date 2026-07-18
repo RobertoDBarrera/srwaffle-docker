@@ -19,8 +19,9 @@ El sistema incluye herramientas enfocadas puramente en el marketing y la factura
 *   **Catálogo Interactivo con "Wow Factor":** Un menú web moderno que luce como una aplicación nativa. Los clientes pueden deslizar fotos de alta calidad de los productos estrella de la casa.
 *   **Catálogo Unificado (Waffles y Productos Directos):** No solo muestras tus waffles especiales, sino que ahora puedes cargar tus "Bebidas" o productos adicionales. Todos conviven en la misma interfaz de compra, brindando una experiencia "todo en uno" al consumidor.
 *   **Waffle Builder 2D (Armado Dinámico):** En lugar de leer un aburrido texto, los clientes "juegan" armando su propio waffle. Ven gráficamente en su pantalla cómo se añade el helado, los toppings y las salsas, lo que incrementa drásticamente el deseo de compra impulsiva.
-*   **Pedidos Directos por WhatsApp:** Al terminar de armar su carrito (o al elegir un producto del catálogo), el sistema genera un mensaje perfectamente estructurado al WhatsApp del negocio, con un botón de "Pedir esto" en cada tarjeta.
-*   **Order Tracking (Rastreador de Comandas):** Los clientes reciben un código de rastreo en caja y pueden ver desde su teléfono cuándo su orden pasa a "Preparación" y a "Listo", reduciendo la ansiedad y mejorando la percepción del servicio.
+*   **Autopedido Inteligente (Kiosco / Tablet):** Los clientes pueden armar su pedido desde una tablet en el local y generar un código de 4 dígitos. Luego se acercan a la caja, dictan el número y pagan en segundos. Además, si el administrador lo habilita, pueden enviar el pedido remotamente por WhatsApp.
+*   **Order Tracking (Rastreador de Comandas):** Los clientes reciben un código de rastreo en caja (o usan el del Kiosco) y pueden usar la Mini App Móvil (`/app/`) desde su mesa para ver con animaciones fluidas cuándo su orden pasa a "Listo", reduciendo la ansiedad.
+*   **Sistema de Reseñas Integrado:** En el mismo módulo móvil, al marcarse el pedido como "Listo", el cliente puede calificar (estrellas) y dejar una reseña que impacta en tiempo real en el Dashboard del Administrador.
 *   **Club Waffle (Loyalty Program):** Un programa de fidelización automático. El cajero solo pide el número de teléfono, y el sistema se encarga de acumular puntos e incentivar al cliente a volver para cobrar su recompensa.
 
 ---
@@ -39,6 +40,7 @@ Olvídate de gritar comandas, de los papeles perdidos o manchados de grasa y de 
 El dueño tiene acceso a un Panel de Administración (`/admin`) protegido criptográficamente, donde tiene el control absoluto del negocio sin tener que estar físicamente presente.
 
 *   **Business Intelligence (Métricas en Tiempo Real):** Un tablero de control que muestra, segundo a segundo, cuánto dinero entró en el día, el ticket promedio y cuánto están tardando los cocineros en sacar los platos.
+*   **Dashboard Analítico de Reseñas:** Monitoreo activo de la satisfacción del cliente. El sistema captura las reseñas post-compra (positivas y negativas) y las muestra en un panel con métricas agregadas, filtros por fecha y vinculación directa para saber qué cajero facturó el pedido reseñado.
 *   **Control de Empleados:** Se terminó el anonimato. Cada cajero y cocinero tiene un PIN de 4 dígitos. El dueño sabe exactamente cuánto facturó "Juan" y cuánto facturó "María" gracias a la tabla de Rendimiento.
 *   **Inventario Infalible (Stock Autogestionado):** Cuando vendes un waffle, el sistema no descuenta "1 waffle". El sistema sabe exactamente su receta y descuenta *1 masa, 1 porción de Nutella y 1 de Oreo* del depósito. Si un insumo se está agotando, aparecerá una alerta roja automática.
 *   **Reembolsos Seguros:** Si un cajero se equivoca, el administrador puede anular la venta. El sistema se encarga solo de restarle esa plata a la facturación del día y devolver milimétricamente la masa y la Nutella al stock virtual.

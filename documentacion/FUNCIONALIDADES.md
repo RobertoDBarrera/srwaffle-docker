@@ -2,11 +2,12 @@
 
 Este documento es una guía de referencia rápida para ubicar todas las funcionalidades del sistema, entender en qué módulo están y para qué sirven.
 
-El sistema se divide en 4 módulos principales (aplicaciones web):
+El sistema se divide en 5 módulos principales (aplicaciones web):
 1. **App Cliente** (`/`) - Menú público y pedidos online.
 2. **Caja POS** (`/caja`) - Punto de venta físico para empleados.
 3. **Panel KDS Cocina** (`/cocina`) - Pantalla para cocineros.
 4. **Panel de Administración** (`/admin`) - Control total y métricas para el dueño.
+5. **App Móvil** (`/app`) - Mini módulo para clientes sentados (rastreo, menú y reseñas).
 
 ---
 
@@ -22,6 +23,7 @@ El sistema se divide en 4 módulos principales (aplicaciones web):
 | **Armado de Bubble Waffle (Paso a Paso)** | Botón "Armá tu Waffle" (Pantalla principal) | Asistente interactivo de 4 pasos (Base, Toppings, Salsas, Helados) para personalizar un waffle. Incluye un visualizador 2D dinámico del producto final. |
 | **Rastreador de Pedidos** | Botón "Rastrear Pedido" (Header) | El cliente ingresa los últimos 4 dígitos de su código de pedido y el sistema le dice en qué estado está (Pendiente, Preparando, Listo). |
 | **Pedido por WhatsApp** | Al finalizar el armado o elegir un producto del menú | Genera un resumen del pedido y abre automáticamente WhatsApp para enviarlo al número oficial del local (si la opción está habilitada en Admin). |
+| **Pedido por Kiosco** | Botón "Generar Pedido" (Final del armado) | Envía el pedido al sistema interno (sin usar WhatsApp) y devuelve un código de 4 dígitos. El cliente debe acercarse a la caja y dictar este código para abonar y retirar. |
 
 ---
 
@@ -34,6 +36,7 @@ El sistema se divide en 4 módulos principales (aplicaciones web):
 | **Facturar Waffles Especiales** | Pestaña "Menú" (Centro) | Permite agregar a la comanda con 1 clic los waffles pre-diseñados (ej: Choco Bomba). |
 | **Armar Waffle Personalizado** | Botón "Armar Bubble Waffle" (Menú) | Permite al cajero construir el waffle paso a paso a pedido del cliente en el mostrador. |
 | **Vender Bebidas y Extras** | Pestaña "Bebidas / Otros" (Centro) | Agrega productos sueltos al ticket de compra. |
+| **Recuperar de Kiosco** | Botón "Recuperar de Kiosco" (Panel derecho) | Permite ingresar el código de 4 dígitos de un cliente que usó la tablet. Carga automáticamente todos los ítems en el carrito para cobrarlos. |
 | **Carrito de Compras** | Panel lateral derecho | Muestra la lista de ítems a cobrar, el total en ARS y permite eliminar ítems individualmente. |
 | **Cobro y Medios de Pago** | Panel lateral derecho (Botones verdes) | Permite registrar la venta indicando si el cliente pagó en Efectivo, Débito o MercadoPago. Envía automáticamente el pedido al KDS de cocina y muestra un cartel con el **Código de Rastreo**. |
 | **Últimas Ventas** | Botón "Últimas Ventas" (Arriba a la derecha) | Muestra una lista con las ventas cobradas durante el día actual y sus respectivos códigos de rastreo por si el cliente lo olvida. |
@@ -67,21 +70,32 @@ El sistema se divide en 4 módulos principales (aplicaciones web):
 | **Reembolsos / Devoluciones** | Menú lateral -> "Historial y Métricas" (Tabla de Últimas Operaciones) | Botón "Devolver". Cancela una venta hecha por error y **devuelve automáticamente los ingredientes descontados al inventario**. |
 | **Exportar CSV** | Menú lateral -> "Historial y Métricas" (Arriba a la derecha) | Descarga un archivo Excel con todas las ventas del periodo seleccionado. |
 | **Inventario (Vista General)** | Menú lateral -> "Vista General" | Panorama completo de los niveles de inventario combinando stock base y masas. |
-| **Control de Stock y Restock** | Menú lateral -> "Stock (Compras)" | Módulo para dar de alta materias primas (ej. Harina, Helado) y registrar reabastecimientos (botón `+`). |
-| **Gestión de Insumos Elaborados** | Menú lateral -> "Insumos (Masas)" | Convertir materias primas del stock en insumos elaborados (ej. Masas), fijar su rendimiento y calcular su costo por porción. |
+| **Control de Stock y Restock** | Menú lateral -> "Stock (Compras)" | Módulo para dar de alta materias primas (ej. Harina, Helado) y registrar reabastecimientos (botón `+`). Las compras ingresan como Lotes con método FIFO y se mantiene un historial de Movimientos de Almacén. |
+| **Gestión de Insumos Elaborados** | Menú lateral -> "Insumos (Masas)" | Convertir materias primas del stock en insumos elaborados (ej. Masas), fijar su rendimiento y calcular su costo por porción, descontando stock a través de una orden de producción. |
 | **Fichas Técnicas / Recetario** | Menú lateral -> "Recetas (Waffles)" | Crear y administrar las recetas de los Waffles. Permite elegir la masa y las cantidades exactas de ingredientes para determinar su costo de producción (sin asignar precio de venta). |
 | **Gestión de Carta (Menú Público)**| Menú lateral -> "Menú (Público)" | Decidir qué Waffles (del recetario) o Bebidas (del stock) se publicarán en la Caja. Aquí se asigna el nombre comercial, el precio final para el cliente y su visibilidad. |
+| **Dashboard de Reseñas** | Menú lateral -> "Reseñas" | Analítica en tiempo real del feedback de clientes. Muestra métricas totales, positivas (👍) y negativas (👎). Permite filtrar reseñas por fecha, buscar por ticket y cruza automáticamente los datos para mostrar el **cajero responsable** de esa venta. |
 | **Seguridad y Contraseñas** | Menú lateral -> "Seguridad" | Cambiar la contraseña principal de Administración del sistema. |
 | **Opciones Configurables (UI / Datos)** | Menú lateral -> "Opciones Configurables" | Cambiar el Logo, las imágenes del Carrusel de Portada, el Mapa de ubicación, activa el Club Waffle (fidelización), el Tiempo de Alerta en Cocina y el interruptor del "Modo Desarrollador". |
 | **Theme Builder (Gestor de Temas)** | Menú lateral -> "Temas" / Botón Flotante 🎨 | Aparece solo si activaste el Modo Dev. Herramienta para gestionar presets de temas, personalizar colores, fondos de pantalla y CSS personalizado. |
-| **Módulo Dev / Testing** | Menú lateral -> "Módulo Dev" | Aparece solo si activaste el Modo Dev. Inyectar ventas de prueba, simular pedidos masivos o resetear la base de datos completa. |
 | **Datos de Empresa** | Menú lateral -> "Datos Empresa" | Configurar el nombre comercial, la dirección, los horarios y el WhatsApp oficial que recibe los pedidos online. |
 | **Gestión de Cajeros/Cocineros** | Menú lateral -> "Empleados" | Crear perfiles de empleados con nombre, PIN único de 4 dígitos y definir su rol (Cajero o Cocinero) para limitar su acceso a otras áreas. |
 | **Visor de Manuales** | Menú lateral -> "Documentación" | Visor Markdown integrado (`marked.js`) para consultar las guías técnicas y esquemas de datos del sistema dinámicamente. |
 
 ---
 
-## 5. Guía de CSS para Theme Builder (Editor Avanzado)
+## 5. Módulo: App Móvil (Rastreador, Menú y Reseñas)
+**URL de acceso:** `http://localhost:3000/app/`  
+
+| Funcionalidad | Cómo Llegar | Para qué sirve |
+|--------------|-------------|----------------|
+| **Rastreador de Pedidos en Vivo** | Pestaña "Rastreador" | Ingresar el código de 4 dígitos para ver el estado del pedido en tiempo real con animaciones fluidas (En Cola, Preparando, ¡Listo!). |
+| **Menú Digital** | Pestaña "Menú" | Visualización elegante y mobile-friendly de los Waffles y Bebidas disponibles, ideal para ver desde la mesa a través de un código QR. |
+| **Reseñas Integradas** | Automático al estar "Listo" | Permite calificar la experiencia con estrellas y comentarios (alimentando el dashboard del Admin) una vez finalizada la preparación. |
+
+---
+
+## 6. Guía de CSS para Theme Builder (Editor Avanzado)
 
 Cuando utilices el botón **Abrir Editor de CSS 📝** en el **Theme Builder**, el código CSS inyectado tendrá el máximo nivel de prioridad para sobreescribir la apariencia de la aplicación. 
 

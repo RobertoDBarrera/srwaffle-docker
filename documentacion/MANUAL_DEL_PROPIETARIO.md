@@ -2,11 +2,12 @@
 
 ¡Bienvenido al sistema integral de Sr. Waffle! Este documento es tu biblia operativa. Aquí aprenderás **paso a paso** cómo utilizar el 100% de las funciones del sistema. Cualquier usuario nuevo que lea esta guía podrá administrar, operar y entender el negocio sin conocimientos técnicos.
 
-El sistema se divide en cuatro partes operativas principales:
-1. **App Cliente (Web Pública):** Donde tus clientes ven el menú y arman sus pedidos.
-2. **La Caja Registradora (POS):** Donde cobras y atiendes.
-3. **La Pantalla de Cocina (KDS):** Donde preparan los pedidos.
-4. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
+El sistema se divide en cinco partes operativas principales:
+1. **App Cliente (Web Pública):** Donde tus clientes arman sus pedidos online (Autopedido y WhatsApp).
+2. **Mini App Móvil:** Donde los clientes que ya están en el local rastrean su ticket, ven el menú digital y dejan reseñas.
+3. **La Caja Registradora (POS):** Donde cobras y atiendes.
+4. **La Pantalla de Cocina (KDS):** Donde preparan los pedidos.
+5. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
 
 ---
 
@@ -78,27 +79,33 @@ Aquí es donde controlas todo tu negocio (`/admin`). Solo se puede entrar con tu
 - **Hacer un Reembolso:** Si cobraste mal un pedido, baja hasta "Historial de Ventas Recientes". Busca el ticket erróneo y haz clic en el botón rojo **Devolver**. *Magia:* El dinero se resta de tus ganancias y **todos los insumos (masas, helados) regresan al inventario.**
 - **Descargar a Excel:** Presiona el botón verde **Exportar CSV** arriba a la derecha. Se descargará un archivo con todas las ventas para tu contador.
 
-### 3.2 Control de Stock (Inventario Físico)
+### 3.2 Dashboard de Reseñas (Feedback de Clientes)
+- Al hacer clic en la pestaña "Reseñas" en el menú, ingresarás al tablero de control de satisfacción del cliente.
+- **Métricas:** En la parte superior verás 3 tarjetas en tiempo real: el total de reseñas recibidas, la cantidad de pulgares arriba (positivas) y pulgares abajo (negativas).
+- **Filtros Avanzados:** Puedes buscar a un cliente específico ingresando su número de ticket, seleccionar un rango de fechas para evaluar cómo estuvo la atención en una semana particular, o usar el desplegable para ver las reseñas vinculadas exclusivamente a un empleado de **Caja** en particular.
+- **Asociación Automática:** La tabla no solo muestra qué opinó el cliente, sino que el sistema revisa inteligentemente tu historial de ventas y muestra una columna de "Cajero" para que sepas quién fue el empleado que cobró ese pedido reseñado.
+
+### 3.3 Control de Stock (Inventario Físico)
 - Muestra todo tu almacén. Cada producto tiene una barra.
 - **Colores:** Azul (bien de stock), Amarilla (hay poco), Roja (¡Crítico, comprar urgente!).
 - **Reponer Mercadería:** Cuando llegue el camión del proveedor con 5 kilos de helado nuevo, busca "Helado" en la tabla, haz clic en el botón verde con el símbolo **`+`**, escribe "5", y presiona **Guardar**. Se sumará al stock actual automáticamente.
 
-### 3.3 Editar Insumos (Catálogo de Ingredientes)
+### 3.4 Editar Insumos (Catálogo de Ingredientes)
 Aquí configuras las partes de los waffles (Toppings, Salsas, Bebidas, etc).
 - **Crear un ingrediente nuevo:** Usa el formulario superior. Escribe el Nombre (ej. "Rocklets"), elige la Categoría (Toppings), pon el Precio de Venta (cuánto le cobras al cliente), y el **Stock Mínimo** (el número que hará que la barra se ponga roja para avisarte que debes comprar).
 - **Modificar precios por inflación:** Busca el producto en la lista y presiona el ícono del **Lápiz azul**. Podrás cambiar su precio al instante en todas las cajas.
 - **Borrar:** Presiona el **Tacho de basura rojo** para eliminar un producto que ya no vendes.
 
-### 3.4 Fichas Técnicas (Recetas de Waffles)
+### 3.5 Fichas Técnicas (Recetas de Waffles)
 Aquí construyes cómo se preparan exactamente tus waffles.
 - **Armado del Recetario:** Seleccionas un tipo de Masa elaborada y le agregas las cantidades exactas (ej. porciones o gramos) de materia prima (toppings, salsas) que el cocinero debe utilizar.
 - **Cálculo de Costo:** A medida que añades ingredientes, el sistema calcula el costo base exacto de producir ese waffle.
 - **Nota Importante:** En esta pestaña NO se define el precio de venta ni si aparece o no en la caja. Aquí solo se define la estructura interna del producto.
 
-### 3.5 Vitrina y Menú Público
+### 3.6 Vitrina y Menú Público
 Aquí decides qué productos vas a poner a la venta para que tus cajeros los puedan facturar y para que el cliente final los vea.
 - **Tipos de Producto que puedes publicar:**
-  1. **Receta de Waffle (Compuesto):** Vinculas una de las recetas que armaste en el paso 3.4. Al venderse en la caja, el sistema descontará exactamente los ingredientes indicados en su ficha técnica.
+  1. **Receta de Waffle (Compuesto):** Vinculas una de las recetas que armaste en el paso 3.5. Al venderse en la caja, el sistema descontará exactamente los ingredientes indicados en su ficha técnica.
   2. **Producto de Venta Directa:** Vinculas un insumo físico que vendes sin preparación extra (Ej: Una gaseosa o agua). Al venderse, descuenta 1 unidad del stock de forma directa.
 - **Pasos para publicar un producto:**
   1. Elige qué vas a publicar (Waffle o Venta Directa).
@@ -107,35 +114,31 @@ Aquí decides qué productos vas a poner a la venta para que tus cajeros los pue
   4. Fija el **Precio Final**.
   5. Asegúrate de marcar "Visible en Caja" y guárdalo.
 
-### 3.6 Opciones Configurables (Apariencia y Reglas)
+### 3.7 Opciones Configurables (Apariencia y Reglas)
 - **Identidad del local:** Sube tu Logo, sube fotos para el carrusel principal, e ingresa la URL o el HTML de tu Google Maps.
 - **Tiempo de Alarma en Cocina:** Ingresa un número en minutos (ej: `10`). Si un pedido tarda más de esos minutos en la cocina, empezará a parpadear en rojo (como vimos en la Parte 2).
 - **Programa de Fidelización:** Aquí puedes prender o apagar el programa "Club Waffle". Si lo enciendes, puedes configurar a cuántos pesos equivale 1 Punto.
 
-### 3.7 Datos de Empresa
+### 3.8 Datos de Empresa
 - Configura el Nombre del Local y la Dirección.
-- **Número de WhatsApp:** Ingresa el número oficial de tu negocio (incluyendo código de país, ej. `54911...`). Cuando los clientes pidan desde el catálogo web de sus casas, el mensaje te llegará a este número.
+- **Número de WhatsApp:** Ingresa el número oficial de tu negocio (incluyendo código de país, ej. `54911...`). Cuando los clientes pidan desde el catálogo web de sus casas, el mensaje te llegará a este número (si la opción de WhatsApp está habilitada).
 
-### 3.8 Empleados (Gestión de Personal)
+### 3.9 Empleados (Gestión de Personal)
 - Usa el formulario de la izquierda para dar de alta a tus empleados.
 - Ponles su Nombre, asígnales un **PIN numérico de 4 dígitos** (para que nadie más pueda usar su usuario) y elige su **Rol** (Cajero o Cocinero).
 - Si un empleado se va de la empresa, búscalo en la lista y presiona el ícono de **Tacho de basura** para revocarle el acceso.
 
-### 3.9 Seguridad y Control de Sesiones
+### 3.10 Seguridad y Control de Sesiones
 - Es el lugar más sensible. Aquí cambias la **Contraseña Maestra** que utilizas para entrar a este panel `/admin`. 
 - Ingresa tu contraseña actual y escribe una nueva. ¡No la olvides!
 - **Sesiones Automáticas:** Por tu seguridad, si tú o tus cajeros dejan el sistema inactivo, el sistema cerrará la sesión de forma automática y volverá a pedir la contraseña o PIN.
 - **Defensa Activa:** Si alguien intenta adivinar tu contraseña ingresando claves incorrectas más de 20 veces, el sistema bloqueará temporalmente el acceso para proteger tu negocio.
 
-### 3.10 Temas Visuales (Branding)
+### 3.11 Temas Visuales (Branding)
 *Aparece solo si activaste el "Modo Desarrollador" en la pestaña de Opciones Configurables.*
 - Te permite gestionar los "Presets" (Temas) de tu aplicación. 
 - Puedes clonar temas existentes, borrarlos o aplicar un tema diferente a todas las pantallas.
 
-### 3.11 Módulo Dev (Herramientas Técnicas)
-*Aparece solo si activaste el "Modo Desarrollador". Sección para casos extremos o soporte técnico.*
-- Te permite resetear toda la base de datos para empezar de cero (cuidado, esto borra todas tus ventas).
-- Te permite inyectar ventas falsas de prueba si estás haciendo simulacros de entrenamiento con tu personal.
 
 ---
 
@@ -145,23 +148,41 @@ Esta es la cara visible de tu negocio. Tus clientes ingresan desde sus celulares
 ### 4.1 Menú Digital y Armado de Waffle
 - **Catálogo:** Los clientes pueden deslizar para ver fotos reales de tus Waffles Especiales y Bebidas, junto a su precio.
 - **Armador Interactivo:** Si tocan "Armá tu Waffle", un asistente los guiará para elegir Masa, Toppings, Salsas y Helados. Mientras eligen, verán un dibujo 2D armándose en tiempo real.
-- **Pedido por WhatsApp:** Al terminar, el sistema genera automáticamente un mensaje estructurado y abre WhatsApp para enviarlo al número de tu local.
-
-### 4.2 Rastreador de Pedidos
-- Arriba de todo, el cliente verá un botón "Rastrear Pedido".
-- Ahí pueden escribir el **Código de Rastreo de 4 dígitos** que el cajero les dio en el mostrador. 
-- El sistema les dirá al instante si su waffle está "Pendiente", "En Preparación" o "Listo".
+### 4.2 Kiosco / Autopedido (Confirmar en Caja)
+- Al terminar de armar su pedido (o en el carrito), el cliente puede tocar "Confirmar Pedido (Pagar en Caja)".
+- El sistema generará un ticket interno con un **código gigante de 4 dígitos**.
+- El cliente debe acercarse al mostrador y dictarle el código al cajero para pagar.
+- *(Si lo configuraste en Opciones, el cliente también podrá enviar el pedido directamente por WhatsApp).*
 
 ---
 
-## 🎨 PARTE 5: Editor de Temas (Theme Builder)
+## 📱 PARTE 5: Mini App Móvil (Para clientes en el local)
+Esta es una versión súper limpia y rápida de tu web (`/app/`) pensada para que la usen los clientes físicos que están sentados en tus mesas.
+
+### 5.1 Menú Digital en la mesa
+- Escaneando un código QR en la mesa, el cliente entra al instante a la pestaña "Menú".
+- Verá una lista muy elegante de todos tus Waffles y Bebidas con sus fotos y precios (sin opciones complejas de armado).
+
+### 5.2 Rastreador en Vivo
+- El cliente escribe los **4 dígitos de su ticket** y ve una animación.
+- **En Cola:** Hay pedidos antes que el suyo.
+- **En Preparación:** Tu cocina empezó a hacerlo (Aparece un icono de fuego animado).
+- **Listo:** El pedido ya está hecho y puede ir a retirarlo.
+
+### 5.3 Sistema de Reseñas Directo
+- En cuanto la cocina marca el ticket como "Listo", a ese cliente le aparece un cartel gigante en su celular invitándolo a dejar una **Reseña**.
+- Puede calificar con estrellas y dejar un texto, lo cual llegará directo a tu panel de Administración.
+
+---
+
+## 🎨 PARTE 6: Editor de Temas (Theme Builder)
 ¿Te aburriste de los colores actuales? Como propietario, tienes el poder de rediseñar tu aplicación en tiempo real sin llamar a un programador.
 
-### 5.1 Cómo activar el Editor
+### 6.1 Cómo activar el Editor
 1. Ve a la pestaña **Opciones Configurables** en tu panel de Administración y marca la casilla **"Activar Modo Desarrollador"**.
 2. A partir de ese momento, verás flotando en la pantalla un ícono circular azul de una paleta de pintor (🎨).
 
-### 5.2 Modificar Colores y Fondos
+### 6.2 Modificar Colores y Fondos
 1. Haz clic en la paleta flotante para abrir el **Theme Builder**.
 2. **Colores Base:** Cambia el color de fondo primario, el color de las tarjetas, etc., haciendo clic en los cuadritos de color.
 3. **Resplandores Neón:** Ajusta la intensidad y el tono del Morado, Rosa o Cian.

@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Check Demo Mode
+  fetch('/api/demo/status').then(r=>r.json()).then(d=>{
+    const banner = document.getElementById('demo-banner');
+    if(banner) banner.style.display = d.isDemoMode ? 'block' : 'none';
+  }).catch(e=>console.error(e));
+
   let employees = [];
   let currentUser = null;
   let tickets = [];
@@ -326,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       ticketEl.innerHTML = `
         <div class="ticket-header">
-          <span class="ticket-id">#${ticket.id.split('_')[1].slice(-4)}</span>
+          <span class="ticket-id">#${(ticket.id.includes('_') ? ticket.id.split('_')[1] : ticket.id).slice(-4)}</span>
           <span class="ticket-time ${isUrgent ? 'urgent' : ''}">${timeStr} ${isUrgent ? '(+' + diffMins + 'm)' : ''}</span>
         </div>
         <div class="ticket-items">

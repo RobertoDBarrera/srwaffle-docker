@@ -21,11 +21,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 const authenticateToken = (req, res, next) => {
   // Permitir todas las peticiones GET excepto ventas
   if (req.method === 'GET' && !req.path.startsWith('/sales')) {
+    return next();
+  }
+  // Permitir crear reviews sin token
+  if (req.method === 'POST' && req.path === '/reviews') {
+    return next();
+  }
+  // Permitir actualizar el estado de los tickets de cocina sin token
+  if (req.method === 'PUT' && req.path.startsWith('/kitchen/tickets')) {
+    return next();
+  }
+  // Permitir generar pedidos de kiosco sin token
+  if (req.method === 'POST' && req.path === '/kiosk-orders') {
     return next();
   }
   // Permitir rutas de autenticación
@@ -234,6 +246,76 @@ app.post('/api/reviews', async (req, res) => {
   }
 });
 
+// --- API TRACKING ---
+app.get('/api/tracking/:id', async (req, res) => {
+  try {
+    const sale = await db.getSaleById(req.params.id);
+    if (!sale) return res.status(404).json({ error: 'Ticket no encontrado' });
+    res.json(sale);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- API KITCHEN ---
+app.get('/api/kitchen/tickets', async (req, res) => {
+  try { res.json(await db.getKitchenTickets()); }
+  catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.put('/api/kitchen/tickets/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await db.updateKitchenTicketStatus(req.params.id, status);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- API KIOSK ORDERS ---
+app.post('/api/kiosk-orders', async (req, res) => {
+  try {
+    const cart = req.body.cart;
+    if (!cart || cart.length === 0) return res.status(400).json({error: 'Cart is empty'});
+    
+    const sales = await db.getSales();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaysSales = sales.filter(s => new Date(s.date || s.created_at) >= today);
+    const usedCodes = new Set(todaysSales.map(s => s.id));
+    
+    let ticketCode;
+    do {
+      ticketCode = Math.floor(1000 + Math.random() * 9000).toString();
+    } while (usedCodes.has(ticketCode));
+
+    await db.createKioskOrder(ticketCode, cart);
+    res.json({ success: true, id: ticketCode });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/kiosk-orders/:id', async (req, res) => {
+  try {
+    const order = await db.getKioskOrder(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/kiosk-orders/:id', async (req, res) => {
+  try {
+    await db.deleteKioskOrder(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- API SALES ---
 app.get('/api/sales', async (req, res) => {
   try { res.json(await db.getSales()); }
@@ -253,7 +335,7 @@ app.post('/api/sales', async (req, res) => {
           await db.updateStockQuantity(item.id, -(stockItem.portion_size || 1));
         }
       } else if (item.type === 'menu_waffle') {
-        const conf = item.config;
+        const conf = item.config || {};
         if (conf.ingredients) {
           for (const ing of conf.ingredients) {
             if (ing.type === 'masa') {
@@ -286,10 +368,12 @@ app.post('/api/sales', async (req, res) => {
     const todaysSales = sales.filter(s => new Date(s.date || s.created_at) >= today);
     const usedCodes = new Set(todaysSales.map(s => s.id));
     
-    let ticketCode;
-    do {
-      ticketCode = Math.floor(1000 + Math.random() * 9000).toString();
-    } while (usedCodes.has(ticketCode));
+    let ticketCode = req.body.id;
+    if (!ticketCode || usedCodes.has(ticketCode)) {
+      do {
+        ticketCode = Math.floor(1000 + Math.random() * 9000).toString();
+      } while (usedCodes.has(ticketCode));
+    }
 
     const newSale = {
       id: ticketCode,
@@ -430,7 +514,30 @@ app.post('/api/company/info', async (req, res) => {
   try { await db.updateCompanyInfo(req.body); res.json({ success: true }); } catch (error) { res.status(500).json({ error: 'Error' }); }
 });
 
-// --- API CONFIGURACION DESARROLLADOR ---
+// --- API CONFIGURACION DESARROLLADOR & DEMO ---
+const { getDemoMode, setDemoMode } = require('./src/db/demoState');
+const { seedDemo } = require('./src/db/seedDemo');
+
+app.get('/api/demo/status', (req, res) => {
+  res.json({ isDemoMode: getDemoMode() });
+});
+
+app.post('/api/demo/toggle', async (req, res) => {
+  try {
+    const { isDemoMode } = req.body;
+    setDemoMode(isDemoMode);
+    
+    if (isDemoMode) {
+      await seedDemo();
+    }
+    
+    res.json({ success: true, isDemoMode: getDemoMode() });
+  } catch (err) {
+    console.error("Error toggling demo mode:", err);
+    res.status(500).json({ error: 'Error toggling demo mode' });
+  }
+});
+
 app.get('/api/developer/settings', async (req, res) => {
   try {
     const settings = await db.getSettings();

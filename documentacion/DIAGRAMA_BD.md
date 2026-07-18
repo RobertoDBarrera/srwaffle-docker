@@ -1,50 +1,118 @@
 # Diagrama Entidad-Relación (Base de Datos) - Sr. Waffle V2
 
-A continuación se detalla la estructura y el modelo relacional de la base de datos de "Sr. Waffle", ahora rediseñada bajo un esquema estricto de control de inventario y recetas.
+A continuación se detalla la estructura y el modelo relacional de la base de datos de "Sr. Waffle". El sistema ha sido migrado a un esquema avanzado de tipo ERP para la gestión de inventario, incluyendo manejo de unidades, lotes, movimientos históricos de almacén y módulos de Kiosco/Cocina.
 
-El sistema funciona con soporte local (JSON) y soporte PostgreSQL (para la versión Dockerizada).
+El sistema funciona nativamente con PostgreSQL. (Aún conserva un fallback a JSON local para desarrollo, pero la estructura primaria se define en SQL).
 
 ## Diagrama Visual (ERD)
 
 ```mermaid
 erDiagram
-    STOCK ||--o{ MASAS : "Se usan para fabricar"
-    STOCK ||--o{ WAFFLES : "Toppings extras"
-    STOCK ||--o{ MENU : "Venta directa (Bebidas)"
+    WAREHOUSES ||--o{ STOCK_LOTS : "Almacena"
+    WAREHOUSES ||--o{ STOCK_MOVEMENTS : "Registra en"
     
-    MASAS ||--o{ WAFFLES : "Masa base"
+    UNITS ||--o{ PRODUCTS : "Define unidad base"
+    UNITS ||--o{ PRODUCT_PRESENTATIONS : "Define unidad de presentación"
     
+    PRODUCTS ||--o{ PRODUCT_PRESENTATIONS : "Se puede comprar en"
+    PRODUCTS ||--o{ STOCK_LOTS : "Tiene stock en"
+    PRODUCTS ||--o{ STOCK_MOVEMENTS : "Registra histórico"
+    
+    PRODUCTS ||--o{ MASAS : "Ingredientes para"
+    PRODUCTS ||--o{ WAFFLES : "Toppings extras para"
+    PRODUCTS ||--o{ MENU : "Venta directa de"
+    
+    STOCK_LOTS ||--o{ STOCK_MOVEMENTS : "Afectado por"
+    
+    MASAS ||--o{ WAFFLES : "Masa base de"
     WAFFLES ||--o{ MENU : "Se publica en"
     
     MENU ||--o{ SALES : "Se vende en"
+    MENU ||--o{ KIOSK_ORDERS : "Se añade al carrito"
+    
+    SALES ||--o| REVIEWS : "Recibe feedback"
 
-    STOCK {
+    UNITS {
         string id PK
         string name
-        string category "raw_material, topping, syrup, drink"
-        int stock "Cantidad (g, ml, un)"
-        int cost
+        string type "mass, volume, item"
+        string base_unit_id FK
+        decimal conversion_factor
+    }
+
+    WAREHOUSES {
+        string id PK
+        string name
+    }
+
+    PRODUCTS {
+        string id PK
+        string name
+        string category
+        string base_unit_id FK
+        decimal min_stock
+        string cost_method "FIFO, LIFO, AVG"
+        decimal portion_size
+        decimal price_per_portion
+    }
+
+    PRODUCT_PRESENTATIONS {
+        string id PK
+        string product_id FK
+        string name
+        decimal quantity
+        string unit_id FK
+    }
+
+    STOCK_LOTS {
+        int id PK
+        string product_id FK
+        string warehouse_id FK
+        decimal quantity_initial
+        decimal quantity_current
+        decimal unit_cost
+        decimal purchase_quantity
+        string purchase_unit
+        decimal total_cost
+        timestamp created_at
+    }
+
+    STOCK_MOVEMENTS {
+        int id PK
+        string product_id FK
+        string warehouse_id FK
+        string type "IN, OUT, ADJ"
+        string reason
+        decimal quantity
+        decimal unit_cost
+        int lot_id FK
+        string reference_id
+        timestamp created_at
     }
     
     MASAS {
         string id PK
         string name
-        int yield_qty "Porciones por lote"
-        int stock "Porciones disponibles"
-        jsonb ingredients "IDs de Stock"
+        int stock
+        int min_stock
+        int yield_qty
+        int cost_per_portion
+        jsonb ingredients
     }
     
     WAFFLES {
         string id PK
         string name
+        string description
         int cost
-        jsonb ingredients "ID de Masa + IDs de Stock"
+        string image
+        jsonb ingredients
     }
     
     MENU {
         string id PK
         string type "waffle | direct"
-        string reference_id FK "Waffles.id o Stock.id"
+        string reference_id FK "Waffles.id o Products.id"
         string name
         int price
         boolean is_visible
@@ -52,111 +120,57 @@ erDiagram
     
     SALES {
         string id PK
-        datetime date
+        timestamp date
+        jsonb items
         int total
-        jsonb items "Items del Menu"
+        string payment_method
+        string status "completed, cancelled"
+        string cashier_name
+        string kdsStatus "pending, completed"
+        timestamp kds_completed_at
+        string customer_name
+    }
+
+    REVIEWS {
+        int id PK
+        string sale_id FK
+        int rating
+        string comment
+        timestamp created_at
+    }
+
+    KIOSK_ORDERS {
+        string id PK
+        jsonb cart
+        timestamp created_at
     }
 ```
 
-## Esquema Relacional Estricto
+## Esquema Relacional ERP
 
-### 1. `STOCK` (Inventario y Materias Primas)
-Almacena todos los productos comprados a proveedores. Representa el nivel más bajo del inventario físico.
-```json
-{
-  "id": "raw_material_1718100000",
-  "name": "Harina 0000",
-  "category": "raw_material", // Enum: raw_material, topping, syrup, drink, icecream
-  "stock": 15000,             // Cantidad total (Ej: 15000 gramos)
-  "minStock": 2000,           // Alerta de stock mínimo
-  "unit": "g",                // Unidad de medida (g, ml, unidades)
-  "cost": 1500,               // Costo Interno (Total / Unidades de Pack)
-  "portion_size": 0,          // Gramos/ML utilizados cuando se vende como "Porción Extra"
-  "price_per_portion": 0      // Precio de venta cuando se vende como "Porción Extra"
-}
-```
+### 1. Sistema de Unidades y Presentaciones
+- **`UNITS`**: Define las magnitudes de medida base (gramos, mililitros, unidades) y sus conversiones (ej. 1 kg = 1000g).
+- **`PRODUCT_PRESENTATIONS`**: Permite definir cómo se compra un producto al proveedor (ej. "Bolsa de 25KG de Harina").
 
-### 2. `MASAS` (Insumos Elaborados)
-Almacena productos que la cocina fabrica internamente consumiendo materias primas de la tabla `STOCK`.
-```json
-{
-  "id": "masa_1718200000",
-  "name": "Masa Tradicional Dulce",
-  "yield_qty": 20,            // Cuántas porciones de masa rinde 1 lote fabricado
-  "cost": 120,                // Costo calculado (Suma Costo Ingredientes / yield_qty)
-  "stock": 40,                // Stock de masas disponibles
-  "ingredients": [
-    {
-      "type": "stock",
-      "id": "raw_material_1718100000",
-      "qty": 1000             // Requiere 1000g de harina por lote
-    }
-  ]
-}
-```
+### 2. Inventario Avanzado (Método FIFO)
+- **`PRODUCTS`**: Tabla maestra de artículos (antes STOCK). Posee categoría, alertas de stock mínimo, tamaño de porción de venta, precio de venta directo y método de costeo.
+- **`WAREHOUSES`**: Define depósitos lógicos (ej. "Depósito Principal").
+- **`STOCK_LOTS`**: Cada compra ingresa como un lote individual (`Lote`). Registra costo unitario de ese momento histórico, permitiendo costeo real (FIFO).
+- **`STOCK_MOVEMENTS`**: Histórico inmutable. Cualquier adición, resta o ajuste de inventario queda registrado aquí, afectando a un lote específico.
 
-### 3. `WAFFLES` (Recetas Finales)
-Almacena el catálogo de recetas de Waffles (Fichas Técnicas). No tienen precio ni visibilidad pública.
-```json
-{
-  "id": "waffle_1718300000",
-  "name": "Delicia Frutal",
-  "description": "Waffle dulce con frutillas",
-  "cost": 620,                // Costo calculado (Masa + Ingredientes)
-  "ingredients": [
-    {
-      "type": "masa",
-      "id": "masa_1718200000", // Consume 1 masa base
-      "qty": 1
-    },
-    {
-      "type": "stock",
-      "id": "topping_1718400000", // Consume N gramos de frutilla (según portion_size del stock)
-      "qty": 30
-    }
-  ]
-}
-```
+### 3. Producción Interna
+- **`MASAS`**: Insumos elaborados internamente. Consume cantidades en base a las unidades de los `PRODUCTS` y se almacena en porciones. Posee `min_stock` para control de producción.
+- **`WAFFLES`**: Fichas técnicas (Recetas). Combina una porción de `MASAS` más toppings adicionales (cantidades descontadas de `PRODUCTS`).
 
-### 4. `MENU` (Vitrina Pública)
-Almacena los productos que el cliente final puede comprar en la caja. Pueden ser Waffles (referenciando a la tabla `WAFFLES`) o Venta Directa (referenciando a la tabla `STOCK`).
-```json
-{
-  "id": "menu_1718500000",
-  "type": "waffle",           // "waffle" o "direct"
-  "reference_id": "waffle_1718300000", // ID de la receta o stock asociado
-  "name": "Waffle Delicia Frutal",
-  "price": 5500,              // Precio final al público
-  "is_visible": true          // Visible en el catálogo POS
-}
-```
+### 4. Ventas y Módulos Externos
+- **`MENU`**: Vitrina comercial. Determina qué se visualiza en la terminal POS, Kiosco y `/app`.
+- **`KIOSK_ORDERS`**: Almacena temporalmente los pedidos autogestionados por clientes hasta que son pagados en caja.
+- **`SALES`**: Centraliza la facturación. Posee integración directa con el KDS (Cocina) a través de `kdsStatus` y `kds_completed_at`.
+- **`REVIEWS`**: Retroalimentación conectada a la venta, ingresada por el cliente post-consumo.
 
-### 5. `SALES` (Historial de Ventas)
-Registra cada transacción completada en el POS.
-```json
-{
-  "id": "sale_1718700000",
-  "date": "2026-06-16T15:30:00Z",
-  "total": 7300,
-  "paymentMethod": "Efectivo",
-  "cashierName": "Juan Perez",
-  "status": "completed",
-  "items": [
-    {
-      "id": "waffle_1718300000",
-      "type": "menu_waffle",
-      "name": "Delicia Frutal",
-      "price": 5500,
-      "config": {} // Detalles de personalización si existieron
-    }
-  ]
-}
-```
-
-## Relación de Flujo de Datos
-1. **Compras:** Proveedor -> `STOCK` (Almacena Gramos, Mililitros, Unidades).
-2. **Producción:** Cocina hace un Lote -> Descuenta Gramos de `STOCK` -> Suma Unidades a `MASAS`.
-3. **Ventas (Menú Público):** Caja vende Producto del Menú -> 
-   - Si es "waffle": Descuenta 1 Unidad de `MASAS` + Descuenta X gramos exactos de `STOCK` (según receta de `WAFFLES`).
-   - Si es "direct": Descuenta 1 Unidad directa de `STOCK`.
-   - Si el cliente añade "Extras": Descuenta *Tamaño de Porción* del `STOCK`.
+## Flujo de Datos Transaccional
+1. **Compras:** Al ingresar una presentación comercial, el sistema desglosa los gramos/ml, crea un nuevo `STOCK_LOTS` (Lote) y graba el ingreso en `STOCK_MOVEMENTS`.
+2. **Fabricación:** Al producir `MASAS`, se generan movimientos de salida (`OUT`) en `STOCK_MOVEMENTS` por cada ingrediente utilizado (descontando del lote más viejo si es FIFO), y aumenta el `stock` de la masa.
+3. **Kiosco:** Genera un pre-ticket en `KIOSK_ORDERS`. No descuenta stock físico.
+4. **Caja (POS):** Factura el pedido (o aprueba un pedido de Kiosco). Genera un `SALES`. Inmediatamente genera una petición de salida de insumos (para lo que sea directo o waffle).
+5. **Cocina (KDS):** Visualiza los ítems pendientes usando el `kdsStatus`. Al marcar como terminado, se actualiza `kds_completed_at`.

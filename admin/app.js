@@ -21,6 +21,12 @@ window.fetch = async function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Check Demo Mode
+  fetch('/api/demo/status').then(r=>r.json()).then(d=>{
+    const banner = document.getElementById('demo-banner');
+    if(banner) banner.style.display = d.isDemoMode ? 'block' : 'none';
+  }).catch(e=>console.error(e));
+
   // --- INICIALIZACIÓN DE ESTADO ---
   let stock = {};
   let flatStock = [];
@@ -235,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reviews.forEach(review => {
       const tr = document.createElement('tr');
       const dateStr = new Date(review.created_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
-      const ratingIcon = review.rating === 'positive' ? '👍' : '👎';
+      const ratingIcon = (review.rating === 'positive' || review.rating === 2 || review.rating === '2') ? '👍' : '👎';
       
       tr.innerHTML = `
         <td>${dateStr}</td>
@@ -286,34 +292,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalOrders = activeSales.length;
     const avgTicket = totalOrders > 0 ? totalEarnings / totalOrders : 0;
     
-    const toppingCounts = {};
+    const productCounts = {};
     filteredSales.forEach(sale => {
       if (sale.status !== 'completed') return;
       sale.items.forEach(item => {
-        let textToSearch = item.details || '';
-        // If it's a menu_waffle, toppings are in item.config.toppings
-        if (item.type === 'menu_waffle' && item.config && Array.isArray(item.config.toppings)) {
-          textToSearch += ' ' + item.config.toppings.join(' ');
-        }
-
-        if (textToSearch) {
-          stock.toppings.forEach(top => {
-            if (textToSearch.includes(top.name)) {
-              // Add quantity if item.quantity > 1
-              const qty = item.quantity || item.qty || 1;
-              toppingCounts[top.name] = (toppingCounts[top.name] || 0) + qty;
-            }
-          });
-        }
+        const textToSearch = item.name || '';
+        productCounts[textToSearch] = (productCounts[textToSearch] || 0) + (item.quantity || item.qty || 1);
       });
     });
 
-    let bestTopping = 'Ninguno';
-    let maxToppingCount = 0;
-    for (const name in toppingCounts) {
-      if (toppingCounts[name] > maxToppingCount) {
-        maxToppingCount = toppingCounts[name];
-        bestTopping = name;
+    let bestProduct = 'Ninguno';
+    let maxProductCount = 0;
+    for (const name in productCounts) {
+      if (productCounts[name] > maxProductCount) {
+        maxProductCount = productCounts[name];
+        bestProduct = name;
       }
     }
 
@@ -341,7 +334,10 @@ document.addEventListener('DOMContentLoaded', () => {
       avgKitchenTimeEl.textContent = avgKitchenTime > 0 ? `${Math.round(avgKitchenTime)} min` : '-- min';
     }
     
-    document.getElementById('stat-topping').textContent = bestTopping === 'Ninguno' ? 'N/A' : `${bestTopping} (${maxToppingCount} u)`;
+    const favToppingEl = document.getElementById('stat-topping');
+    if (favToppingEl) {
+      favToppingEl.textContent = bestProduct === 'Ninguno' ? 'N/A' : `${bestProduct} (${maxProductCount} u)`;
+    }
 
     // VENTAS POR CAJERO
     const cashierStats = {};
@@ -373,10 +369,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     renderSalesChart(activeSales);
-    renderToppingsRanking(toppingCounts);
+    renderProductsRanking(productCounts);
+    renderHeatmap(activeSales);
+    renderPaymentPieChart(activeSales);
     renderTransactionsTable(filteredSales);
   };
 
+  let salesChartInstance = null;
   const renderSalesChart = (activeSales) => {
     const chartContainer = document.getElementById('sales-bar-chart');
     if (!chartContainer) return;
@@ -403,7 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
       startDate.setDate(endDate.getDate() - 6);
     }
 
-    // Limitar a un rango máximo razonable si se seleccionan muchos días para no colgar el navegador
     const diffTime = Math.abs(endDate - startDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays > 90) {
@@ -448,37 +446,101 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const renderToppingsRanking = (toppingCounts) => {
+  const renderProductsRanking = (productCounts) => {
     const rankingContainer = document.getElementById('topping-ranking-container');
     if (!rankingContainer) return;
 
     rankingContainer.innerHTML = '';
 
-    const sortedToppings = Object.entries(toppingCounts)
+    const sortedProducts = Object.entries(productCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    if (sortedToppings.length === 0) {
-      rankingContainer.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding: 20px 0;">No hay datos de ingredientes aún</div>';
+    if (sortedProducts.length === 0) {
+      rankingContainer.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding: 20px 0;">No hay datos de productos aún</div>';
       return;
     }
 
-    const maxCount = sortedToppings[0][1];
+    const maxCount = sortedProducts[0][1];
 
-    sortedToppings.forEach(([name, count]) => {
+    sortedProducts.forEach(([name, count]) => {
       const pct = (count / maxCount) * 100;
       const item = document.createElement('div');
       item.className = 'ranking-item';
       item.innerHTML = `
         <div class="ranking-item-header">
           <span>${name}</span>
-          <span style="color:var(--neon-pink);">${count} porciones</span>
+          <span style="color:var(--neon-pink);">${count} u</span>
         </div>
         <div class="ranking-bar-bg">
           <div class="ranking-bar-fill" style="width: ${pct}%;"></div>
         </div>
       `;
       rankingContainer.appendChild(item);
+    });
+  };
+
+  let heatmapInstance = null;
+  const renderHeatmap = (activeSales) => {
+    const canvas = document.getElementById('heatmapChart');
+    if (!canvas) return;
+    const data = [0,0,0,0,0,0,0,0];
+    activeSales.forEach(s => {
+      const h = new Date(s.date).getHours();
+      if (h >= 10 && h < 12) data[0]++;
+      else if (h >= 12 && h < 14) data[1]++;
+      else if (h >= 14 && h < 16) data[2]++;
+      else if (h >= 16 && h < 18) data[3]++;
+      else if (h >= 18 && h < 20) data[4]++;
+      else if (h >= 20 && h < 22) data[5]++;
+      else if (h >= 22 && h < 24) data[6]++;
+      else data[7]++;
+    });
+    if (heatmapInstance) heatmapInstance.destroy();
+    heatmapInstance = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['10-12', '12-14', '14-16', '16-18', '18-20', '20-22', '22-00', '00+'],
+        datasets: [{ label: 'Ventas por hora', data: data, backgroundColor: '#f72585' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  };
+
+  let paymentPieChartInstance = null;
+  const renderPaymentPieChart = (activeSales) => {
+    const canvas = document.getElementById('paymentPieChart');
+    if (!canvas) return;
+    
+    const paymentMethods = {};
+    activeSales.forEach(sale => {
+      const method = sale.paymentMethod || 'Efectivo';
+      paymentMethods[method] = (paymentMethods[method] || 0) + 1;
+    });
+
+    const labels = Object.keys(paymentMethods);
+    const data = Object.values(paymentMethods);
+    
+    // Generar colores neón para los métodos
+    const bgColors = ['#f72585', '#4cc9f0', '#7209b7', '#00f5d4', '#fee440'];
+
+    if (paymentPieChartInstance) paymentPieChartInstance.destroy();
+    paymentPieChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: bgColors.slice(0, labels.length)
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#ccc' } }
+        }
+      }
     });
   };
 
@@ -2116,42 +2178,57 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const loadDeveloperSettingsPanel = async () => {
-    try {
-      const res = await fetch('/api/developer/settings');
-      const data = await res.json();
-      updateDevStatusUI(data.developerMode);
-    } catch (err) {
-      console.error(err);
-      showToast('Error al conectar con la API de desarrollador', true);
-    }
-  };
+    const statusBadge = document.getElementById('developer-status-badge');
+    const toggle = document.getElementById('developer-toggle');
+    if (!statusBadge || !toggle) return;
 
-  if (devToggle) {
-    devToggle.onchange = async () => {
-      const isChecked = devToggle.checked;
-      try {
-        const res = await fetch('/api/developer/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ developerMode: isChecked })
-        });
-        if (res.ok) {
-          updateDevStatusUI(isChecked);
-          showToast(isChecked ? 'Módulo de personalización activado. Recargando...' : 'Módulo de personalización desactivado. Recargando...');
+    try {
+      const settings = await fetch('/api/developer/settings').then(r => r.json());
+      const isDev = settings.enabled;
+
+      // Usar el toggle solo para Developer Theme Edit
+      toggle.checked = isDev;
+      if (toggle.checked) {
+        statusBadge.textContent = 'Módulo Dev: ACTIVO';
+        statusBadge.style.color = 'var(--neon-green)';
+        statusBadge.style.borderColor = 'var(--neon-green)';
+      } else {
+        statusBadge.textContent = 'Módulo Dev: INACTIVO';
+        statusBadge.style.color = 'var(--text-muted)';
+        statusBadge.style.borderColor = 'rgba(255,255,255,0.08)';
+      }
+
+      toggle.onchange = async (e) => {
+        const val = e.target.checked;
+        const confirmMsg = val 
+          ? "¿Seguro que desea activar el Módulo Dev?" 
+          : "¿Seguro que desea desactivar el Módulo Dev?";
+          
+        if (!confirm(confirmMsg)) {
+          e.target.checked = !val;
+          return;
+        }
+
+        try {
+          await fetch('/api/developer/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: val })
+          });
+          
+          showToast(val ? 'Módulo Dev habilitado' : 'Módulo Dev deshabilitado');
+          
           setTimeout(() => {
             window.location.reload();
           }, 1000);
-        } else {
-          showToast('Error al actualizar configuración', true);
-          devToggle.checked = !isChecked;
+        } catch (err) {
+          showToast('Error de red', true);
         }
-      } catch (err) {
-        console.error(err);
-        showToast('Error de conexión con el servidor', true);
-        devToggle.checked = !isChecked;
-      }
-    };
-  }
+      };
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   // --- PANEL 7: CONFIGURACIÓN DE DATOS DE LA EMPRESA ---
   const companyForm = document.getElementById('admin-company-form');
@@ -2174,6 +2251,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (companyPhoneInput) companyPhoneInput.value = data.companyPhone || '';
       if (kdsAlertTimeInput) kdsAlertTimeInput.value = data.kdsAlertTime || 10;
       if (companyWhatsappEnabledInput) companyWhatsappEnabledInput.checked = data.whatsappOrdersEnabled !== false;
+
+      // --- Cargar Métodos de Pago ---
+      window.currentPaymentMethods = data.paymentMethods || ['Efectivo', 'MercadoPago', 'Tarjeta de Débito', 'Tarjeta de Crédito'];
+      renderPaymentMethodsList();
 
       // Cargar settings de Logo
       window.currentCompanyLogo = data.companyLogo || '';
@@ -2334,7 +2415,9 @@ document.addEventListener('DOMContentLoaded', () => {
         companyHours: companyHoursInput.value.trim(),
         companyInstagram: companyInstagramInput.value.trim(),
         companyPhone: companyPhoneInput.value.trim(),
-        whatsappOrdersEnabled: companyWhatsappEnabledInput ? companyWhatsappEnabledInput.checked : true
+        whatsappOrdersEnabled: companyWhatsappEnabledInput ? companyWhatsappEnabledInput.checked : true,
+        kdsAlertTime: kdsAlertTimeInput ? parseInt(kdsAlertTimeInput.value) || 10 : 10,
+        paymentMethods: window.currentPaymentMethods
       };
 
       try {
@@ -2356,6 +2439,82 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
   }
+
+    const renderPaymentMethodsList = () => {
+      const container = document.getElementById('admin-payment-methods-container');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!window.currentPaymentMethods || window.currentPaymentMethods.length === 0) {
+        container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">No hay métodos configurados.</span>';
+        return;
+      }
+      window.currentPaymentMethods.forEach((method, index) => {
+        // Normalizar a objeto si era un string
+        if (typeof method === 'string') {
+          method = { name: method, enabled: true };
+          window.currentPaymentMethods[index] = method;
+        }
+        
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px;';
+        
+        const checkedStr = method.enabled ? 'checked' : '';
+        div.innerHTML = `
+          <span>${method.name}</span>
+          <label class="dev-switch">
+            <input type="checkbox" onchange="togglePaymentMethod(${index}, this.checked)" ${checkedStr}>
+            <span class="dev-slider"></span>
+          </label>
+        `;
+        container.appendChild(div);
+      });
+    };
+
+    window.togglePaymentMethod = (index, enabled) => {
+      window.currentPaymentMethods[index].enabled = enabled;
+      const companyForm = document.getElementById('admin-company-form');
+      if (companyForm) companyForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    };
+
+    window.deletePaymentMethod = (index) => {
+      if (confirm('¿Eliminar este método de pago?')) {
+        window.currentPaymentMethods.splice(index, 1);
+        renderPaymentMethodsList();
+        const companyForm = document.getElementById('admin-company-form');
+        if (companyForm) companyForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    };
+
+    const addPaymentBtn = document.getElementById('admin-add-payment-btn');
+    if (addPaymentBtn) {
+      addPaymentBtn.addEventListener('click', () => {
+        const input = document.getElementById('admin-new-payment-method');
+        const val = input.value.trim();
+        if (val) {
+          if (!window.currentPaymentMethods) window.currentPaymentMethods = [];
+          // Verify if exists by name
+          const exists = window.currentPaymentMethods.find(m => (typeof m === 'object' ? m.name : m) === val);
+          if (!exists) {
+            window.currentPaymentMethods.push({ name: val, enabled: true });
+            input.value = '';
+            renderPaymentMethodsList();
+            const companyForm = document.getElementById('admin-company-form');
+            if (companyForm) companyForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          } else {
+            showToast('El método de pago ya existe', true);
+          }
+        }
+      });
+    }
+
+    const kdsSaveBtn = document.getElementById('kds-alert-save-btn');
+    if (kdsSaveBtn) {
+      kdsSaveBtn.addEventListener('click', async () => {
+        if (companyForm) {
+          companyForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      });
+    }
 
   // --- LÓGICA DE LOGO DE EMPRESA ---
   const companyLogoInput = document.getElementById('company-logo-file');
@@ -3075,6 +3234,47 @@ document.addEventListener('DOMContentLoaded', () => {
         window.showToast('Error de red: ' + e.message, true);
       }
     });
+  }
+
+  // --- MODO DEMO ---
+  const demoToggle = document.getElementById('demo-mode-toggle');
+  if (demoToggle) {
+    // Check current demo status
+    fetch('/api/demo/status')
+      .then(r => r.json())
+      .then(data => {
+        demoToggle.checked = data.isDemoMode;
+      })
+      .catch(console.error);
+
+    demoToggle.onchange = async (e) => {
+      const val = e.target.checked;
+      const confirmMsg = val 
+        ? "¿Seguro que desea activar el Modo Demo? Se cargarán datos ficticios de demostración." 
+        : "¿Seguro que desea desactivar? Se restaurará la base de datos a su estado real.";
+        
+      if (!confirm(confirmMsg)) {
+        e.target.checked = !val;
+        return;
+      }
+
+      try {
+        await fetch('/api/demo/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isDemoMode: val })
+        });
+        
+        showToast(val ? 'Modo Demo habilitado' : 'Modo Demo deshabilitado');
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (err) {
+        showToast('Error de red', true);
+        e.target.checked = !val;
+      }
+    };
   }
 
 });
