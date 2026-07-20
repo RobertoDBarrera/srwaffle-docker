@@ -225,16 +225,26 @@ const seedDemo = async () => {
             const cashier = cashiers[Math.floor(Math.random() * cashiers.length)];
             
             // KDS completed logic
-            const kdsComplete = new Date(date.getTime() + (5 + Math.floor(Math.random() * 10)) * 60000); // 5 to 15 mins later
+            let status = 'completed';
+            let kdsStatus = 'completed';
+            let kdsCompletedDate = new Date(date.getTime() + (5 + Math.floor(Math.random() * 10)) * 60000);
+            let kdsCompletedStr = kdsCompletedDate.toISOString();
+
+            // 15% chance of being active (pending/preparing) if it's very recent (last 1-2 days)
+            if (daysAgo <= 2 && Math.random() < 0.15) {
+                status = 'pending';
+                kdsStatus = Math.random() < 0.5 ? 'pending' : 'preparing';
+                kdsCompletedStr = null;
+            }
 
             await client.query(
                 `INSERT INTO sales (id, date, items, total, payment_method, status, cashier_name, "kdsStatus", kds_completed_at) 
-                 VALUES ($1, $2, $3, $4, $5, 'completed', $6, 'completed', $7)`,
-                [saleId, date.toISOString(), JSON.stringify(items), total, pay, cashier, kdsComplete.toISOString()]
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [saleId, date.toISOString(), JSON.stringify(items), total, pay, cashier, status, kdsStatus, kdsCompletedStr]
             );
 
-            // 30% chance of getting a review
-            if (Math.random() > 0.7) {
+            // 30% chance of getting a review (only for completed sales)
+            if (status === 'completed' && Math.random() > 0.7) {
                 const rating = Math.random() > 0.2 ? 2 : 1; // mostly positive
                 const commentsPos = ['¡Riquísimo!', 'Excelente atención', 'Volveré pronto', 'El mejor waffle'];
                 const commentsNeg = ['Tardaron mucho', 'Vino frío', 'No me gustó el sabor'];
@@ -244,7 +254,7 @@ const seedDemo = async () => {
 
                 await client.query(
                     `INSERT INTO reviews (sale_id, rating, comment, created_at) VALUES ($1, $2, $3, $4)`,
-                    [saleId, rating, comment, kdsComplete.toISOString()] // Review shortly after completed
+                    [saleId, rating, comment, kdsCompletedStr] // Review shortly after completed
                 );
             }
             totalSalesCount++;

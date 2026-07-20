@@ -184,6 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const switchAdminView = async (viewName) => {
     currentAdminView = viewName;
 
+    // Si la pantalla es pequeña y la sidebar está abierta, cerrarla
+    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    }
+
     adminMenuItems.forEach(item => {
       if (item.getAttribute('data-admin-view') === viewName) {
         item.classList.add('active');
@@ -232,20 +238,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('reviews-table-body');
     if (!tbody) return;
 
-    if (reviews.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem;">No hay reseñas aún.</td></tr>';
+    // Populate employee dropdown if empty
+    const empSelect = document.getElementById('review-filter-employee');
+    if (empSelect && empSelect.options.length <= 1 && typeof employees !== 'undefined' && employees.length > 0) {
+      employees.forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp.name;
+        opt.textContent = emp.name;
+        empSelect.appendChild(opt);
+      });
+      // Add 'Administrador' if not there
+      const optAdmin = document.createElement('option');
+      optAdmin.value = 'Administrador';
+      optAdmin.textContent = 'Administrador';
+      empSelect.appendChild(optAdmin);
+    }
+
+    const filterEmp = empSelect ? empSelect.value : '';
+    const filterRating = document.getElementById('review-filter-rating') ? document.getElementById('review-filter-rating').value : '';
+    const filterStart = document.getElementById('review-filter-start-date') ? document.getElementById('review-filter-start-date').value : '';
+    const filterEnd = document.getElementById('review-filter-end-date') ? document.getElementById('review-filter-end-date').value : '';
+
+    let filtered = reviews || [];
+    
+    if (filterEmp || filterRating || filterStart || filterEnd) {
+      filtered = filtered.filter(review => {
+        const date = new Date(review.created_at);
+        const dateStrIso = date.toISOString().split('T')[0];
+        
+        let ratingType = (review.rating === 'positive' || review.rating === 2 || review.rating === '2') ? 'positive' : 'negative';
+        
+        let match = true;
+        if (filterRating && ratingType !== filterRating) match = false;
+        if (filterStart && dateStrIso < filterStart) match = false;
+        if (filterEnd && dateStrIso > filterEnd) match = false;
+        
+        if (filterEmp) {
+          const sale = typeof sales !== 'undefined' ? sales.find(s => s.id == review.sale_id) : null;
+          const cashier = sale ? (sale.cashier_name || 'Administrador') : 'Administrador';
+          if (cashier !== filterEmp) match = false;
+        }
+        
+        return match;
+      });
+    }
+
+    if (!Array.isArray(filtered) || filtered.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">No hay reseñas aún o no coinciden con los filtros.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = '';
-    reviews.forEach(review => {
+    if (tbody) tbody.innerHTML = '';
+    filtered.forEach(review => {
       const tr = document.createElement('tr');
       const dateStr = new Date(review.created_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
       const ratingIcon = (review.rating === 'positive' || review.rating === 2 || review.rating === '2') ? '👍' : '👎';
       
+      const sale = typeof sales !== 'undefined' ? sales.find(s => s.id == review.sale_id) : null;
+      const cashierName = sale ? (sale.cashier_name || 'Administrador') : 'Administrador';
+      
       tr.innerHTML = `
         <td>${dateStr}</td>
         <td style="font-family: monospace; font-size: 1.1rem;">#${review.sale_id}</td>
+        <td>${cashierName}</td>
         <td style="font-size: 1.5rem;">${ratingIcon}</td>
         <td>${review.comment || '-'}</td>
       `;
@@ -253,16 +308,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  if (document.getElementById('btn-apply-review-filter')) {
+    document.getElementById('btn-apply-review-filter').addEventListener('click', renderReviews);
+  }
+
   // --- PANEL 1: ANALYTICS & HISTORIAL DE VENTAS ---
   const getFilteredSales = () => {
     const startInput = document.getElementById('filter-start-date');
     const endInput = document.getElementById('filter-end-date');
 
-    // Por defecto hoy si están vacíos
+    // Por defecto últimos 30 días si están vacíos
     if (startInput && !startInput.value) {
-      const today = new Date();
-      const offset = today.getTimezoneOffset() * 60000;
-      startInput.value = (new Date(today - offset)).toISOString().split('T')[0];
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const offset = thirtyDaysAgo.getTimezoneOffset() * 60000;
+      startInput.value = (new Date(thirtyDaysAgo - offset)).toISOString().split('T')[0];
     }
     if (endInput && !endInput.value) {
       const today = new Date();
@@ -1020,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('stock-edit-id').value = item.id;
           document.getElementById('stock-name').value = item.name;
           document.getElementById('stock-category').value = item.category;
-          document.getElementById('stock-cost').value = item.cost || 0;
+          if (document.getElementById('stock-cost')) document.getElementById('stock-cost').value = item.cost || 0;
           
           if (document.getElementById('stock-portion-size')) document.getElementById('stock-portion-size').value = item.portion_size || 0;
           if (document.getElementById('stock-price-per-portion')) document.getElementById('stock-price-per-portion').value = item.price_per_portion || 0;

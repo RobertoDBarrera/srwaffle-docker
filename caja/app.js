@@ -209,6 +209,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.pin-clear-all').addEventListener('click', () => { pinInput=''; updatePinDots(); });
   document.getElementById('caja-logout').addEventListener('click', () => { sessionStorage.removeItem('caja_authenticated'); sessionStorage.removeItem('caja_jwt_token'); loginOverlay.style.display='flex'; });
 
+  // Soporte para teclado físico en el PIN
+  document.addEventListener('keydown', (e) => {
+    if (loginOverlay.style.display !== 'none') {
+      if (e.key >= '0' && e.key <= '9') {
+        handlePinKey(e.key);
+      } else if (e.key === 'Backspace') {
+        if (pinInput.length > 0) { pinInput = pinInput.slice(0, -1); updatePinDots(); }
+      } else if (e.key === 'Escape' || e.key === 'Delete') {
+        pinInput = ''; updatePinDots();
+      }
+    }
+  });
+
   const startCaja = async () => { await loadState(); renderPOS(); };
 
   const renderPOS = () => {

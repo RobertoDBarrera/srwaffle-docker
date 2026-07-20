@@ -314,10 +314,27 @@
     <main class="admin-content-area">
 
       <!-- ================= VISTA: RESEÑAS ================= -->
-      <div id="admin-view-reviews" class="admin-view-panel" style="display: none;">
+      <div id="admin-view-reviews" class="admin-view-panel">
         <div style="margin-bottom: 2rem;">
           <h2 style="font-size: 1.8rem; font-weight: 700; color: #FFD700; margin-bottom: 10px;">Reseñas de Clientes</h2>
           <p style="color: var(--text-secondary);">El feedback de los clientes que recibieron su pedido.</p>
+        </div>
+
+        <div class="inventory-controls" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px; display: flex; align-items: center;">
+          <div style="display:flex; gap:10px; align-items:center; flex-grow: 1; flex-wrap: wrap;">
+            <select id="review-filter-employee" class="form-control" style="width: auto; background:#222;">
+              <option value="">Todos los empleados</option>
+            </select>
+            <select id="review-filter-rating" class="form-control" style="width: auto; background:#222;">
+              <option value="">Cualquier calificación</option>
+              <option value="positive">Positivas (👍)</option>
+              <option value="negative">Negativas (👎)</option>
+            </select>
+            <input type="date" id="review-filter-start-date" class="form-control" style="width: auto;" title="Fecha inicio">
+            <span style="color:var(--text-muted)">a</span>
+            <input type="date" id="review-filter-end-date" class="form-control" style="width: auto;" title="Fecha fin">
+            <button class="btn-primary" id="btn-apply-review-filter" style="padding: 0.5rem 1rem;">Filtrar</button>
+          </div>
         </div>
 
         <div style="background: rgba(18, 18, 18, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
@@ -327,12 +344,13 @@
                 <tr>
                   <th>Fecha</th>
                   <th>Ticket</th>
+                  <th>Empleado</th>
                   <th>Calificación</th>
                   <th>Comentario</th>
                 </tr>
               </thead>
               <tbody id="reviews-table-body">
-                <tr><td colspan="4" style="text-align:center;">Cargando reseñas...</td></tr>
+                <tr><td colspan="5" style="text-align:center;">Cargando reseñas...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1459,7 +1477,16 @@
   
   <!-- CONTROLADORES JAVASCRIPT -->
   <script src="/theme-manager.js?v=1782406455730"></script>
-  <script src="app.js?v=2026071706"></script>
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        alert("GLOBAL ERROR: " + msg + " at " + lineNo + ":" + columnNo + "\n" + (error && error.stack));
+        return false;
+      };
+      window.addEventListener("unhandledrejection", function(event) {
+        alert("UNHANDLED PROMISE REJECTION: " + event.reason);
+      });
+    </script>
+    <script src="app.js?v=2026071706" defer></script>
   
 </body>
 </html>
