@@ -2,12 +2,13 @@
 
 Este documento es una guía de referencia rápida para ubicar todas las funcionalidades del sistema, entender en qué módulo están y para qué sirven.
 
-El sistema se divide en 5 módulos principales (aplicaciones web):
+El sistema se divide en 6 módulos principales (aplicaciones web):
 1. **App Cliente** (`/`) - Menú público y pedidos online.
 2. **Caja POS** (`/caja`) - Punto de venta físico para empleados.
 3. **Panel KDS Cocina** (`/cocina`) - Pantalla para cocineros.
 4. **Panel de Administración** (`/admin`) - Control total y métricas para el dueño.
 5. **App Móvil** (`/app`) - Mini módulo para clientes sentados (rastreo, menú y reseñas).
+6. **Pantalla de TV** (`/tv`) - Módulo visual para mostrar números de pedidos listos al público.
 
 ---
 
@@ -40,7 +41,7 @@ El sistema se divide en 5 módulos principales (aplicaciones web):
 | **Carrito de Compras** | Panel lateral derecho | Muestra la lista de ítems a cobrar, el total en ARS y permite eliminar ítems individualmente. |
 | **Cobro y Medios de Pago** | Panel lateral derecho (Botones verdes) | Permite registrar la venta indicando si el cliente pagó en Efectivo, Débito o MercadoPago. Envía automáticamente el pedido al KDS de cocina y muestra un cartel con el **Código de Rastreo**. |
 | **Últimas Ventas** | Botón "Últimas Ventas" (Arriba a la derecha) | Muestra una lista con las ventas cobradas durante el día actual y sus respectivos códigos de rastreo por si el cliente lo olvida. |
-| **Club Waffle (Fidelización)** | Panel lateral derecho (Al cobrar) | El cajero puede ingresar el celular del cliente. Si el cliente está registrado, se le suman puntos según la compra. Si acumula suficientes, se le informa para canjear recompensas. |
+| **Club Waffle (Fidelización)** | Panel lateral derecho (Al cobrar) | El cajero puede ingresar el celular del cliente. Si el cliente está registrado, se le suman puntos según la compra. También cuenta con el botón "Canjear Waffle Gratis" para usar 100 puntos y ofrecer 100% de descuento en el pedido. |
 | **Bloqueo Rápido** | Botón "Bloquear" (Arriba a la derecha) | Cierra la sesión del cajero temporalmente por seguridad cuando se aleja de la caja. |
 
 ---
@@ -95,7 +96,18 @@ El sistema se divide en 5 módulos principales (aplicaciones web):
 
 ---
 
-## 6. Guía de CSS para Theme Builder (Editor Avanzado)
+## 6. Módulo: Pantalla de TV (Llamador de Pedidos)
+**URL de acceso:** `http://localhost:3000/tv/`  
+
+| Funcionalidad | Cómo Llegar | Para qué sirve |
+|--------------|-------------|----------------|
+| **Visor de Pedidos Listos** | Automático | Muestra de forma gigante y visible todos los tickets que el cocinero marcó como "Listos" en el KDS. Ideal para poner en un Smart TV en el local. |
+| **Alerta Sonora (Ding-Dong)** | Automático | Cuando ingresa un nuevo pedido a la pantalla de TV, se reproduce un sonido llamativo para avisar a los clientes en el local que su pedido está listo. (Requiere hacer 1 clic en la pantalla la primera vez para habilitar el audio del navegador). |
+| **Sincronización en Tiempo Real** | Automático | Actualiza el estado leyendo de la base de datos cada 3 segundos. Cuando un pedido se marca como "Entregado" en la cocina, desaparece automáticamente de esta pantalla. |
+
+---
+
+## 7. Guía de CSS para Theme Builder (Editor Avanzado)
 
 Cuando utilices el botón **Abrir Editor de CSS 📝** en el **Theme Builder**, el código CSS inyectado tendrá el máximo nivel de prioridad para sobreescribir la apariencia de la aplicación. 
 

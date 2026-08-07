@@ -6,7 +6,7 @@ Este documento reúne toda la información técnica necesaria para desplegar, op
 
 ## 🧭 1. Directorio de Acceso (URLs y URIs)
 
-El sistema expone cuatro portales web independientes a través del servidor Express:
+El sistema expone cinco portales web independientes a través del servidor Express:
 
 | Interfaz | URI de Acceso | Rol / Destinatarios | Método de Acceso | Clave por Defecto |
 | :--- | :--- | :--- | :--- | :--- |
@@ -14,6 +14,7 @@ El sistema expone cuatro portales web independientes a través del servidor Expr
 | **App Móvil** | `/app` (ej: `http://localhost:3000/app`) | Clientes en mesa (menú digital, rastreo de pedidos y reseñas) | Público (Acceso libre) | No aplica |
 | **Caja Registradora POS** | `/caja` (ej: `http://localhost:3000/caja`) | Cajeros (registro rápido de comandas en mostrador) | Bloqueo por PIN Individual | Asignado en Admin |
 | **Pantalla de Cocina KDS** | `/cocina` (ej: `http://localhost:3000/cocina`) | Cocineros (gestión visual de tickets y tiempos de preparación) | Bloqueo por PIN Individual | Asignado en Admin |
+| **Pantalla de TV** | `/tv` (ej: `http://localhost:3000/tv`) | Clientes en tienda física (llamador visual y sonoro) | Público (Acceso libre) | No aplica |
 | **Panel de Administración** | `/admin` (ej: `http://localhost:3000/admin`) | Propietarios y Administradores (inventario, CRUDs, métricas y CSV) | Bloqueo por Contraseña | **`admin`** |
 
 ---

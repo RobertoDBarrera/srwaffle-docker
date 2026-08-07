@@ -2,12 +2,13 @@
 
 ¡Bienvenido al sistema integral de Sr. Waffle! Este documento es tu biblia operativa. Aquí aprenderás **paso a paso** cómo utilizar el 100% de las funciones del sistema. Cualquier usuario nuevo que lea esta guía podrá administrar, operar y entender el negocio sin conocimientos técnicos.
 
-El sistema se divide en cinco partes operativas principales:
+El sistema se divide en seis partes operativas principales:
 1. **App Cliente (Web Pública):** Donde tus clientes arman sus pedidos online (Autopedido y WhatsApp).
 2. **Mini App Móvil:** Donde los clientes que ya están en el local rastrean su ticket, ven el menú digital y dejan reseñas.
 3. **La Caja Registradora (POS):** Donde cobras y atiendes.
 4. **La Pantalla de Cocina (KDS):** Donde preparan los pedidos.
-5. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
+5. **La Pantalla de TV (Llamador):** Donde se anuncian los pedidos listos.
+6. **El Panel de Administración:** Donde controlas el negocio, las ventas y el stock.
 
 ---
 
@@ -33,6 +34,7 @@ Si el programa de fidelización está activo, debajo del total a pagar verás un
 2. Escríbelo en la caja de texto y presiona el botón azul **Buscar**.
 3. **Si el cliente ya existe:** Aparecerá su nombre y cuántos puntos ganará con esta compra.
 4. **Si el cliente es nuevo:** Te pedirá que escribas su nombre. Escríbelo para dejarlo registrado.
+5. **Canje de Puntos:** Si el cliente acumuló al menos 100 puntos, aparecerá un botón brillante "Canjear Waffle Gratis". Al presionarlo, el cliente gastará 100 puntos y el total del ticket pasará a ser $0 de forma automática.
 
 ### 1.4 Cobrar y dar el Código de Rastreo
 1. Cuando el pedido esté completo, ve a la parte inferior derecha.
@@ -69,43 +71,59 @@ Tus cocineros tendrán una tablet o pantalla táctil en la cocina (`/cocina`). F
 
 ---
 
-## ⚙️ PARTE 3: El Panel de Administración (Tu Centro de Mando)
+## 📺 PARTE 3: La Pantalla de TV (Llamador)
+Si tienes un Smart TV o un monitor mirando hacia los clientes, puedes usar este módulo (`/tv`). Es un llamador visual y sonoro 100% automático.
+
+### 3.1 Cómo iniciarlo
+1. Abre el navegador web en el televisor (o en una tablet conectada).
+2. Ingresa a la URL del sistema agregando `/tv` al final (por ejemplo, `http://192.168.1.100:3000/tv`).
+3. **Paso Obligatorio:** Haz un toque o clic en cualquier parte de la pantalla. Esto autoriza al navegador a reproducir la "campana" o sonido de aviso.
+
+### 3.2 ¿Cómo funciona?
+- ¡No hace falta tocar nada! La pantalla se queda estática.
+- Cuando en la cocina (PARTE 2) un cocinero marca un pedido como "Listo", aparecerá gigante el número de 4 dígitos en la TV.
+- Sonará un suave y elegante "*Ding-Dong*" para avisarle a los clientes en la tienda.
+- Una vez que el cliente retira su pedido, si en la cocina presionas "Entregado", el número desaparece solo de la TV.
+
+---
+
+## ⚙️ PARTE 4: El Panel de Administración (Tu Centro de Mando)
 Aquí es donde controlas todo tu negocio (`/admin`). Solo se puede entrar con tu Contraseña Maestra (por defecto `admin`).
 
-### 3.1 Historial y Métricas (Tus Ganancias)
+### 4.1 Historial y Métricas (Tus Ganancias)
 - **Ver mis métricas:** Apenas entras, ves 4 bloques arriba: Ingresos Totales, Cantidad de Ventas, Ticket Promedio y Tiempo en Cocina. Estos números reflejan la salud de tu negocio.
 - **Filtrar por Fechas:** Arriba a la derecha dice "Fecha Inicio" y "Fecha Fin". Elige un rango (ej: del 1 al 15 del mes) y presiona **Filtrar**. Toda la pantalla se actualizará para mostrarte solo cuánto ganaste esos días.
 - **Revisar Cajeros:** Debajo verás una tabla que dice "Rendimiento por Empleado". Ahí sabrás quién recaudó más dinero y cuántas ventas hizo.
 - **Hacer un Reembolso:** Si cobraste mal un pedido, baja hasta "Historial de Ventas Recientes". Busca el ticket erróneo y haz clic en el botón rojo **Devolver**. *Magia:* El dinero se resta de tus ganancias y **todos los insumos (masas, helados) regresan al inventario.**
 - **Descargar a Excel:** Presiona el botón verde **Exportar CSV** arriba a la derecha. Se descargará un archivo con todas las ventas para tu contador.
 
-### 3.2 Dashboard de Reseñas (Feedback de Clientes)
+### 4.2 Dashboard de Reseñas (Feedback de Clientes)
 - Al hacer clic en la pestaña "Reseñas" en el menú, ingresarás al tablero de control de satisfacción del cliente.
 - **Métricas:** En la parte superior verás 3 tarjetas en tiempo real: el total de reseñas recibidas, la cantidad de pulgares arriba (positivas) y pulgares abajo (negativas).
 - **Filtros Avanzados:** Puedes buscar a un cliente específico ingresando su número de ticket, seleccionar un rango de fechas para evaluar cómo estuvo la atención en una semana particular, o usar el desplegable para ver las reseñas vinculadas exclusivamente a un empleado de **Caja** en particular.
 - **Asociación Automática:** La tabla no solo muestra qué opinó el cliente, sino que el sistema revisa inteligentemente tu historial de ventas y muestra una columna de "Cajero" para que sepas quién fue el empleado que cobró ese pedido reseñado.
 
-### 3.3 Control de Stock (Inventario Físico)
+### 4.3 Control de Stock (Inventario Físico)
 - Muestra todo tu almacén. Cada producto tiene una barra.
 - **Colores:** Azul (bien de stock), Amarilla (hay poco), Roja (¡Crítico, comprar urgente!).
 - **Reponer Mercadería:** Cuando llegue el camión del proveedor con 5 kilos de helado nuevo, busca "Helado" en la tabla, haz clic en el botón verde con el símbolo **`+`**, escribe "5", y presiona **Guardar**. Se sumará al stock actual automáticamente.
 
-### 3.4 Editar Insumos (Catálogo de Ingredientes)
+### 4.4 Editar Insumos (Catálogo de Ingredientes)
 Aquí configuras las partes de los waffles (Toppings, Salsas, Bebidas, etc).
 - **Crear un ingrediente nuevo:** Usa el formulario superior. Escribe el Nombre (ej. "Rocklets"), elige la Categoría (Toppings), pon el Precio de Venta (cuánto le cobras al cliente), y el **Stock Mínimo** (el número que hará que la barra se ponga roja para avisarte que debes comprar).
 - **Modificar precios por inflación:** Busca el producto en la lista y presiona el ícono del **Lápiz azul**. Podrás cambiar su precio al instante en todas las cajas.
 - **Borrar:** Presiona el **Tacho de basura rojo** para eliminar un producto que ya no vendes.
 
-### 3.5 Fichas Técnicas (Recetas de Waffles)
+### 4.5 Fichas Técnicas (Recetas de Waffles)
 Aquí construyes cómo se preparan exactamente tus waffles.
 - **Armado del Recetario:** Seleccionas un tipo de Masa elaborada y le agregas las cantidades exactas (ej. porciones o gramos) de materia prima (toppings, salsas) que el cocinero debe utilizar.
 - **Cálculo de Costo:** A medida que añades ingredientes, el sistema calcula el costo base exacto de producir ese waffle.
 - **Nota Importante:** En esta pestaña NO se define el precio de venta ni si aparece o no en la caja. Aquí solo se define la estructura interna del producto.
 
-### 3.6 Vitrina y Menú Público
+### 4.6 Vitrina y Menú Público
 Aquí decides qué productos vas a poner a la venta para que tus cajeros los puedan facturar y para que el cliente final los vea.
 - **Tipos de Producto que puedes publicar:**
-  1. **Receta de Waffle (Compuesto):** Vinculas una de las recetas que armaste en el paso 3.5. Al venderse en la caja, el sistema descontará exactamente los ingredientes indicados en su ficha técnica.
+  1. **Receta de Waffle (Compuesto):** Vinculas una de las recetas que armaste en el paso 4.5. Al venderse en la caja, el sistema descontará exactamente los ingredientes indicados en su ficha técnica.
   2. **Producto de Venta Directa:** Vinculas un insumo físico que vendes sin preparación extra (Ej: Una gaseosa o agua). Al venderse, descuenta 1 unidad del stock de forma directa.
 - **Pasos para publicar un producto:**
   1. Elige qué vas a publicar (Waffle o Venta Directa).
@@ -114,16 +132,16 @@ Aquí decides qué productos vas a poner a la venta para que tus cajeros los pue
   4. Fija el **Precio Final**.
   5. Asegúrate de marcar "Visible en Caja" y guárdalo.
 
-### 3.7 Opciones Configurables (Apariencia y Reglas)
+### 4.7 Opciones Configurables (Apariencia y Reglas)
 - **Identidad del local:** Sube tu Logo, sube fotos para el carrusel principal, e ingresa la URL o el HTML de tu Google Maps.
 - **Tiempo de Alarma en Cocina:** Ingresa un número en minutos (ej: `10`). Si un pedido tarda más de esos minutos en la cocina, empezará a parpadear en rojo (como vimos en la Parte 2).
 - **Programa de Fidelización:** Aquí puedes prender o apagar el programa "Club Waffle". Si lo enciendes, puedes configurar a cuántos pesos equivale 1 Punto.
 
-### 3.8 Datos de Empresa
+### 4.8 Datos de Empresa
 - Configura el Nombre del Local y la Dirección.
 - **Número de WhatsApp:** Ingresa el número oficial de tu negocio (incluyendo código de país, ej. `54911...`). Cuando los clientes pidan desde el catálogo web de sus casas, el mensaje te llegará a este número (si la opción de WhatsApp está habilitada).
 
-### 3.9 Empleados (Gestión de Personal)
+### 4.9 Empleados (Gestión de Personal)
 - Usa el formulario de la izquierda para dar de alta a tus empleados.
 - Ponles su Nombre, asígnales un **PIN numérico de 4 dígitos** (para que nadie más pueda usar su usuario) y elige su **Rol** (Cajero o Cocinero).
 - Si un empleado se va de la empresa, búscalo en la lista y presiona el ícono de **Tacho de basura** para revocarle el acceso.

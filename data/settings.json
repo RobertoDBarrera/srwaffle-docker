@@ -1,5 +1,6 @@
 {
   "adminPassword": "admin",
   "cashierPin": "1234",
-  "developerMode": true
+  "developerMode": true,
+  "activeTheme": null
 }

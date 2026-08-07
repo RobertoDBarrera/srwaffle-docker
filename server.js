@@ -383,6 +383,12 @@ app.post('/api/sales', async (req, res) => {
       status: 'pending'
     };
     await db.createSale(newSale);
+    if (req.body.loyaltyRedeemed && req.body.loyaltyPhone) {
+      await db.redeemLoyaltyPoints(req.body.loyaltyPhone, 100);
+    } else if (req.body.loyaltyPhone && req.body.loyaltyPointsToAdd > 0) {
+      await db.updateLoyaltyPoints(req.body.loyaltyPhone, req.body.loyaltyName || 'Cliente Waffle Club', req.body.loyaltyPointsToAdd);
+    }
+    
     res.json({ success: true, sale: newSale });
   } catch (error) {
     console.error(error);
@@ -642,6 +648,7 @@ app.use(express.static(path.join(__dirname)));
 app.use('/caja', express.static(path.join(__dirname, 'caja')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use('/cocina', express.static(path.join(__dirname, 'cocina')));
+app.use('/tv', express.static(path.join(__dirname, 'tv')));
 app.use('/docs', express.static(path.join(__dirname, 'documentacion')));
 
 app.listen(PORT, () => {

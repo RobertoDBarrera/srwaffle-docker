@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos Listos - Sr. Waffle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css"> <!-- Base styles -->
+  <link rel="stylesheet" href="styles.css"> <!-- TV Specific styles -->
+</head>
+<body class="tv-body">
+
+  <div class="tv-header">
+    <h1 class="neon-title" style="font-size: 5rem; margin-bottom: 10px;">Pedidos Listos</h1>
+    <p class="tv-subtitle">Por favor, acércate al mostrador cuando veas tu número en pantalla.</p>
+  </div>
+
+  <div class="tv-grid" id="ready-tickets-grid">
+    <!-- Tickets will be injected here by app.js -->
+  </div>
+
+  <div class="tv-footer">
+    <div class="brand-logo" style="font-family: var(--font-cursive); font-size: 2.5rem; color: var(--neon-pink);">Sr. Waffle</div>
+    <div class="clock" id="tv-clock">--:--</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

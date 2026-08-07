@@ -441,5 +441,101 @@
     "total": 900,
     "paymentMethod": "Tarjeta de Débito",
     "status": "completed"
+  },
+  {
+    "id": "3495",
+    "date": "2026-08-03T18:09:14.501Z",
+    "items": [
+      {
+        "id": "custom_1785780554281",
+        "name": "Waffle Customizado",
+        "details": "Masa: N/A",
+        "price": 1500,
+        "type": "custom_waffle",
+        "config": {
+          "base": "",
+          "toppings": [],
+          "syrups": [],
+          "icecreams": [],
+          "spread": ""
+        }
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "cashierName": "cajero1",
+    "status": "pending"
+  },
+  {
+    "id": "8376",
+    "date": "2026-08-03T18:10:35.650Z",
+    "items": [
+      {
+        "id": "custom_1785780635614",
+        "name": "Waffle Customizado",
+        "details": "Masa: N/A",
+        "price": 1500,
+        "type": "custom_waffle",
+        "config": {
+          "base": "",
+          "toppings": [],
+          "syrups": [],
+          "icecreams": [],
+          "spread": ""
+        }
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "cashierName": "cajero1",
+    "status": "pending"
+  },
+  {
+    "id": "5253",
+    "date": "2026-08-03T18:13:06.904Z",
+    "items": [
+      {
+        "id": "custom_1785780786810",
+        "name": "Waffle Customizado",
+        "details": "Masa: N/A",
+        "price": 1500,
+        "type": "custom_waffle",
+        "config": {
+          "base": "",
+          "toppings": [],
+          "syrups": [],
+          "icecreams": [],
+          "spread": ""
+        }
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "cashierName": "cajero1",
+    "status": "pending"
+  },
+  {
+    "id": "2075",
+    "date": "2026-08-03T18:18:17.354Z",
+    "items": [
+      {
+        "id": "custom_1785781097315",
+        "name": "Waffle Customizado",
+        "details": "Masa: N/A",
+        "price": 1500,
+        "type": "custom_waffle",
+        "config": {
+          "base": "",
+          "toppings": [],
+          "syrups": [],
+          "icecreams": [],
+          "spread": ""
+        }
+      }
+    ],
+    "total": 1500,
+    "paymentMethod": "Efectivo",
+    "cashierName": "cajero1",
+    "status": "pending"
   }
 ]

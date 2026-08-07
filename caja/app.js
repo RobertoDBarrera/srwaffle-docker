@@ -758,6 +758,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cart.length === 0) return;
     try {
       const total = cart.reduce((s, i) => s + i.price, 0);
+      
+      let loyaltyPhone = '';
+      let loyaltyName = '';
+      let loyaltyPointsToAdd = 0;
+      
+      if (loyaltyInfo && loyaltyInfo.style.display === 'flex' && loyaltyPhoneInput) {
+        loyaltyPhone = loyaltyPhoneInput.value.trim();
+        const ln = document.getElementById('loyalty-name');
+        loyaltyName = ln ? ln.value.trim() : 'Cliente Waffle Club';
+        loyaltyPointsToAdd = Math.floor(Math.max(total, 0) / loyaltyPointsThreshold);
+      }
+      
       const res = await fetch('/api/sales', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -765,8 +777,12 @@ document.addEventListener('DOMContentLoaded', () => {
           total, 
           paymentMethod: selectedPaymentMethod, 
           cashierName: sessionStorage.getItem('caja_cashier_name'),
-          customerName: currentLoyaltyCustomer ? currentLoyaltyCustomer.name : null,
-          id: currentKioskOrderId
+          customerName: loyaltyName || (currentLoyaltyCustomer ? currentLoyaltyCustomer.name : null),
+          id: currentKioskOrderId,
+          loyaltyPhone: loyaltyPhone,
+          loyaltyName: loyaltyName,
+          loyaltyPointsToAdd: loyaltyPointsToAdd,
+          loyaltyRedeemed: loyaltyRedeemed
         })
       });
       if (res.ok) {
@@ -791,13 +807,101 @@ document.addEventListener('DOMContentLoaded', () => {
           successModalEl.style.display = 'flex';
         }
         
-        cart = []; renderCart(); loadState(); // reload stock
+        cart = []; 
+        loyaltyRedeemed = false;
+        currentLoyaltyCustomer = null;
+        if (loyaltyInfo) loyaltyInfo.style.display = 'none';
+        if (loyaltyPhoneInput) loyaltyPhoneInput.value = '';
+        if (loyaltySearchStatus) loyaltySearchStatus.textContent = '';
+        
+        renderCart(); 
+        loadState(); // reload stock
       } else {
         const err = await res.json();
         showToast(err.error || 'Error en la venta', true);
       }
     } catch (e) {
       showToast('Error de conexión', true);
+    }
+  };
+
+  // --- LOYALTY UI ---
+  const loyaltyFindBtn = document.getElementById('loyalty-find-btn');
+  const loyaltyPhoneInput = document.getElementById('loyalty-phone');
+  const loyaltyInfo = document.getElementById('loyalty-customer-info');
+  const loyaltyName = document.getElementById('loyalty-name');
+  const loyaltyPointsCurrent = document.getElementById('loyalty-points-current');
+  const loyaltySearchStatus = document.getElementById('loyalty-search-status');
+  const loyaltyRedeemBtn = document.getElementById('loyalty-redeem-btn');
+  let loyaltyRedeemed = false;
+
+  if (loyaltyFindBtn) {
+    loyaltyFindBtn.onclick = async () => {
+      const phone = loyaltyPhoneInput.value.trim();
+      if (!phone) return showToast('Ingrese un teléfono', true);
+      
+      try {
+        const res = await fetch(`/api/loyalty/customer/${phone}`);
+        if (res.ok) {
+          currentLoyaltyCustomer = await res.json();
+          loyaltySearchStatus.textContent = 'Cliente Encontrado';
+          loyaltyName.value = currentLoyaltyCustomer.name;
+          loyaltyPointsCurrent.textContent = currentLoyaltyCustomer.points;
+        } else {
+          currentLoyaltyCustomer = { phone, name: '', points: 0 };
+          loyaltySearchStatus.textContent = 'Cliente Nuevo';
+          loyaltyName.value = '';
+          loyaltyPointsCurrent.textContent = '0';
+        }
+        loyaltyInfo.style.display = 'flex';
+        
+        // Mostrar botón de canje si tiene suficientes puntos (ej. 100)
+        if (currentLoyaltyCustomer.points >= 100) {
+          loyaltyRedeemBtn.style.display = 'block';
+        } else {
+          loyaltyRedeemBtn.style.display = 'none';
+        }
+      } catch (e) {
+        showToast('Error al buscar cliente', true);
+      }
+    };
+  }
+
+  if (loyaltyRedeemBtn) {
+    loyaltyRedeemBtn.onclick = () => {
+      // Find the most expensive waffle in the cart
+      const wafflesInCart = cart.filter(item => item.type === 'menu_waffle' || item.type === 'custom_waffle');
+      if (wafflesInCart.length === 0) {
+        return showToast('No hay waffles en la comanda para canjear.', true);
+      }
+      
+      let mostExpensive = wafflesInCart.reduce((max, item) => item.price > max.price ? item : max, wafflesInCart[0]);
+      
+      // Add a discount item
+      cart.push({
+        id: 'discount_' + Date.now(),
+        name: '🎁 Descuento Waffle Gratis',
+        details: 'Club Waffle',
+        price: -mostExpensive.price,
+        type: 'discount'
+      });
+      
+      loyaltyRedeemed = true;
+      showToast(`¡Canje aplicado! Descuento de ${formatCurrency(mostExpensive.price)}`);
+      renderCart();
+      loyaltyRedeemBtn.style.display = 'none'; // Hide after redeeming
+    };
+  }
+
+  // Calculate points to add on renderCart
+  const originalRenderCart = renderCart;
+  renderCart = () => {
+    originalRenderCart();
+    if (loyaltyInfo && loyaltyInfo.style.display === 'flex') {
+      const total = cart.reduce((s, i) => s + i.price, 0);
+      const pointsToAdd = Math.floor(Math.max(total, 0) / loyaltyPointsThreshold);
+      const toAddEl = document.getElementById('loyalty-points-to-add');
+      if (toAddEl) toAddEl.textContent = pointsToAdd;
     }
   };
 

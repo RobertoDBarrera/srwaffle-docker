@@ -1304,6 +1304,27 @@ const updateLoyaltyPoints = async (phone, name, pointsToAdd) => {
   }
 };
 
+const redeemLoyaltyPoints = async (phone, pointsToDeduct) => {
+  if (usePostgres) {
+    const customer = await getLoyaltyCustomer(phone);
+    if (customer && customer.points >= pointsToDeduct) {
+      const newPoints = customer.points - pointsToDeduct;
+      await pool.query('UPDATE loyalty_customers SET points = $1 WHERE phone = $2', [newPoints, phone]);
+      return { success: true, phone, name: customer.name, points: newPoints };
+    }
+    return { success: false, error: 'Puntos insuficientes o cliente no encontrado' };
+  } else {
+    const customers = readJSON(LOYALTY_CUSTOMERS_FILE);
+    const customerIdx = customers.findIndex(c => c.phone === phone);
+    if (customerIdx !== -1 && customers[customerIdx].points >= pointsToDeduct) {
+      customers[customerIdx].points -= pointsToDeduct;
+      writeJSON(LOYALTY_CUSTOMERS_FILE, customers);
+      return { success: true, ...customers[customerIdx] };
+    }
+    return { success: false, error: 'Puntos insuficientes o cliente no encontrado' };
+  }
+};
+
 const getLoyaltyCustomers = async () => {
   if (usePostgres) {
     const res = await pool.query('SELECT phone, name, points FROM loyalty_customers ORDER BY points DESC');
@@ -1499,6 +1520,7 @@ module.exports = {
   updateLoyaltySettings,
   getLoyaltyCustomer,
   updateLoyaltyPoints,
+  redeemLoyaltyPoints,
   getLoyaltyCustomers,
   updateSaleStatus,
   getKitchenTickets,

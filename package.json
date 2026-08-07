@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "test:e2e": "node test_e2e.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
